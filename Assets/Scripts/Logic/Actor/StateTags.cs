@@ -10,6 +10,7 @@ namespace Refraction.Logic.Actor
         Idle,
         Move,
         Jump,
+        Fall,
         Dash
     }
 }

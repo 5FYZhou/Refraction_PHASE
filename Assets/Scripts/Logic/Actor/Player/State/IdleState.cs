@@ -25,6 +25,9 @@ namespace Refraction.Logic.Actor
 
         public override bool IsDone(in LogicContext ctx)
         {
+            // 离地就不再是站立态，交给 Jump / Fall
+            if (!ctx.WorldInfo.Grounded) return true;
+
             return ctx.InputSnapshot.Move.sqrMagnitude != 0f;
         }
 

@@ -2,6 +2,7 @@
 using Refraction.Foundation;
 using Refraction.Logic.Input;
 using Refraction.Logic.Move;
+using UnityEngine;
 using static UnityEngine.Rendering.DebugUI.Table;
 
 namespace Refraction.Logic.Actor
@@ -28,12 +29,20 @@ namespace Refraction.Logic.Actor
         {
             RegisterState(new IdleState(_motor));
             RegisterState(new MoveState(_motor, _config.speed));
+            RegisterState(new JumpState(_motor, _config.jumpSpeed, _config.speed));
+            RegisterState(new FallState(_motor, _config.speed));
             _dashState = new(_motor, _config.dashSpeed, _config.dashDuration);
             RegisterState(_dashState);
         }
          
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {
+            // 离地：按竖直速度分成上升段和下落段（> 0 上升，≤ 0 下落）
+            if (!ctx.WorldInfo.Grounded)
+            {
+                return ctx.WorldInfo.Velocity.y > 0f ? MovementStateTag.Jump : MovementStateTag.Fall;
+            }
+
             // 如果有速度 回到Move
             if (ctx.InputSnapshot.Move.sqrMagnitude > 0) return MovementStateTag.Move;
             // Fall?
@@ -54,6 +63,12 @@ namespace Refraction.Logic.Actor
                 target = MovementStateTag.Dash;
                 return true;
             }
+            // 踩地 + 跳跃键还在缓冲窗口里 才能起跳（空中不给跳，所以目前只有一段跳）
+            if (ctx.WorldInfo.Grounded && CanJump(ctx))
+            {
+                target = MovementStateTag.Jump;
+                return true;
+            }
             return false;
         }
 
@@ -61,13 +76,35 @@ namespace Refraction.Logic.Actor
         {
             switch (target)
             {
+                case MovementStateTag.Jump:
+                    // 消费掉这次按下，避免同一次按键反复起跳
+                    return TryConsumeJump(ctx.GameTime.now);
                 case MovementStateTag.Dash:
                     if(!TryConsumeDash(ctx.GameTime.now)) return false;
                     _dashCooldown.MarkUsed(ctx.GameTime.now, _config.dashCooldown);
-                    _dashState.Configure(_motor.Face);
+                    _dashState.Configure(Direction(ctx));
                     return true;
             }
             return false;
+        }
+
+        /// <summary>跳跃键的缓冲窗口沿用 inputBufferTime：落地前一点按下也能补跳</summary>
+        private bool CanJump(in LogicContext ctx)
+        {
+            return _buffer.CanConsume(InputType.Jump, ctx.GameTime.now, _config.inputBufferTime);
+        }
+
+        private bool TryConsumeJump(float now)
+        {
+            return _buffer.TryConsume(InputType.Jump, now, _config.inputBufferTime);
+        }
+
+        private Vector2 Direction(in LogicContext ctx)
+        {
+            int x = ctx.WorldInfo.Face;
+            if (ctx.InputSnapshot.Move.x > 0f) x = 1;
+            if (ctx.InputSnapshot.Move.x < 0f) x = -1;
+            return new Vector2(x, 0);
         }
 
         private bool CanDash(in LogicContext ctx)

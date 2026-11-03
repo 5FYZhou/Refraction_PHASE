@@ -13,6 +13,11 @@ namespace Refraction.Data
         [Min(0f)]
         public float speed = 10f;
 
+        [Header("跳跃")]
+        [Tooltip("起跳瞬间的竖直速度。跳跃高度 ≈ 该值² / (2 × 重力加速度)。")]
+        [Min(0f)]
+        public float jumpSpeed = 9f;
+
         [Header("冲刺")]
         [Tooltip("冲刺时叠加到当前速度上的冲量")]
         [Min(0f)]
@@ -34,5 +39,24 @@ namespace Refraction.Data
         [Tooltip("输入缓冲区的总回看窗口，单位 秒，决定最多往回记多久的按键。")]
         [Min(0f)]
         public float inputBufferTime;
+
+        [Header("重力")]
+        public bool enableGravity = false;
+
+        [Tooltip("最大下落速度")]
+        public float maxFallSpeed = 20f;
+
+        [Tooltip("最大上升速度")]
+        public float maxRiseSpeed = 20f;
+
+        //[Tooltip("上升期且按住跳跃键时的重力加速度")]
+        //public float riseGravity = 40f;
+
+        [Tooltip("其余情况的重力加速度")]
+        public float fallGravity = 70f;
+
+        //[Tooltip("上升期松开跳跃键时的垂直速度截断系数")]
+        //[Range(0f, 1f)]
+        //public float jumpCutMultiplier = 0.5f;
     }
 }

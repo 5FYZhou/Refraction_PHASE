@@ -52,7 +52,8 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
-            WorldInfo worldInfo = new(true, false, 1);
+            // 世界信息由 MoveMotor 的物理探测给出，本层只负责组装 Context
+            WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
             LogicContext context = new(snapshot, worldInfo, gameTime);
 

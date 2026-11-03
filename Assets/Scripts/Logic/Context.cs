@@ -8,11 +8,13 @@ namespace Refraction.Logic
         public readonly Vector2 Move;
         public readonly bool Jump;
         public readonly bool Dash;
-        public InputSnapshot(Vector2 move, bool jump, bool dash)
+        public readonly bool JumpHeld;
+        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld)
         {
             this.Move = move;
             this.Jump = jump;
             this.Dash = dash;
+            this.JumpHeld = jumpHeld;
         }
     }
 
@@ -27,11 +29,16 @@ namespace Refraction.Logic
         /// <summary>墙面所在方向：-1 在左，1 在右。</summary>
         public readonly int WallSide;
 
-        public WorldInfo(bool grounded, bool touchingWall, int wallSide)
+        public readonly Vector2 Velocity;
+        public readonly int Face;
+
+        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face)
         {
             Grounded = grounded;
             TouchingWall = touchingWall;
             WallSide = wallSide;
+            Velocity = velocity;
+            Face = face;
         }
     }
 

@@ -19,6 +19,7 @@ namespace Refraction.Logic.Actor
         public void FixedTick(LogicContext ctx)
         {
             _motor.BeginStep(ctx.GameTime.now, ctx.GameTime.deltaTime);
+            _motor.ApplyGravity(ctx, false);
 
             OnTick(in ctx);
 

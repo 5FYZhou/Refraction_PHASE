@@ -34,11 +34,13 @@ namespace Refraction.Logic.Actor
         public override void Enter(in LogicContext ctx)
         {
             _startTime = ctx.GameTime.now;
-            _motor.AddImpulse(_dir * _speed);
+            _motor.SetGravity(false);
+            _motor.SnapVelocity(_dir * _speed);
         }
 
         public override void Exit()
         {
+            _motor.SetGravity(true);
         }
 
         public override bool IsDone(in LogicContext ctx)

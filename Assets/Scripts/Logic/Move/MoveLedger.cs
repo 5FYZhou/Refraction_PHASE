@@ -16,6 +16,7 @@ namespace Refraction.Logic.Move
         private float _speedScale = 1f;
         private float _now;
         private float _dt = 0.02f;
+        private bool _enableGravity;
 
         public MoveLedger(System.Func<Vector2> readVelocity, System.Action<Vector2> writeVelocity)
         {
@@ -33,6 +34,7 @@ namespace Refraction.Logic.Move
         public void Configure(PlayerConfig config)
         {
             Config = config;
+            _enableGravity = config.enableGravity;
         }
 
         public Vector2 FrameStartVelocity => _frameStart;
@@ -94,8 +96,7 @@ namespace Refraction.Logic.Move
         public void SetVelocity(Vector2 velocity)
         {
             SetVelocityX(velocity.x);
-            _accel.y = 0f;
-            _delta.y = velocity.y - _frameStart.y;
+            SetVelocityY(velocity.y);
         }
 
         public void MoveDirection(Vector2 direction, float speed)
@@ -156,12 +157,36 @@ namespace Refraction.Logic.Move
             _delta += delta;
         }
 
-        private void SetVelocityX(float vx)
+        public void SetVelocityX(float vx)
         {
             _accel.x = 0f;
             _delta.x = vx - _frameStart.x;
         }
 
+        /// <summary>只改竖直速度，横向不动；起跳给一次向上速度用这个，避免把横移抹掉</summary>
+        public void SetVelocityY(float vy)
+        {
+            _accel.y = 0f;
+            _delta.y = vy - _frameStart.y;
+        }
+
         private bool HasSubmission => _delta.x != 0f || _delta.y != 0f || _accel.x != 0f || _accel.y != 0f;
+
+        public void ApplyGravity(in LogicContext ctx, bool jumpReleased)
+        {
+            if (!_enableGravity) return;
+
+            float gravity = Config.fallGravity;
+            _accel.y -= gravity;
+
+            if (Velocity.y > Config.maxRiseSpeed) SetVelocityY(Config.maxRiseSpeed);
+            else if (Velocity.y < -Config.maxFallSpeed) SetVelocityY(-Config.maxFallSpeed);
+        }
+
+        public void SetGravity(bool enable)
+        {
+            if(!Config.enableGravity) return;
+            _enableGravity = enable;
+        }
     }
 }
