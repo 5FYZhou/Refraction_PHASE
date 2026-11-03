@@ -6,13 +6,14 @@ namespace Refraction.Logic.Move
 {
     public interface IStateMove
     {
-        float Speed { get; }
         void MoveTowards(Vector2 direction, float speed);
         void StopMove();
+        void AddImpulse(Vector2 deltaVelocity);
     }
 
     public interface IMoveMotor : IStateMove
     {
+        public Vector2 Face {  get; }
         void BeginStep(float now, float deltaTime);
         void Commit();
         void FaceTowards(Vector2 dir);

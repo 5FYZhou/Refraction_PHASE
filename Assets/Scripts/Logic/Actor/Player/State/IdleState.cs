@@ -3,7 +3,7 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    public class IdleState : BaseState<MovementStateTag, InputSnapshot>
+    public sealed class IdleState : BaseState<MovementStateTag, LogicContext>
     {
         public override MovementStateTag Tag => MovementStateTag.Idle;
 
@@ -14,18 +14,18 @@ namespace Refraction.Logic.Actor
             _motor = motor;
         }
 
-        public override void Enter()
+        public override void Enter(in LogicContext cxt)
         {
             _motor.StopMove();
         }
 
-        public override void Tick(InputSnapshot ctx)
+        public override void Tick(in LogicContext ctx)
         {
         }
 
-        public override bool IsDone(InputSnapshot ctx)
+        public override bool IsDone(in LogicContext ctx)
         {
-            return ctx.Move.sqrMagnitude != 0f;
+            return ctx.InputSnapshot.Move.sqrMagnitude != 0f;
         }
 
         public override void Exit()

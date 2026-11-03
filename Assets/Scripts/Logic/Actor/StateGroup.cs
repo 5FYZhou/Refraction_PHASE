@@ -10,21 +10,21 @@ namespace Refraction.Logic.Actor
         private StateMachine<TTag, TContext> _machine = new StateMachine<TTag, TContext>();
 
         protected abstract TTag EmptyTag { get; }
-        protected abstract TTag Fallback(TContext ctx);
+        protected abstract TTag Fallback(in TContext ctx);
 
         public void RegisterState(in IState<TTag, TContext> state)
         {
             _machine.RegisterState(state);
         }
 
-        public void ChangeState(TTag tag)
+        public void ChangeState(TTag tag, in TContext ctx)
         {
-            _machine.ChangeState(tag);
+            _machine.ChangeState(tag, ctx);
         }
 
         protected void TickStates(in TContext ctx)
         {
-            _machine.ChangeState(CheckChange(ctx));
+            _machine.ChangeState(CheckChange(ctx), ctx);
 
             _machine.CurrentState?.Tick(ctx);
         }

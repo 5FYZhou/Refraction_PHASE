@@ -13,3 +13,6 @@ MonoBehaviour:
   m_Name: PlayerConfig
   m_EditorClassIdentifier: 
   speed: 10
+  dashSpeed: 5
+  dashDuration: 0.2
+  dashCooldown: 2

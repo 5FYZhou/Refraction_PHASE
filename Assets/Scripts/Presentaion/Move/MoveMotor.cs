@@ -18,6 +18,24 @@ namespace Refraction.Presentation
 
         public float Speed => config.speed;
 
+        private Vector2 _face;
+        public Vector2 Face
+        {
+            get => _face;
+            set
+            {
+                if (value.sqrMagnitude <= 0f) return;
+
+                _face = value;
+
+                if (value.x == 0f) return;
+
+                Vector3 scale = transform.localScale;
+                scale.x = Mathf.Abs(scale.x) * (value.x < 0f ? -1f : 1f);
+                transform.localScale = scale;
+            }
+        }
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
@@ -33,15 +51,19 @@ namespace Refraction.Presentation
 
         public void FaceTowards(Vector2 dir)
         {
-            var scale = transform.localScale;
-            scale.x = dir.x > 0 ? 1f : -1f;
-            transform.localScale = scale;
+            if (dir.sqrMagnitude <= 0f) return;
+            Face = dir;
         }
 
         public void MoveTowards(Vector2 dir, float speed)
         {
             FaceTowards(dir);
             _ledger.MoveTowards(dir, speed);
+        }
+
+        public void AddImpulse(Vector2 deltaVelocity)
+        {
+            _ledger.AddImpulse(deltaVelocity);
         }
 
         public void StopMove()

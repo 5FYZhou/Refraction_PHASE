@@ -3,32 +3,34 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    public class MoveState : BaseState<MovementStateTag, InputSnapshot>
+    public sealed class MoveState : BaseState<MovementStateTag, LogicContext>
     {
         public override MovementStateTag Tag => MovementStateTag.Move;
 
-        private IStateMove motor;
+        private IStateMove _motor;
+        private float _speed;
 
-        public MoveState(IStateMove motor) 
+        public MoveState(IStateMove motor, float speed) 
         {
-            this.motor = motor;
+            _motor = motor;
+            _speed = speed;
         }
 
-        public override void Enter()
+        public override void Enter(in LogicContext cxt)
         {
         }
 
-        public override void Tick(InputSnapshot cxt)
+        public override void Tick(in LogicContext cxt)
         {
-            if (motor != null)
+            if (_motor != null)
             {
-                motor.MoveTowards(cxt.Move, motor.Speed);
+                _motor.MoveTowards(cxt.InputSnapshot.Move, _speed);
             }
         }
 
-        public override bool IsDone(InputSnapshot cxt)
+        public override bool IsDone(in LogicContext cxt)
         {
-            return cxt.Move.magnitude <= 0f;
+            return cxt.InputSnapshot.Move.magnitude <= 0f;
         }
 
         public override void Exit()

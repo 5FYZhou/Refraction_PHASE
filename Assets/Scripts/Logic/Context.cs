@@ -18,12 +18,20 @@ namespace Refraction.Logic
 
     public readonly struct WorldInfo
     {
-        public readonly Vector2 Position;
-        public readonly Vector2 Velocity;
-        public WorldInfo(Vector2 position, Vector2 velocity)
+        /// <summary>是否站在地面。</summary>
+        public readonly bool Grounded;
+
+        /// <summary>是否贴墙。</summary>
+        public readonly bool TouchingWall;
+
+        /// <summary>墙面所在方向：-1 在左，1 在右。</summary>
+        public readonly int WallSide;
+
+        public WorldInfo(bool grounded, bool touchingWall, int wallSide)
         {
-            Position = position;
-            Velocity = velocity;
+            Grounded = grounded;
+            TouchingWall = touchingWall;
+            WallSide = wallSide;
         }
     }
 

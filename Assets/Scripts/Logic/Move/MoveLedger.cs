@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Move
 {
-    public class MoveLedger : IMoveLedger
+    public sealed class MoveLedger : IMoveLedger
     {
         private readonly System.Func<Vector2> _readVelocity;
         private readonly System.Action<Vector2> _writeVelocity;

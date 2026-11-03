@@ -8,10 +8,11 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public class PlayerController : MonoBehaviour
+    public sealed class PlayerController : MonoBehaviour
     {
         private bool _attached = false;
         private InputProvider _inputProvider;
+        private InputBuffer _buffer;
         private PlayerLogic _logic;
         [SerializeField]
         private MoveMotor moveMotor;
@@ -21,9 +22,20 @@ namespace Refraction.Presentation.Actor
 
         public void Attach(InputProvider inputProvider)
         {
+            if(moveMotor  == null)
+            {
+                return;
+            }
+            if(config == null)
+            {
+                return;
+            }
             _inputProvider = inputProvider;
-            _attached = true;
-            _logic = new(moveMotor);
+            _buffer = new (
+                Mathf.Max(config.inputBufferTime, config.dashBufferTime),
+                Mathf.RoundToInt(1f / Time.fixedDeltaTime)
+                );
+            _logic = new(moveMotor, config, _buffer);
             _attached = true;
         }
 
@@ -40,10 +52,11 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
-            WorldInfo worldInfo = new(transform.position, moveMotor.Rb.velocity);
+            WorldInfo worldInfo = new(true, false, 1);
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
+            _buffer.Push(in snapshot, Time.fixedTime);
             _logic.FixedTick(context);
         }
     }

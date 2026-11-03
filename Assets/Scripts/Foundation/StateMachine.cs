@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Refraction.Logic;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,18 +8,18 @@ namespace Refraction.Foundation
     public interface IState<TTag, TContext>
     {
         public TTag Tag { get; }
-        void Enter();
-        void Tick(TContext cxt);
-        bool IsDone(TContext cxt);
+        void Enter(in TContext cxt);
+        void Tick(in TContext cxt);
+        bool IsDone(in TContext cxt);
         void Exit();
     }
 
     public abstract class BaseState<TTag, TContext> : IState<TTag, TContext>
     {
         public abstract TTag Tag { get; }
-        public abstract void Enter();
-        public abstract void Tick(TContext cxt);
-        public abstract bool IsDone(TContext cxt);
+        public abstract void Enter(in TContext cxt);
+        public abstract void Tick(in TContext cxt);
+        public abstract bool IsDone(in TContext cxt);
         public abstract void Exit();
     }
 
@@ -38,7 +39,7 @@ namespace Refraction.Foundation
             return true;
         }
 
-        public bool ChangeState(TTag tag)
+        public bool ChangeState(TTag tag, in TContext ctx)
         {
             if (!_states.TryGetValue(tag, out var nextState))
                 return false;
@@ -49,7 +50,7 @@ namespace Refraction.Foundation
 
             _currentState?.Exit();
             _currentState = nextState;
-            _currentState.Enter();
+            _currentState.Enter(ctx);
 
             Debug.Log(_currentState.Tag.ToString());
 

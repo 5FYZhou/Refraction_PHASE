@@ -29,13 +29,20 @@ namespace Refraction.Logic.Input
                 _input.Player.Move.ReadValue<Vector2>(),
                 1f
             );
-            _jump = _input.Player.Jump.WasPressedThisFrame();
-            _dash = _input.Player.Dash.WasPressedThisFrame();
+            // 瞬时输入累积，物理帧侧取走
+            _jump |= _input.Player.Jump.WasPressedThisFrame();
+            _dash |= _input.Player.Dash.WasPressedThisFrame();
         }
 
+        /// <summary>物理帧取走一次按下沿；取走即清零，不能留着，否则会被反复消费</summary>
         public InputSnapshot ConsumeSnapshot()
         {
-            return new InputSnapshot(_move, _jump, _dash);
+            InputSnapshot snapshot = new(_move, _jump, _dash);
+
+            _jump = false;
+            _dash = false;
+
+            return snapshot;
         }
     }
 }
