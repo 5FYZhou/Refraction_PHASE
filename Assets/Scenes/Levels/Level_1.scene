@@ -1232,6 +1232,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveMotor: {fileID: 2137401068}
   config: {fileID: 11400000, guid: c054cdf82763e1b47b8350caed29d612, type: 2}
+  _spawnT: {fileID: 476960018}
 --- !u!50 &2137401070
 Rigidbody2D:
   serializedVersion: 4

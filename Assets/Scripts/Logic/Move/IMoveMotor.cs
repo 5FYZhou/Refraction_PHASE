@@ -24,6 +24,7 @@ namespace Refraction.Logic.Move
         void Commit();
         void FaceTowards(Vector2 dir);
         void ApplyGravity(in LogicContext ctx, bool jumpReleased);
+        void SetPosition(Vector2 position);
     }
 
     public interface IMoveLedger

@@ -41,6 +41,7 @@ namespace Refraction.Data
         public float inputBufferTime;
 
         [Header("重力")]
+        [Tooltip("是否由本逻辑接管竖直方向的重力。\n关闭时完全依赖 Rigidbody2D 的 Gravity Scale，开着才用下面的下落/上升限速和 fallGravity。")]
         public bool enableGravity = false;
 
         [Tooltip("最大下落速度")]

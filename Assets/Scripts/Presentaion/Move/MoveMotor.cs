@@ -1,4 +1,5 @@
 ﻿using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Move;
 using UnityEngine;
@@ -64,14 +65,17 @@ namespace Refraction.Presentation
     [RequireComponent(typeof(Rigidbody2D))]
     public class MoveMotor : MonoBehaviour, IMoveMotor
     {
+        [Tooltip("玩家参数资产。移动速度、重力、冲刺等数值都从这里读，运行时只读不改。")]
         [SerializeField]
         private PlayerConfig config;
 
         [Header("地面检测 · 圆形射线")]
+        [Tooltip("探地面用的圆形射线参数。脚下的圆会向下扫一小段，只看朝上的面。")]
         [SerializeField]
         private GroundProbeSettings groundProbe = new();
 
         [Header("墙面检测 · 胶囊射线")]
+        [Tooltip("探墙用的胶囊射线参数。沿角色朝向扫，只看基本正对角色的面。")]
         [SerializeField]
         private WallProbeSettings wallProbe = new();
 
@@ -130,6 +134,8 @@ namespace Refraction.Presentation
 
         private void Awake()
         {
+            Require.Assigned(config, nameof(MoveMotor), nameof(config));
+
             _rb = GetComponent<Rigidbody2D>();
             _selfColliders = GetComponentsInChildren<Collider2D>(true);
             _ledger = new MoveLedger(
@@ -150,7 +156,7 @@ namespace Refraction.Presentation
             _touchingWall = ProbeWall(side, out _wallHit);
             _wallSide = side;
 
-            return new WorldInfo(_grounded, _touchingWall, _wallSide, _ledger.Velocity, FacingSign);
+            return new WorldInfo(_grounded, _touchingWall, _wallSide, _ledger.Velocity, FacingSign, _rb.position);
         }
 
         public void BeginStep(float now, float deltaTime)
@@ -198,6 +204,11 @@ namespace Refraction.Presentation
         private void SetFace(Vector2 face)
         {
             Face = face;
+        }
+
+        public void SetPosition(Vector2 position)
+        {
+            _rb.position = position;
         }
 
         #region 物理检测

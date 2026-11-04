@@ -1,35 +1,38 @@
 ﻿using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Input;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
     public sealed class PlayerController : MonoBehaviour
     {
+        private const float _spawnY = -10f;
+
         private bool _attached = false;
         private InputProvider _inputProvider;
         private InputBuffer _buffer;
         private PlayerLogic _logic;
+
+        [Tooltip("驱动刚体的执行器。逻辑层的移动/跳跃/冲刺指令最终都落到这里。")]
         [SerializeField]
         private MoveMotor moveMotor;
+
+        [Tooltip("玩家参数资产。应与 MoveMotor 上引用的是同一份配置。")]
         [SerializeField]
         private PlayerConfig config;
 
+        [Tooltip("重生点。掉到 _spawnY 以下后被送回这里。")]
+        [SerializeField]
+        private Transform _spawnT;
 
         public void Attach(InputProvider inputProvider)
         {
-            if(moveMotor  == null)
-            {
-                return;
-            }
-            if(config == null)
-            {
-                return;
-            }
+            Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
+            Require.Assigned(config, nameof(PlayerController), nameof(config));
+
             _inputProvider = inputProvider;
             _buffer = new (
                 Mathf.Max(config.inputBufferTime, config.dashBufferTime),
@@ -37,14 +40,6 @@ namespace Refraction.Presentation.Actor
                 );
             _logic = new(moveMotor, config, _buffer);
             _attached = true;
-        }
-
-        private void Start()
-        {
-            if(!_attached)
-            {
-                Debug.LogError("未装配，无法运行");
-            }
         }
 
         public void FixedTick()
@@ -59,6 +54,10 @@ namespace Refraction.Presentation.Actor
 
             _buffer.Push(in snapshot, Time.fixedTime);
             _logic.FixedTick(context);
+            if (context.WorldInfo.Pos.y < _spawnY)
+            {
+                _logic.SpawnTo(_spawnT ? _spawnT.position : new Vector2(0, 0));
+            }
         }
     }
 }

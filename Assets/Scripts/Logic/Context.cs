@@ -31,14 +31,16 @@ namespace Refraction.Logic
 
         public readonly Vector2 Velocity;
         public readonly int Face;
+        public readonly Vector2 Pos;
 
-        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face)
+        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face, Vector2 pos)
         {
             Grounded = grounded;
             TouchingWall = touchingWall;
             WallSide = wallSide;
             Velocity = velocity;
             Face = face;
+            Pos = pos;
         }
     }
 

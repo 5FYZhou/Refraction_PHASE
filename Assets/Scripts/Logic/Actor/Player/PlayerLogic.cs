@@ -10,15 +10,23 @@ namespace Refraction.Logic.Actor
     public sealed class PlayerLogic : ActorLogic
     {
         private MoveGroup _moveGroup;
+        private IMoveMotor _motor;
 
         public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer) : base(motor)
         {
             _moveGroup = new(motor, config, buffer);
+            _motor = motor;
         }
 
-        protected override void OnTick(in LogicContext cxt)
+        protected override void OnTick(in LogicContext ctx)
         {
-            _moveGroup.Tick(cxt);
+            _moveGroup.Tick(ctx);
+        }
+
+        public void SpawnTo(Vector2 pos)
+        {
+            _motor.SetPosition(pos);
+            _motor.StopMove();
         }
     }
 }

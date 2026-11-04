@@ -1,4 +1,6 @@
-﻿using Refraction.Logic.Level;
+﻿using System;
+using Refraction.Foundation;
+using Refraction.Logic.Level;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,8 +12,11 @@ namespace Refraction.Presentation.Level
     /// </summary>
     public class LevelReader : MonoBehaviour
     {
+        [Tooltip("玩家进入关卡时的出生点。")]
         [SerializeField]
         private Transform spawnT;
+
+        [Tooltip("关卡出口的门。Awake 时会在这个 Transform 上挂 Door 组件。")]
         [SerializeField]
         private Transform doorT;
 
@@ -36,7 +41,7 @@ namespace Refraction.Presentation.Level
             }
         }
 
-        /// <summary>玩家出生点。可能为空，由使用方决定缺省行为。</summary>
+        /// <summary>玩家出生点。</summary>
         public Transform SpawnPoint => spawnT;
 
         /// <summary>关卡出口的门。</summary>
@@ -44,30 +49,22 @@ namespace Refraction.Presentation.Level
 
         private void Awake()
         {
+            Require.Assigned(spawnT, nameof(LevelReader), nameof(spawnT));
+            Require.Assigned(doorT, nameof(LevelReader), nameof(doorT));
+
             string sceneName = SceneManager.GetActiveScene().name;
 
             if (!SceneName.CheckLevelName(sceneName))
             {
                 _id = 0;
                 _resolved = true;
-                Debug.LogError(
-                    $"[LevelReader] 关卡场景名 \"{sceneName}\" 不合法，应命名为 {SceneName.GetLevelName(1)}、{SceneName.GetLevelName(2)}……",
-                    this);
-                enabled = false;
-                return;
+                throw new InvalidOperationException(
+                    $"[LevelReader] 关卡场景名 \"{sceneName}\" 不合法，应命名为 {SceneName.GetLevelName(1)}、{SceneName.GetLevelName(2)}……");
             }
-            
+
             _id = ResolveId();
             _resolved = true;
 
-            if (spawnT == null)
-            {
-                Debug.LogWarning("[LevelReader] 未指定出生点 spawnT，玩家会停在场景摆放的位置。", this);
-            }
-            if (doorT == null)
-            {
-                Debug.LogWarning("[LevelReader] 未指定出口 doorT。", this);
-            }
             InitDoor();
         }
 
