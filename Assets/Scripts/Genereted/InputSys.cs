@@ -125,7 +125,7 @@ namespace Refraction.Generated
                     ""name"": ""Interaction"",
                     ""type"": ""Button"",
                     ""id"": ""f1e1384e-eb83-459d-9b0b-ad39713a0b04"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -398,7 +398,7 @@ namespace Refraction.Generated
                 {
                     ""name"": """",
                     ""id"": ""c9522ff5-8962-4795-b6ea-1db4026a919e"",
-                    ""path"": ""<Keyboard>/leftShift"",
+                    ""path"": ""<Keyboard>/L"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -409,7 +409,7 @@ namespace Refraction.Generated
                 {
                     ""name"": """",
                     ""id"": ""0a1b2c3d-0001-4001-8001-0000000000a1"",
-                    ""path"": ""<Mouse>/leftButton"",
+                    ""path"": ""<keyboard>/J"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -464,7 +464,7 @@ namespace Refraction.Generated
                 {
                     ""name"": """",
                     ""id"": ""30c204f7-db24-4e68-8b4e-bb04377c82dd"",
-                    ""path"": ""<Keyboard>/space"",
+                    ""path"": ""<Keyboard>/K"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
