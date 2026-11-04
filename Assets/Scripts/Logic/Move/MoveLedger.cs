@@ -17,6 +17,7 @@ namespace Refraction.Logic.Move
         private float _now;
         private float _dt = 0.02f;
         private bool _enableGravity;
+        private float _curGravity;
 
         public MoveLedger(System.Func<Vector2> readVelocity, System.Action<Vector2> writeVelocity)
         {
@@ -35,6 +36,7 @@ namespace Refraction.Logic.Move
         {
             Config = config;
             _enableGravity = config.enableGravity;
+            _curGravity = config.fallGravity;
         }
 
         public Vector2 FrameStartVelocity => _frameStart;
@@ -91,6 +93,11 @@ namespace Refraction.Logic.Move
             if (velocity.x == 0f && velocity.y == 0f) return;
 
             facing?.Invoke(velocity);
+        }
+
+        public void ScaleVelocityY(float multiplier)
+        {
+            SetVelocityY(Velocity.y * multiplier);
         }
 
         public void SetVelocity(Vector2 velocity)
@@ -172,7 +179,15 @@ namespace Refraction.Logic.Move
 
         private bool HasSubmission => _delta.x != 0f || _delta.y != 0f || _accel.x != 0f || _accel.y != 0f;
 
-        public void ApplyGravity(in LogicContext ctx, bool jumpReleased)
+
+        public void SetGravityEnable(bool enable)
+        {
+            // 配置禁用重力后，运行时也无法重新启用
+            if (!Config.enableGravity) return;
+            _enableGravity = enable;
+        }
+
+        public void ApplyGravity(in LogicContext ctx)
         {
             if (!_enableGravity) return;
 
@@ -183,16 +198,15 @@ namespace Refraction.Logic.Move
                 return;
             }
 
-            _accel.y -= Config.fallGravity;
+            _accel.y -= _curGravity;
 
             if (Velocity.y > Config.maxRiseSpeed) SetVelocityY(Config.maxRiseSpeed);
             else if (Velocity.y < -Config.maxFallSpeed) SetVelocityY(-Config.maxFallSpeed);
         }
 
-        public void SetGravity(bool enable)
+        public void SetGravity(float gravity)
         {
-            if(!Config.enableGravity) return;
-            _enableGravity = enable;
+            _curGravity = gravity;
         }
     }
 }

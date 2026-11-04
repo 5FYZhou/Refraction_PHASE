@@ -1,4 +1,5 @@
-﻿using Refraction.Foundation;
+﻿using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic.Move;
 using UnityEngine;
 
@@ -13,43 +14,71 @@ namespace Refraction.Logic.Actor
         public override MovementStateTag Tag => MovementStateTag.Jump;
 
         private readonly IStateMove _motor;
-        private readonly float _jumpSpeed;
-        private readonly float _moveSpeed;
+        private readonly PlayerConfig _config;
+        private bool _jumpReleased;
 
-        public JumpState(IStateMove motor, float jumpSpeed, float moveSpeed)
+        public JumpState(IStateMove motor, PlayerConfig config)
         {
             _motor = motor;
-            _jumpSpeed = jumpSpeed;
-            _moveSpeed = moveSpeed;
+            _config = config;
         }
 
         public override void Enter(in LogicContext ctx)
         {
+            _jumpReleased = false;
+
             // 只有踩地起跳才给速度；离地后被归到本态（例如上升途中）不重复起跳
             if (!ctx.WorldInfo.Grounded) return;
+            _motor.SetVelocityY(_config.jumpSpeed);
 
-            _motor.SetVelocityY(_jumpSpeed);
+            _motor.SetGravity(_config.riseGravity);
+
+            // 输入缓冲触发起跳时，可能已经松开跳跃键
+            if (!ctx.InputSnapshot.JumpHeld)
+                ApplyJumpCut(ctx.WorldInfo.FrameStartVelocity.y);
         }
 
         public override void Tick(in LogicContext ctx)
         {
-            Vector2 dir = ctx.InputSnapshot.Move;
-            if (dir.sqrMagnitude <= 0f)
+            _motor.SetVelocityX(ctx.InputSnapshot.Move.x * _config.speed);
+
+            float vy = ctx.WorldInfo.FrameStartVelocity.y;
+            if (!ctx.InputSnapshot.JumpHeld)
             {
-                _motor.SetVelocityX(0f);
+                ApplyJumpCut(vy);
                 return;
             }
-
-            _motor.SetVelocityX(ctx.InputSnapshot.Move.x * _moveSpeed);
+            // 顶点悬停
+            if (vy > 0f && vy < _config.apexThreshold)
+            {
+                _motor.SetGravity(_config.apexGravity);
+            }
+            else
+            {
+                _motor.SetGravity(_config.riseGravity);
+            }
         }
 
         public override bool IsDone(in LogicContext ctx)
         {
-            return ctx.WorldInfo.Velocity.y <= 0f;
+            return ctx.WorldInfo.FrameStartVelocity.y <= 0f;
         }
 
         public override void Exit()
         {
+            _motor.SetGravity(_config.fallGravity);
+        }
+
+        private void ApplyJumpCut(float vy)
+        {
+            if (_jumpReleased) return;
+            _jumpReleased = true;
+
+            if (vy > 0f)
+            {
+                _motor.ScaleVelocityY(_config.jumpCutMultiplier);
+                _motor.SetGravity(_config.jumpCutGravity);
+            }
         }
     }
 }

@@ -53,7 +53,9 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
             _buffer.Push(in snapshot, Time.fixedTime);
+
             _logic.FixedTick(context);
+
             if (context.WorldInfo.Pos.y < _spawnY)
             {
                 _logic.SpawnTo(_spawnT ? _spawnT.position : new Vector2(0, 0));

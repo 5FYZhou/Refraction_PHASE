@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 6.5
   jumpSpeed: 13
+  coyoteTime: 0.12
   dashSpeed: 15
   dashDuration: 0.2
   dashCooldown: 1
@@ -22,4 +23,9 @@ MonoBehaviour:
   enableGravity: 1
   maxFallSpeed: 22
   maxRiseSpeed: 30
-  fallGravity: 18
+  riseGravity: 20
+  apexThreshold: 0.12
+  apexGravity: 40
+  fallGravity: 50
+  jumpCutMultiplier: 0.5
+  jumpCutGravity: 80

@@ -18,6 +18,7 @@ namespace Refraction.Logic
         }
     }
 
+    /// <summary> 当前帧开始时的世界快照 </summary>
     public readonly struct WorldInfo
     {
         /// <summary>是否站在地面。</summary>
@@ -29,7 +30,8 @@ namespace Refraction.Logic
         /// <summary>墙面所在方向：-1 在左，1 在右。</summary>
         public readonly int WallSide;
 
-        public readonly Vector2 Velocity;
+        /// <summary> 当前帧开始时的速度  </summary>
+        public readonly Vector2 FrameStartVelocity;
         public readonly int Face;
         public readonly Vector2 Pos;
 
@@ -38,7 +40,7 @@ namespace Refraction.Logic
             Grounded = grounded;
             TouchingWall = touchingWall;
             WallSide = wallSide;
-            Velocity = velocity;
+            FrameStartVelocity = velocity;
             Face = face;
             Pos = pos;
         }

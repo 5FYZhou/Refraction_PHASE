@@ -3,7 +3,6 @@ using Refraction.Foundation;
 using Refraction.Logic.Input;
 using Refraction.Logic.Move;
 using UnityEngine;
-using static UnityEngine.Rendering.DebugUI.Table;
 
 namespace Refraction.Logic.Actor
 {
@@ -29,7 +28,7 @@ namespace Refraction.Logic.Actor
         {
             RegisterState(new IdleState(_motor));
             RegisterState(new MoveState(_motor, _config.speed));
-            RegisterState(new JumpState(_motor, _config.jumpSpeed, _config.speed));
+            RegisterState(new JumpState(_motor, _config));
             RegisterState(new FallState(_motor, _config.speed));
             _dashState = new(_motor, _config.dashSpeed, _config.dashDuration);
             RegisterState(_dashState);
@@ -40,12 +39,11 @@ namespace Refraction.Logic.Actor
             // 离地：按竖直速度分成上升段和下落段（> 0 上升，≤ 0 下落）
             if (!ctx.WorldInfo.Grounded)
             {
-                return ctx.WorldInfo.Velocity.y > 0f ? MovementStateTag.Jump : MovementStateTag.Fall;
+                return ctx.WorldInfo.FrameStartVelocity.y > 0f ? MovementStateTag.Jump : MovementStateTag.Fall;
             }
 
             // 如果有速度 回到Move
             if (ctx.InputSnapshot.Move.sqrMagnitude > 0) return MovementStateTag.Move;
-            // Fall?
             return MovementStateTag.Idle;
         }
 

@@ -152,11 +152,11 @@ namespace Refraction.Presentation
         {
             _grounded = ProbeGround();
 
-            int side = FacingSign;
-            _touchingWall = ProbeWall(side, out _wallHit);
-            _wallSide = side;
+            int facing = FacingSign;
+            _touchingWall = ProbeWall(facing, out _wallHit);
+            _wallSide = facing;
 
-            return new WorldInfo(_grounded, _touchingWall, _wallSide, _ledger.Velocity, FacingSign, _rb.position);
+            return new WorldInfo(_grounded, _touchingWall, _wallSide, _rb.velocity, facing, _rb.position);
         }
 
         public void BeginStep(float now, float deltaTime)
@@ -195,11 +195,18 @@ namespace Refraction.Presentation
             _ledger.Commit();
         }
 
-        public void ApplyGravity(in LogicContext ctx, bool jumpReleased) => _ledger.ApplyGravity(ctx, jumpReleased);
+        public void ApplyGravity(in LogicContext ctx) => _ledger.ApplyGravity(ctx);
 
         public void SnapVelocity(Vector2 velocity) => _ledger.SnapVelocity(velocity, SetFace);
 
-        public void SetGravity(bool enable) => _ledger.SetGravity(enable);
+        public void ScaleVelocityY(float multiplier) => _ledger.ScaleVelocityY(multiplier);
+
+        public void SetGravityEnable(bool enable) => _ledger.SetGravityEnable(enable);
+
+        /// <summary>
+        /// 必须在apply前
+        /// </summary>
+        public void SetGravity(float gravity) => _ledger.SetGravity(gravity);
 
         private void SetFace(Vector2 face)
         {

@@ -11,11 +11,12 @@ namespace Refraction.Logic.Move
         void AddImpulse(Vector2 deltaVelocity);
 
         void SetVelocityX(float speed);
-        /// <summary>只写竖直速度，横向保持不动（起跳/落地用）。</summary>
         void SetVelocityY(float speed);
-
         void SnapVelocity(Vector2 velocity);
-        void SetGravity(bool enable);
+        void ScaleVelocityY(float multiplier);
+
+        void SetGravityEnable(bool enable);
+        void SetGravity(float gravity);
     }
 
     public interface IMoveMotor : IStateMove
@@ -23,7 +24,7 @@ namespace Refraction.Logic.Move
         void BeginStep(float now, float deltaTime);
         void Commit();
         void FaceTowards(Vector2 dir);
-        void ApplyGravity(in LogicContext ctx, bool jumpReleased);
+        void ApplyGravity(in LogicContext ctx);
         void SetPosition(Vector2 position);
     }
 

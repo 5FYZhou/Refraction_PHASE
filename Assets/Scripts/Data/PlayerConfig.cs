@@ -18,6 +18,9 @@ namespace Refraction.Data
         [Min(0f)]
         public float jumpSpeed = 9f;
 
+        [Tooltip("土狼时间")]
+        public float coyoteTime = 0.12f;
+
         [Header("冲刺")]
         [Tooltip("冲刺时叠加到当前速度上的冲量")]
         [Min(0f)]
@@ -50,14 +53,22 @@ namespace Refraction.Data
         [Tooltip("最大上升速度")]
         public float maxRiseSpeed = 20f;
 
-        //[Tooltip("上升期且按住跳跃键时的重力加速度")]
-        //public float riseGravity = 40f;
+        [Tooltip("上升期且按住跳跃键时的重力加速度")]
+        public float riseGravity = 40f;
+
+        public float apexThreshold = 0.5f;
+
+        [Tooltip("顶点悬停重力")]
+        public float apexGravity = 40f;
 
         [Tooltip("其余情况的重力加速度")]
         public float fallGravity = 70f;
 
-        //[Tooltip("上升期松开跳跃键时的垂直速度截断系数")]
-        //[Range(0f, 1f)]
-        //public float jumpCutMultiplier = 0.5f;
+        [Tooltip("上升期松开跳跃键时的垂直速度截断系数")]
+        [Range(0f, 1f)]
+        public float jumpCutMultiplier = 0.5f; 
+        
+        [Tooltip("上升期松开跳跃键时的重力加速度")]
+        public float jumpCutGravity = 90f;
     }
 }
