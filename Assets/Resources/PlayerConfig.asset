@@ -12,10 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb87d8fbf071ad04eb66ce3f905146d7, type: 3}
   m_Name: PlayerConfig
   m_EditorClassIdentifier: 
-  speed: 8
-  jumpSpeed: 9
+  speed: 6.5
+  jumpSpeed: 13
   dashSpeed: 15
   dashDuration: 0.2
   dashCooldown: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
+  enableGravity: 1
+  maxFallSpeed: 22
+  maxRiseSpeed: 30
+  fallGravity: 18
