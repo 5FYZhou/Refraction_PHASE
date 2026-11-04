@@ -19,10 +19,11 @@ MonoBehaviour:
   jumpSpeed: 13
   coyoteTime: 0.12
   maxAirJumps: 1
-  doubleJumpSpeed: 12
+  doubleJumpSpeed: 10
   dashSpeed: 15
   dashDuration: 0.2
   dashCooldown: 1
+  maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
   enableGravity: 1

@@ -31,11 +31,13 @@ namespace Refraction.Data
         [Min(0f)]
         public float coyoteTime = 0.12f;
 
-        [Tooltip("【未接入】计划中的空中跳跃次数，1 表示二段跳。\n当前 MoveGroup.CanJump 只认踩地与土狼，没有任何代码读取该字段，改它不会生效。")]
+        [Tooltip("空中跳跃次数：一次离地期间最多还能在空中跳几次，1 表示二段跳，0 表示空中不给跳。\n每次重新落地才会恢复；土狼跳（离地宽限）算地面跳，不消耗这里的次数。")]
+        [Min(0)]
         public int maxAirJumps = 1;
 
-        [Tooltip("【未接入】计划中的二段跳初速度。\nJumpState 只使用 jumpSpeed，该字段目前无人读取，改它不会生效。")]
-        public float doubleJumpSpeed = 12f;
+        [Tooltip("空中跳初速度（不是加速度）。AirJumpState 起跳那一帧直接写入该值，会覆盖当前竖直速度。\n同样受松键 Jump Cut 与顶点悬停影响。")]
+        [Min(0f)]
+        public float airJumpSpeed = 12f;
 
         [Header("冲刺")]
         [Tooltip("冲刺期间的水平速度：进入冲刺时直接覆盖当前速度（方向 × 该值），不是叠加冲量。\n冲刺会把竖直速度一并清零，上升/下落途中冲刺同样有效。")]
@@ -49,6 +51,10 @@ namespace Refraction.Data
         [Tooltip("冲刺冷却（秒）。从触发冲刺的那一刻起算，而不是从冲刺结束起算。")]
         [Min(0f)]
         public float dashCooldown;
+
+        [Tooltip("两次落地之间可用的空中冲刺次数：0 表示离地后不给冲，1 表示一次空中冲刺。\n踩地冲刺不占用这里的次数，每次都还是要过 dashCooldown 冷却；重新落地即回满。")]
+        [Min(0)]
+        public int maxAirDashes = 1;
 
         [Header("输入缓冲")]
         [Tooltip("冲刺输入缓冲窗口（秒）。\n冷却结束的那一帧，只有落在这个窗口内按下的冲刺才会触发；冷却期间按下的不会一直留到冷却结束后补触发（除非窗口大于剩余冷却）。\n建议 0.1 ~ 0.15。设成 0 表示不缓冲，必须精确按在可用的那一帧。")]

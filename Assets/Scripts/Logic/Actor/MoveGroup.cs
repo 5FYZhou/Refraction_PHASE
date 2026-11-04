@@ -18,6 +18,8 @@ namespace Refraction.Logic.Actor
         private float _lastGroundedTime = float.NegativeInfinity;
         private bool _wasGrounded;
         private bool _coyoteConsumed;
+        private int _airJumpsUsed;
+        private int _airDashesUsed;
 
         public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer) 
         {
@@ -32,6 +34,7 @@ namespace Refraction.Logic.Actor
             RegisterState(new IdleState(_motor));
             RegisterState(new MoveState(_motor, _config.moveSpeed));
             RegisterState(new JumpState(_motor, _config));
+            RegisterState(new AirJumpState(_motor, _config));
             RegisterState(new FallState(_motor, _config.moveSpeed));
             _dashState = new(_motor, _config.dashSpeed, _config.dashDuration);
             RegisterState(_dashState);
@@ -58,9 +61,13 @@ namespace Refraction.Logic.Actor
             {
                 _lastGroundedTime = ctx.GameTime.now;
 
-                // 只有重新落地时才恢复土狼机会
+                // 只有重新落地时才恢复土狼机会、空中跳次数与空中冲刺次数
                 if (!_wasGrounded)
+                {
                     _coyoteConsumed = false;
+                    _airJumpsUsed = 0;
+                    _airDashesUsed = 0;
+                }
             }
 
             _wasGrounded = grounded;
@@ -71,18 +78,14 @@ namespace Refraction.Logic.Actor
         {
             target = EmptyTag;
             // 如果冲刺没在冷却 冲刺能抢占
-            if (CanDash(ctx.GameTime.now))
+            if (CanDash(ctx))
             {
                 target = MovementStateTag.Dash;
                 return true;
             }
-            // 踩地 + 跳跃键还在缓冲窗口里 才能起跳（空中不给跳，所以目前只有一段跳）
-            if (CanJump(ctx))
-            {
-                target = MovementStateTag.Jump;
-                return true;
-            }
-            return false;
+
+            target = DecideJump(ctx);
+            return target != EmptyTag;
         }
 
         protected override bool TryCommitPreempt(in LogicContext ctx, MovementStateTag target)
@@ -92,8 +95,13 @@ namespace Refraction.Logic.Actor
                 case MovementStateTag.Jump:
                     // 消费掉这次按下，避免同一次按键反复起跳
                     return TryConsumeJump(ctx.GameTime.now);
+                case MovementStateTag.AirJump:
+                    // 空中跳同样要消费输入，成功后扣掉一次空中跳机会
+                    if (!TryConsumeJump(ctx.GameTime.now)) return false;
+                    _airJumpsUsed++;
+                    return true;
                 case MovementStateTag.Dash:
-                    if(!TryConsumeDash(ctx.GameTime.now)) return false;
+                    if(!TryConsumeDash(ctx)) return false;
                     _dashCooldown.MarkUsed(ctx.GameTime.now, _config.dashCooldown);
                     _dashState.Configure(Direction(ctx));
                     return true;
@@ -101,17 +109,30 @@ namespace Refraction.Logic.Actor
             return false;
         }
 
-        private bool CanJump(in LogicContext ctx)
+        /// <summary>
+        /// 判定这一帧的跳跃该落到哪个状态：踩地或土狼窗口内是地面跳，离地且还有空中跳次数则是空中跳。
+        /// 都判不中返回 <see cref="EmptyTag"/>。
+        /// </summary>
+        private MovementStateTag DecideJump(in LogicContext ctx)
         {
             float now = ctx.GameTime.now;
-            bool hasInput = _buffer.CanConsume(InputType.Jump, now, _config.inputBufferTime);
 
-            bool canGroundJump = ctx.WorldInfo.Grounded;
-            bool canCoyoteJump = !_coyoteConsumed && now - _lastGroundedTime <= _config.coyoteTime;
+            // 冲刺期间不接受起跳
+            if (machine.CurrentState?.Tag == MovementStateTag.Dash) return EmptyTag;
 
-            bool dashing = machine.CurrentState?.Tag == MovementStateTag.Dash;
+            // 跳跃键不在缓冲窗口里
+            if (!_buffer.CanConsume(InputType.Jump, now, _config.inputBufferTime)) return EmptyTag;
 
-            return !dashing && hasInput && (canGroundJump || canCoyoteJump);
+            if (ctx.WorldInfo.Grounded) return MovementStateTag.Jump;
+
+            // 土狼时间：刚离地仍算一次地面跳
+            if (!_coyoteConsumed && now - _lastGroundedTime <= _config.coyoteTime)
+                return MovementStateTag.Jump;
+
+            // 土狼用掉（或已过期）后，剩余次数内可以空中跳
+            if (_airJumpsUsed < _config.maxAirJumps) return MovementStateTag.AirJump;
+
+            return EmptyTag;
         }
 
         private bool TryConsumeJump(float now)
@@ -131,16 +152,31 @@ namespace Refraction.Logic.Actor
             return new Vector2(x, 0);
         }
 
-        private bool CanDash(float now)
+        /// <summary>
+        /// 冲刺是否可用：冷却已过 + 输入还在缓冲窗口 +（踩地，或空中冲刺次数没用完）。
+        /// </summary>
+        private bool CanDash(in LogicContext ctx)
         {
-            return _dashCooldown.CanUse(now) 
-                && _buffer.CanConsume(InputType.Dash, now, _config.dashBufferTime);
+            float now = ctx.GameTime.now;
+
+            if (!_dashCooldown.CanUse(now)) return false;
+
+            bool hasInput = _buffer.CanConsume(InputType.Dash, now, _config.dashBufferTime);
+
+            bool canAirDash = _airDashesUsed < _config.maxAirDashes;
+
+            return hasInput && (ctx.WorldInfo.Grounded || canAirDash);
         }
 
-        private bool TryConsumeDash(float now)
+        private bool TryConsumeDash(in LogicContext ctx)
         {
-            return _dashCooldown.CanUse(now)
-                && _buffer.TryConsume(InputType.Dash, now, _config.dashBufferTime);
+            if (!CanDash(ctx)) return false;
+            if (!_buffer.TryConsume(InputType.Dash, ctx.GameTime.now, _config.dashBufferTime)) return false;
+
+            // 只有真的在空中冲出去才扣次数
+            if (!ctx.WorldInfo.Grounded) _airDashesUsed++;
+
+            return true;
         }
     }
 }
