@@ -27,15 +27,17 @@ namespace Refraction.Logic.Actor
         {
             _jumpReleased = false;
 
-            // 只有踩地起跳才给速度；离地后被归到本态（例如上升途中）不重复起跳
-            if (!ctx.WorldInfo.Grounded) return;
+            // 上升途中被 Fallback 重新归到本态时不重复给速度；
+            // 踩地起跳（Grounded）和土狼跳（已离地但还在下坠/顶点，vy ≤ 0）都必须真正起跳
+            if (ctx.WorldInfo.FrameStartVelocity.y > 0f) return;
+
             _motor.SetVelocityY(_config.jumpSpeed);
 
             _motor.SetGravity(_config.riseGravity);
 
             // 输入缓冲触发起跳时，可能已经松开跳跃键
             if (!ctx.InputSnapshot.JumpHeld)
-                ApplyJumpCut(ctx.WorldInfo.FrameStartVelocity.y);
+                ApplyJumpCut(_config.jumpSpeed);
         }
 
         public override void Tick(in LogicContext ctx)

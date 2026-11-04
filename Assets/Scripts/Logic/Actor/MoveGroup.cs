@@ -14,7 +14,10 @@ namespace Refraction.Logic.Actor
         private PlayerConfig _config;
         private InputBuffer _buffer;
         private DashState _dashState;
-        private Cooldown _dashCooldown = new();
+        private Cooldown _dashCooldown = new(); 
+        private float _lastGroundedTime = float.NegativeInfinity;
+        private bool _wasGrounded;
+        private bool _coyoteConsumed;
 
         public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer) 
         {
@@ -49,6 +52,18 @@ namespace Refraction.Logic.Actor
 
         public void Tick(in LogicContext ctx)
         {
+            bool grounded = ctx.WorldInfo.Grounded;
+
+            if (grounded)
+            {
+                _lastGroundedTime = ctx.GameTime.now;
+
+                // 只有重新落地时才恢复土狼机会
+                if (!_wasGrounded)
+                    _coyoteConsumed = false;
+            }
+
+            _wasGrounded = grounded;
             TickStates(ctx);
         }
 
@@ -56,13 +71,13 @@ namespace Refraction.Logic.Actor
         {
             target = EmptyTag;
             // 如果冲刺没在冷却 冲刺能抢占
-            if (CanDash(ctx))
+            if (CanDash(ctx.GameTime.now))
             {
                 target = MovementStateTag.Dash;
                 return true;
             }
             // 踩地 + 跳跃键还在缓冲窗口里 才能起跳（空中不给跳，所以目前只有一段跳）
-            if (ctx.WorldInfo.Grounded && CanJump(ctx))
+            if (CanJump(ctx))
             {
                 target = MovementStateTag.Jump;
                 return true;
@@ -86,15 +101,24 @@ namespace Refraction.Logic.Actor
             return false;
         }
 
-        /// <summary>跳跃键的缓冲窗口沿用 inputBufferTime：落地前一点按下也能补跳</summary>
         private bool CanJump(in LogicContext ctx)
         {
-            return _buffer.CanConsume(InputType.Jump, ctx.GameTime.now, _config.inputBufferTime);
+            float now = ctx.GameTime.now;
+            bool hasInput = _buffer.CanConsume(InputType.Jump, now, _config.inputBufferTime);
+
+            bool canGroundJump = ctx.WorldInfo.Grounded;
+            bool canCoyoteJump = !_coyoteConsumed && now - _lastGroundedTime <= _config.coyoteTime;
+
+            return hasInput && (canGroundJump || canCoyoteJump);
         }
 
         private bool TryConsumeJump(float now)
         {
-            return _buffer.TryConsume(InputType.Jump, now, _config.inputBufferTime);
+            if (!_buffer.TryConsume(InputType.Jump, now, _config.inputBufferTime))
+                return false;
+
+            _coyoteConsumed = true;
+            return true;
         }
 
         private Vector2 Direction(in LogicContext ctx)
@@ -105,10 +129,10 @@ namespace Refraction.Logic.Actor
             return new Vector2(x, 0);
         }
 
-        private bool CanDash(in LogicContext ctx)
+        private bool CanDash(float now)
         {
-            return _dashCooldown.CanUse(ctx.GameTime.now) 
-                && _buffer.CanConsume(InputType.Dash, ctx.GameTime.now, _config.dashBufferTime);
+            return _dashCooldown.CanUse(now) 
+                && _buffer.CanConsume(InputType.Dash, now, _config.dashBufferTime);
         }
 
         private bool TryConsumeDash(float now)
