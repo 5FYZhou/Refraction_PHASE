@@ -93,7 +93,7 @@ namespace Refraction.Presentation
 
         public Rigidbody2D Rb { get => _rb; }
 
-        public float Speed => config.speed;
+        public float Speed => config.moveSpeed;
 
         /// <summary>最近一次探测：是否站在地面。</summary>
         public bool Grounded => _grounded;
@@ -136,12 +136,19 @@ namespace Refraction.Presentation
         {
             Require.Assigned(config, nameof(MoveMotor), nameof(config));
 
-            _rb = GetComponent<Rigidbody2D>();
+            InitRb();
             _selfColliders = GetComponentsInChildren<Collider2D>(true);
             _ledger = new MoveLedger(
                 readVelocity: () => _rb.velocity,
                 writeVelocity: v => _rb.velocity = v);
             _ledger.Configure(config);
+        }
+
+        private void InitRb()
+        {
+            _rb = GetComponent<Rigidbody2D>();
+            _rb.bodyType = RigidbodyType2D.Dynamic;
+            _rb.gravityScale = 0f;
         }
 
         /// <summary>
@@ -170,10 +177,10 @@ namespace Refraction.Presentation
             Face = dir;
         }
 
-        public void MoveTowards(Vector2 dir, float speed)
+        public void MoveTowardsX(Vector2 dir, float speed)
         {
             FaceTowards(dir);
-            _ledger.MoveTowards(dir, speed);
+            _ledger.MoveTowardsX(dir, speed);
         }
 
         public void AddImpulse(Vector2 deltaVelocity)
@@ -181,9 +188,9 @@ namespace Refraction.Presentation
             _ledger.AddImpulse(deltaVelocity);
         }
 
-        public void StopMove()
+        public void BrakeTowardsX()
         {
-            _ledger.StopMove();
+            _ledger.BrakeTowardsX();
         }
 
         public void SetVelocityX(float speed) => _ledger.SetVelocityX(speed);

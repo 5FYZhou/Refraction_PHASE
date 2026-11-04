@@ -16,19 +16,16 @@ namespace Refraction.Logic.Actor
 
         public override void Enter(in LogicContext cxt)
         {
-            _motor.StopMove();
         }
 
         public override void Tick(in LogicContext ctx)
         {
+            _motor.BrakeTowardsX();
         }
 
         public override bool IsDone(in LogicContext ctx)
         {
-            // 离地就不再是站立态，交给 Jump / Fall
-            if (!ctx.WorldInfo.Grounded) return true;
-
-            return ctx.InputSnapshot.Move.sqrMagnitude != 0f;
+            return !ctx.WorldInfo.Grounded || ctx.InputSnapshot.Move.x != 0f;
         }
 
         public override void Exit()

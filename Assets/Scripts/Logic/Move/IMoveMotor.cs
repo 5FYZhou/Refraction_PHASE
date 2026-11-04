@@ -6,8 +6,8 @@ namespace Refraction.Logic.Move
 {
     public interface IStateMove
     {
-        void MoveTowards(Vector2 direction, float speed);
-        void StopMove();
+        void MoveTowardsX(Vector2 direction, float speed);
+        void BrakeTowardsX();
         void AddImpulse(Vector2 deltaVelocity);
 
         void SetVelocityX(float speed);

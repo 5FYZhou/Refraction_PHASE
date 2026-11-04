@@ -30,9 +30,9 @@ namespace Refraction.Logic.Actor
         public void Init()
         {
             RegisterState(new IdleState(_motor));
-            RegisterState(new MoveState(_motor, _config.speed));
+            RegisterState(new MoveState(_motor, _config.moveSpeed));
             RegisterState(new JumpState(_motor, _config));
-            RegisterState(new FallState(_motor, _config.speed));
+            RegisterState(new FallState(_motor, _config.moveSpeed));
             _dashState = new(_motor, _config.dashSpeed, _config.dashDuration);
             RegisterState(_dashState);
         }
@@ -109,7 +109,9 @@ namespace Refraction.Logic.Actor
             bool canGroundJump = ctx.WorldInfo.Grounded;
             bool canCoyoteJump = !_coyoteConsumed && now - _lastGroundedTime <= _config.coyoteTime;
 
-            return hasInput && (canGroundJump || canCoyoteJump);
+            bool dashing = machine.CurrentState?.Tag == MovementStateTag.Dash;
+
+            return !dashing && hasInput && (canGroundJump || canCoyoteJump);
         }
 
         private bool TryConsumeJump(float now)

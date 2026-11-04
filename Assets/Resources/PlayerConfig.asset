@@ -12,9 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb87d8fbf071ad04eb66ce3f905146d7, type: 3}
   m_Name: PlayerConfig
   m_EditorClassIdentifier: 
-  speed: 6.5
+  moveSpeed: 10
+  moveAcceleration: 50
+  moveDeceleration: 60
+  turnAcceleration: 80
   jumpSpeed: 13
   coyoteTime: 0.12
+  maxAirJumps: 1
+  doubleJumpSpeed: 12
   dashSpeed: 15
   dashDuration: 0.2
   dashCooldown: 1
@@ -23,9 +28,9 @@ MonoBehaviour:
   enableGravity: 1
   maxFallSpeed: 22
   maxRiseSpeed: 30
+  fallGravity: 50
   riseGravity: 20
   apexThreshold: 0.12
-  apexGravity: 40
-  fallGravity: 50
+  apexGravity: 10
   jumpCutMultiplier: 0.5
   jumpCutGravity: 80

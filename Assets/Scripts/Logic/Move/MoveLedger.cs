@@ -116,52 +116,65 @@ namespace Refraction.Logic.Move
             SetVelocity(Vector2.zero);
         }
 
-        /// <summary>移动层的"走"：有惯性按加速度逼近，零惯性当帧直达；方向可未归一化，零向量表示没有期望方向</summary>
-        /// <remarks>判据是 MotionParams.MoveAcceleration（≤0 即零惯性）。速度乘数乘的是目标速度，零惯性当帧生效，有惯性稳态等于配置速度 × 乘数</remarks>
-        public void MoveTowards(Vector2 direction, float speed)
+        /// <summary>移动层的"走"：有惯性按加速度逼近，零惯性当帧直达，只修改x轴速度；方向可未归一化，零向量表示没有期望方向</summary>
+        public void MoveTowardsX(Vector2 direction, float speed)
         {
-            float scaled = speed * _speedScale;
+            float target = direction.x == 0f ? 0f
+                : Mathf.Sign(direction.x) * speed * _speedScale;
 
-            MoveDirection(direction, scaled);
-        }
-
-        public void BrakeTowards()
-        {
-            StopMove();
-        }
-
-        /// <summary>二维渐进逼近目标速度，控制律的唯一实现点；方向可未归一化，零向量表示没有期望方向</summary>
-        /// <remarks>零方向走指数衰减（Δ -= 当前速度 × (1 − e^(−衰减率·Δt))），符号保持、模长单调收缩；方向变号时取两支中较快的一支。目标速度与当前速度都为零时不写速度</remarks>
-        public void SteerTowards(Vector2 direction, float targetSpeed, float acceleration, float decayPerSecond)
-        {
-            Vector2 current = Velocity;
-            Vector2 desired;
-
-            if (direction.sqrMagnitude <= 0f || targetSpeed <= 0f)
+            if (Config.moveAcceleration <= 0f)
             {
-                desired = Vector2.zero;
+                SetVelocityX(target);
+                return;
+            }
+
+            ApproachX(target);
+        }
+
+        public void BrakeTowardsX()
+        {
+            if (Config.moveAcceleration <= 0f)
+            {
+                SetVelocityX(0f);
+                return;
+            }
+
+            ApproachX(0f);
+        }
+
+        /// <summary>
+        /// 向目标水平速度渐进逼近。
+        /// </summary>
+        private void ApproachX(float target)
+        {
+            float current = Velocity.x;
+
+            float acceleration;
+
+            if (Mathf.Approximately(target, 0f))
+            {
+                // 松开方向键：减速
+                acceleration = Config.moveDeceleration;
+            }
+            else if (current * target < 0f)
+            {
+                // 反向输入：转向
+                acceleration = Config.turnAcceleration;
             }
             else
             {
-                desired = direction.normalized * targetSpeed;
+                // 起步或同方向加速
+                acceleration = Config.moveAcceleration;
             }
 
-            Vector2 delta = desired - current;
+            float maxStep = acceleration * _dt;
+            float delta = Mathf.Clamp(
+                target - current,
+                -maxStep,
+                maxStep
+            );
 
-            if (desired.sqrMagnitude > 0f && current.sqrMagnitude > 0f && Vector2.Dot(desired, current) < 0f)
-            {
-                Vector2 decay = -current * (1f - Mathf.Exp(-decayPerSecond * _dt));
-
-                if (decay.sqrMagnitude > delta.sqrMagnitude) delta = decay;
-            }
-            else
-            {
-                float maxStep = acceleration * _dt;
-
-                if (delta.sqrMagnitude > maxStep * maxStep) delta = delta.normalized * maxStep;
-            }
-
-            _delta += delta;
+            _delta.x += delta;
         }
 
         public void SetVelocityX(float vx)

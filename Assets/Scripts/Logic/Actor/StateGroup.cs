@@ -7,26 +7,26 @@ namespace Refraction.Logic.Actor
 {
     public abstract class StateGroup<TTag, TContext>
     {
-        private StateMachine<TTag, TContext> _machine = new StateMachine<TTag, TContext>();
+        protected StateMachine<TTag, TContext> machine = new StateMachine<TTag, TContext>();
 
         protected abstract TTag EmptyTag { get; }
         protected abstract TTag Fallback(in TContext ctx);
 
         public void RegisterState(in IState<TTag, TContext> state)
         {
-            _machine.RegisterState(state);
+            machine.RegisterState(state);
         }
 
         public void ChangeState(TTag tag, in TContext ctx)
         {
-            _machine.ChangeState(tag, ctx);
+            machine.ChangeState(tag, ctx);
         }
 
         protected void TickStates(in TContext ctx)
         {
-            _machine.ChangeState(CheckChange(ctx), ctx);
+            machine.ChangeState(CheckChange(ctx), ctx);
 
-            _machine.CurrentState?.Tick(ctx);
+            machine.CurrentState?.Tick(ctx);
         }
 
 
@@ -45,7 +45,7 @@ namespace Refraction.Logic.Actor
 
         public TTag CheckChange(in TContext ctx)
         {
-            IState<TTag, TContext> current = _machine.CurrentState;
+            IState<TTag, TContext> current = machine.CurrentState;
 
             // 首帧无当前状态，抢占照常判定，判不中才落到基础态
             if (TryDecidePreempt(ctx, out TTag target)

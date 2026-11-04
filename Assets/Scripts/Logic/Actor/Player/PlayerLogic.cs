@@ -26,7 +26,8 @@ namespace Refraction.Logic.Actor
         public void SpawnTo(Vector2 pos)
         {
             _motor.SetPosition(pos);
-            _motor.StopMove();
+            _motor.SetVelocityX(0);
+            _motor.SetVelocityY(0);
         }
     }
 }

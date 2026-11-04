@@ -42,7 +42,7 @@ namespace Refraction.Logic.Actor
 
         public override void Tick(in LogicContext ctx)
         {
-            _motor.SetVelocityX(ctx.InputSnapshot.Move.x * _config.speed);
+            _motor.MoveTowardsX(ctx.InputSnapshot.Move, _config.moveSpeed);
 
             float vy = ctx.WorldInfo.FrameStartVelocity.y;
             if (!ctx.InputSnapshot.JumpHeld)

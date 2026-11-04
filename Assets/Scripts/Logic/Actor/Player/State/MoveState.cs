@@ -16,21 +16,18 @@ namespace Refraction.Logic.Actor
             _speed = speed;
         }
 
-        public override void Enter(in LogicContext cxt)
+        public override void Enter(in LogicContext ctx)
         {
         }
 
-        public override void Tick(in LogicContext cxt)
+        public override void Tick(in LogicContext ctx)
         {
-            _motor.MoveTowards(cxt.InputSnapshot.Move, _speed);
+            _motor.MoveTowardsX(ctx.InputSnapshot.Move, _speed);
         }
 
-        public override bool IsDone(in LogicContext cxt)
+        public override bool IsDone(in LogicContext ctx)
         {
-            // 离地就不再是地面行走态，交给 Jump / Fall
-            if (!cxt.WorldInfo.Grounded) return true;
-
-            return cxt.InputSnapshot.Move.magnitude <= 0f;
+            return !ctx.WorldInfo.Grounded || ctx.InputSnapshot.Move.x == 0f;
         }
 
         public override void Exit()

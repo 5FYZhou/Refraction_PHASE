@@ -26,9 +26,7 @@ namespace Refraction.Logic.Actor
 
         public override void Tick(in LogicContext ctx)
         {
-            Vector2 dir = ctx.InputSnapshot.Move;
-
-            _motor.SetVelocityX(ctx.InputSnapshot.Move.x * _moveSpeed);
+            _motor.MoveTowardsX(ctx.InputSnapshot.Move, _moveSpeed);
         }
 
         public override bool IsDone(in LogicContext ctx)
