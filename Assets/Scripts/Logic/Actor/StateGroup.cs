@@ -49,7 +49,7 @@ namespace Refraction.Logic.Actor
 
             // 首帧无当前状态，抢占照常判定，判不中才落到基础态
             if (TryDecidePreempt(ctx, out TTag target)
-                && (current == null || !target.Equals(current))
+                && (current == null || !target.Equals(current.Tag))
                 && TryCommitPreempt(ctx, target))
             {
                 return target;

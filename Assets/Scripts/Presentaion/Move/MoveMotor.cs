@@ -12,14 +12,14 @@ namespace Refraction.Presentation
     [System.Serializable]
     public sealed class GroundProbeSettings
     {
-        [Tooltip("探测圆的参考点，相对角色根节点的偏移。\n圆的中心会自动抬高一个半径，所以这里填脚底位置即可（1×1 角色填 y = -0.5）。")]
+        [Tooltip("探测圆的起点，相对角色根节点的偏移")]
         public Vector2 origin = new(0f, -0.5f);
 
-        [Tooltip("探圆半径，实际检测宽度 = 半径 × 2。")]
+        [Tooltip("探圆半径")]
         [Min(0.01f)]
         public float radius = 0.4f;
 
-        [Tooltip("从脚底继续向下探查的距离。")]
+        [Tooltip("继续向下探查的距离。")]
         [Min(0f)]
         public float distance = 0.08f;
 
@@ -38,10 +38,10 @@ namespace Refraction.Presentation
     [System.Serializable]
     public sealed class WallProbeSettings
     {
-        [Tooltip("探测胶囊的中心，相对角色根节点的偏移。\nx 会随角色朝向镜像，y 不镜像。")]
+        [Tooltip("探测胶囊的中心，相对角色根节点的偏移。\nx 随角色朝向镜像")]
         public Vector2 origin = Vector2.zero;
 
-        [Tooltip("胶囊半径，实际厚度 = 半径 × 2。")]
+        [Tooltip("胶囊半径")]
         [Min(0.01f)]
         public float radius = 0.28f;
 

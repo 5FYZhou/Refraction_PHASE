@@ -176,8 +176,14 @@ namespace Refraction.Logic.Move
         {
             if (!_enableGravity) return;
 
-            float gravity = Config.fallGravity;
-            _accel.y -= gravity;
+            // 站在地面且没有向上运动时，不再施加重力
+            if (ctx.WorldInfo.Grounded && Velocity.y <= 0f)
+            {
+                SetVelocityY(0f);
+                return;
+            }
+
+            _accel.y -= Config.fallGravity;
 
             if (Velocity.y > Config.maxRiseSpeed) SetVelocityY(Config.maxRiseSpeed);
             else if (Velocity.y < -Config.maxFallSpeed) SetVelocityY(-Config.maxFallSpeed);
