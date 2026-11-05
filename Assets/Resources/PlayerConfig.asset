@@ -12,26 +12,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb87d8fbf071ad04eb66ce3f905146d7, type: 3}
   m_Name: PlayerConfig
   m_EditorClassIdentifier: 
-  moveSpeed: 10
-  moveAcceleration: 50
-  moveDeceleration: 60
-  turnAcceleration: 80
-  jumpSpeed: 13
+  moveSpeed: 6.1
+  moveAcceleration: 52
+  moveDeceleration: 65
+  turnAcceleration: 225
+  jumpSpeed: 13.8
   coyoteTime: 0.12
-  maxAirJumps: 1
-  doubleJumpSpeed: 10
-  dashSpeed: 15
-  dashDuration: 0.2
-  dashCooldown: 1
+  maxAirJumps: 0
+  airJumpSpeed: 12
+  dashSpeed: 14.7
+  dashDuration: 0.22
+  dashCooldown: 0.25
   maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
   enableGravity: 1
-  maxFallSpeed: 22
-  maxRiseSpeed: 30
-  fallGravity: 50
-  riseGravity: 20
-  apexThreshold: 0.12
-  apexGravity: 10
-  jumpCutMultiplier: 0.5
-  jumpCutGravity: 80
+  maxFallSpeed: 26
+  maxRiseSpeed: 34
+  fallGravity: 52
+  riseGravity: 18
+  apexThreshold: 0.11
+  apexGravity: 14
+  jumpCutMultiplier: 0.4
+  jumpCutGravity: 75

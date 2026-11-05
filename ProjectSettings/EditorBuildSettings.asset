@@ -9,11 +9,14 @@ EditorBuildSettings:
     path: Assets/Scenes/SampleScene.scene
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
-    path: Assets/Scenes/Levels/Level_2.scene
-    guid: 13b074dc0108c0d499e8427de0a2324a
-  - enabled: 1
     path: Assets/Scenes/Levels/Level_1.scene
     guid: b4703beb7552e0e4b86bf4e48084c4a3
+  - enabled: 1
+    path: Assets/Scenes/Levels/Level_2.scene
+    guid: b91f7451da1678a4f9cc0a35b87094c2
+  - enabled: 1
+    path: Assets/Scenes/Levels/Level_3.scene
+    guid: 3834aece7125e1b4ebae0c85dfc7d5a1
   m_BuildProfiles: []
   m_configObjects: {}
   m_SlimFeaturesWeixinMiniGame:
