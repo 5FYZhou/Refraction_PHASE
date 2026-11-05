@@ -1,21 +1,29 @@
-﻿using Refraction.Logic.Events;
+﻿using System;
+using Refraction.Logic.Events;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Refraction.Logic.Level
 {
     /// <summary>
-    /// 关卡推进：收到 <see cref="RequestNextLevel"/> 后加载下一关场景。
-    /// 下一关按 SceneName 的命名约定推导，场景不存在则报错、留在本关。
+    /// 关卡推进：收到 <see cref="RequestNextDoor"/> 后加载门指定的场景。
+    /// 门没指定关卡时，按 SceneName 的命名约定推导下一关；场景不存在则报错、留在本关。
+    /// 目标关卡就是当前关时不切场景，改为把玩家传送到本场景里 nextDoor 指定的门。
+    ///
+    /// 门的查询全部委托给 <see cref="IDoorReader"/>：逻辑层不认识 Door，也不做场景扫描。
     /// </summary>
     public class LevelManager
     {
         private readonly int _curId;
-        private bool _loading;
+        private readonly IDoorReader _doorReader;
 
-        public LevelManager(int id)
+        private bool _loading;
+        private int _pendingDoorId;
+
+        public LevelManager(int id, IDoorReader doorReader = null)
         {
             _curId = id;
+            _doorReader = doorReader;
 
             if (id <= 0)
             {
@@ -23,25 +31,53 @@ namespace Refraction.Logic.Level
             }
         }
 
+        /// <summary>上一次成功发起的切场景请求里，目标场景指定的门 id；0 表示没指定。</summary>
+        public int PendingDoorId => _pendingDoorId;
+
         public void Init()
         {
-            EventBus<RequestNextLevel>.Subscribe(OnRequestNextLevel);
+            EventBus<RequestNextDoor>.Subscribe(OnRequestNextLevel);
         }
 
         public void Dispose()
         {
-            EventBus<RequestNextLevel>.Unsubscribe(OnRequestNextLevel);
+            EventBus<RequestNextDoor>.Unsubscribe(OnRequestNextLevel);
             _loading = false;
+            _pendingDoorId = 0;
         }
 
-        private void OnRequestNextLevel(RequestNextLevel evt)
+        private void OnRequestNextLevel(RequestNextDoor evt)
         {
             // 门的触发器按碰撞体对触发，玩家身上有多个碰撞体时会连续进来多次，
             // 这里挡住重复请求，避免同一帧多次 LoadScene
             if (_loading) return;
-            if (_curId <= 0) return;
 
-            string nextName = SceneName.GetLevelName(_curId + 1);
+            // 门可以直接指定去哪一关（任意门）；没指定才退回命名约定里的下一关
+            int nextId;
+
+            if (evt.nextLevel > 0)
+            {
+                nextId = evt.nextLevel;
+            }
+            else if (_curId > 0)
+            {
+                nextId = _curId + 1;
+            }
+            else
+            {
+                Debug.LogError($"[LevelManager] 当前关卡 id 与门指定的目标关卡都非法（当前 {_curId}，门指定 {evt.nextLevel}），无法推进。");
+                return;
+            }
+
+            // 目标就是当前关：不重载整个场景，直接把玩家挪到本场景里指定的那扇门。
+            // 重载会把本关的状态全丢掉，而且同场景重载在本帧内根本看不到效果
+            if (nextId == _curId)
+            {
+                TeleportToDoor(evt.nextDoor);
+                return;
+            }
+
+            string nextName = SceneName.GetLevelName(nextId);
 
             if (!Application.CanStreamedLevelBeLoaded(nextName))
             {
@@ -52,7 +88,56 @@ namespace Refraction.Logic.Level
             }
 
             _loading = true;
-            SceneManager.LoadScene(nextName);
+            _pendingDoorId = evt.nextDoor;
+
+            try
+            {
+                SceneManager.LoadScene(nextName);
+            }
+            catch (Exception ex)
+            {
+                // 加载失败就放开闸门和落点：否则这扇门以及后面所有门都会永久失效
+                _loading = false;
+                _pendingDoorId = 0;
+                Debug.LogError($"[LevelManager] 加载场景 \"{nextName}\" 失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 同关内的门对门传送：不重载场景，把玩家送到本场景里 nextDoor 指定的门。
+        /// 用 <see cref="RequestPlayerPosChange"/> 发出去而不是直接抓玩家——逻辑层不认识玩家实体。
+        /// </summary>
+        private void TeleportToDoor(int doorId)
+        {
+            // 门指向本关却没给目标门（旧数据里 nextDoor 普遍是 0），
+            // 这时宁可报错也别把玩家丢到 (0,0) 去
+            if (doorId <= 0)
+            {
+                Debug.LogError($"[LevelManager] 门指向当前关（id = {_curId}），但没有指定目标门（nextDoor = {doorId}），玩家原地不动。");
+                return;
+            }
+
+            if (_doorReader == null)
+            {
+                Debug.LogError("[LevelManager] 装配时没有提供门读取器（IDoorReader），无法在本关内传送。");
+                return;
+            }
+
+            // 「关卡 id + 门 id」才唯一确定一扇门：读取器绑在别的关卡上时，
+            // 同号的门其实是另一扇，按 id 落过去就是错的位置
+            if (_doorReader.LevelId != _curId)
+            {
+                Debug.LogError($"[LevelManager] 门读取器绑定在关卡 {_doorReader.LevelId}，当前关卡是 {_curId}，拒绝按门 id 传送。");
+                return;
+            }
+
+            if (!_doorReader.TryGetPos(doorId, out Vector2 position))
+            {
+                Debug.LogError($"[LevelManager] 关卡 {_curId} 里找不到 id = {doorId} 的门，玩家原地不动。");
+                return;
+            }
+
+            EventBus<RequestPlayerPosChange>.Publish(new RequestPlayerPosChange(position));
         }
     }
 }

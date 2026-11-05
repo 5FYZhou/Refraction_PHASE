@@ -69,11 +69,6 @@ namespace Refraction.Presentation
         [SerializeField]
         private PlayerConfig config;
 
-        [Header("地面检测 · 圆形射线")]
-        [Tooltip("探地面用的圆形射线参数。脚下的圆会向下扫一小段，只看朝上的面。")]
-        [SerializeField]
-        private GroundProbeSettings groundProbe = new();
-
         [Header("贴地吸附")]
         [Tooltip("踩地时把刚体放回地面上。\n关掉就退回纯物理落地：脚下离地几厘米也会被判成踩地，而逻辑层踩地后不再施加重力，角色会一直悬在那一高度。")]
         [SerializeField]
@@ -83,6 +78,11 @@ namespace Refraction.Presentation
         [Min(0f)]
         [SerializeField]
         private float groundSkin = 0.005f;
+
+        [Header("地面检测 · 圆形射线")]
+        [Tooltip("探地面用的圆形射线参数。脚下的圆会向下扫一小段，只看朝上的面。")]
+        [SerializeField]
+        private GroundProbeSettings groundProbe = new();
 
         [Header("墙面检测 · 胶囊射线")]
         [Tooltip("探墙用的胶囊射线参数。沿角色朝向扫，只看基本正对角色的面。")]
@@ -241,6 +241,7 @@ namespace Refraction.Presentation
         public void SetPosition(Vector2 position)
         {
             _rb.position = position;
+            _rb.velocity = Vector2.zero;
         }
 
         #region 物理检测

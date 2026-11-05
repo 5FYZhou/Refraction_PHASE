@@ -1,36 +1,52 @@
-﻿using Refraction.Foundation;
+﻿using System;
+using System.Collections.Generic;
+using Refraction.Foundation;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Level;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Refraction.Presentation
 {
+    /// <summary>
+    /// 场景根：全场唯一的常驻对象。
+    /// 持有输入源与关卡推进器，维护场景根注册表，并在每次切场景后把世界侧整体换成新场景的。
+    /// </summary>
     public class GameRoot : Singleton<GameRoot>
     {
-        private bool _initialized = false;
-
-        [Tooltip("地面初始化器。进关时统一给地面子物体补 BoxCollider2D 并设为 Ground 层。")]
-        [SerializeField]
-        private GroundIniter groundIniter;
-
-        [Tooltip("当前关卡自述。提供关卡 id、出生点、出口门。")]
-        [SerializeField]
-        private LevelReader levelReader;
-
-        [Tooltip("玩家控制器。接收输入，驱动逻辑层。")]
+        [Tooltip("当前玩家。首关用这里的引用，之后由玩家自己注册时替换。")]
         [SerializeField]
         private PlayerController playerController;
 
+        private readonly List<ISceneRoot> _sceneRoots = new();
+        private readonly List<ISceneRoot> _pendingAttach = new();
+
         private InputProvider _inputProvider;
         private LevelManager _levelMgr;
+        private DoorReader _doorReader;
+
+        private Vector2 _entryPoint;
+        private bool _hasEntryPoint;
+
+        /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
+        public InputProvider Input => _inputProvider;
 
         protected override void Awake()
         {
             base.Awake();
-            // 装配缺失直接抛错。这里不吞异常，但先把自己关掉：
-            // 否则 OnEnable / Update 会继续跑并每帧刷空引用，把真正的那条错误淹掉
+
+            // 新场景里也摆着一份 GameRoot。Singleton 已经把这个重复的 Destroy 掉了，
+            // 但销毁要到帧末才生效，Awake / OnEnable 照样会走完。
+            // 这里必须原地退场：否则它会替真正的根把新场景再装配一遍，
+            // 然后带着刚建好的地面、输入、关卡推进器一起被销毁。
+            if (Instance != this)
+            {
+                enabled = false;
+                return;
+            }
+
             try
             {
                 Assemble();
@@ -44,40 +60,53 @@ namespace Refraction.Presentation
 
         private void OnEnable()
         {
+            // 装配失败（enabled = false）或重复实例走不到这里；
+            // 但被手动 Disable 再 Enable 时输入源已经释放，同样要挡住。
+            if (_inputProvider == null) return;
+
             _inputProvider.Init();
-            _levelMgr.Init();
+            _levelMgr?.Init();
+            SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void OnDisable()
         {
-            _inputProvider.Dispose();
-            _levelMgr.Dispose();
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+
+            _levelMgr?.Dispose();
+            _levelMgr = null;
+
+            _inputProvider?.Dispose();
+            _inputProvider = null;
+
+            _sceneRoots.Clear();
+            _pendingAttach.Clear();
+            playerController = null;
+            _doorReader = null;
         }
 
-        /// <summary>
-        /// 组装
-        /// </summary>
+        /// <summary>首关装配：用 Inspector 里连好的引用。玩家的接入走场景根注册表，这里不碰。</summary>
         private void Assemble()
         {
-            Require.Assigned(groundIniter, nameof(GameRoot), nameof(groundIniter));
             Require.Assigned(playerController, nameof(GameRoot), nameof(playerController));
 
-            groundIniter.Init();
             _inputProvider = new();
-            playerController.Attach(_inputProvider);
-            if(levelReader != null)
-                _levelMgr = new LevelManager(levelReader.Id);
+
+            // 这里不能用 gameObject.scene：base.Awake 里已经把自己 DontDestroyOnLoad 了，
+            // 取到的是 DontDestroyOnLoad 场景而不是关卡场景。
+            _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
+            _levelMgr = new LevelManager(_doorReader.LevelId, _doorReader);
         }
 
-        /// <summary>注册场景根（重复是 no-op），真正装配推迟到第一个被驱动的帧</summary>
+        /// <summary>注册场景根（重复是 no-op）。真正的 Attach 推迟到下一个被驱动的帧，按 Order 顺序执行。</summary>
         public void RegisterSceneRoot(ISceneRoot root)
         {
             if (root == null || _sceneRoots.Contains(root)) return;
 
-            _sceneRoots.Add(root);
-            _sceneRoots.Sort(CompareSceneRoots);
+            InsertByOrder(_sceneRoots, root);
+            InsertByOrder(_pendingAttach, root);
 
-            if (!_pendingAttach.Contains(root)) _pendingAttach.Add(root);
+            if (root is PlayerController player) playerController = player;
         }
 
         public void UnregisterSceneRoot(ISceneRoot root)
@@ -86,15 +115,167 @@ namespace Refraction.Presentation
 
             _sceneRoots.Remove(root);
             _pendingAttach.Remove(root);
+
+            if (root is PlayerController player && playerController == player) playerController = null;
+        }
+
+        /// <summary>
+        /// 取走本关的进关落点，一次性。
+        /// 没有落点就返回 false，调用方保持场景里摆的位置，别把 (0,0) 当默认值用。
+        /// </summary>
+        public bool TryConsumeEntryPoint(out Vector2 position)
+        {
+            position = _entryPoint;
+
+            if (!_hasEntryPoint) return false;
+
+            _hasEntryPoint = false;
+            return true;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            // 只接单场景切换。附加加载（菜单、UI 叠层）不该动玩家和地面。
+            if (mode != LoadSceneMode.Single) return;
+
+            Rebind(scene);
+        }
+
+        /// <summary>
+        /// 切场景后重挂世界侧：落点、地面、关卡推进器。
+        /// sceneLoaded 是唯一安全的时机——新场景的 Awake / OnEnable 都跑完了，
+        /// 而场景根还没注册（它们在 Start 里注册），正好把要用的数据先摆好。
+        /// </summary>
+        private void Rebind(Scene scene)
+        {
+            if (_inputProvider == null) return;
+
+            // 目标门 id 记在旧 LevelManager 上，得在换掉它之前取出来
+            int pendingDoorId = _levelMgr != null ? _levelMgr.PendingDoorId : 0;
+
+            // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
+            _doorReader = FindOrCreateDoorReader(scene);
+
+            // 落点先算好：玩家在 Start 里注册、下个驱动帧才 Attach，
+            // 那会儿再回来找门就晚了，也容易撞上“门已经销毁”的时序
+            _hasEntryPoint = false;
+            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId);
+
+            // 推进器换成新关的：旧的那个还订阅着 RequestNextDoor，不 Dispose 会和新的一起响应
+            _levelMgr?.Dispose();
+            _levelMgr = new LevelManager(_doorReader.LevelId, _doorReader);
+            _levelMgr.Init();
+        }
+
+        private void ResolveEntryPoint(Scene scene, int doorId)
+        {
+            if (_doorReader == null)
+            {
+                Debug.LogError($"[GameRoot] 没有门读取器，无法解析场景 \"{scene.name}\" 里 id = {doorId} 的门。");
+                return;
+            }
+
+            // 落点压在门的触发器范围内，DoorReader 命中时会顺手屏蔽该门的进入，
+            // 不然下一个物理步就会再发一次切场景请求，两个场景来回弹
+            if (!_doorReader.TryGetPos(doorId, out Vector2 point))
+            {
+                Debug.LogError($"[GameRoot] 关卡 {_doorReader.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
+                return;
+            }
+
+            _entryPoint = point;
+            _hasEntryPoint = true;
+        }
+
+        /// <summary>
+        /// 取本关的门读取器。场景里显式挂一份最好；没挂就运行时补一个——
+        /// 门索引是装配期的必需品，缺了玩家就落不到指定的门。
+        /// </summary>
+        private static DoorReader FindOrCreateDoorReader(Scene scene)
+        {
+            DoorReader reader = FindInScene<DoorReader>(scene);
+            if (reader != null) return reader;
+
+            GameObject go = new("[DoorReader]");
+            SceneManager.MoveGameObjectToScene(go, scene);
+            reader = go.AddComponent<DoorReader>();
+
+            Debug.LogWarning($"[GameRoot] 场景 \"{scene.name}\" 里没挂 DoorReader，已在运行时补一个，建议在场景里显式挂上。");
+            return reader;
+        }
+
+        /// <summary>只在指定场景里找组件。不能用 FindObjectOfType：常驻对象和别的场景也会被命中。</summary>
+        private static T FindInScene<T>(Scene scene) where T : Component
+        {
+            GameObject[] roots = scene.GetRootGameObjects();
+
+            for (int i = 0; i < roots.Length; i++)
+            {
+                T found = roots[i].GetComponentInChildren<T>(true);
+                if (found != null) return found;
+            }
+
+            return null;
+        }
+
+        /// <summary>把这一帧新注册的场景根按 Order 顺序 Attach 掉。Attach 里再注册的，下一帧继续。</summary>
+        private void AttachPending()
+        {
+            if (_pendingAttach.Count == 0) return;
+
+            ISceneRoot[] batch = _pendingAttach.ToArray();
+            _pendingAttach.Clear();
+
+            for (int i = 0; i < batch.Length; i++)
+            {
+                // 注册后、Attach 前就被销毁的根（整场景被换掉）要跳过：
+                // 接口之间的 == null 不走 Unity 的伪 null 重载，这里必须先转成 Object
+                UnityEngine.Object target = batch[i] as UnityEngine.Object;
+                if (target == null) continue;
+
+                // 单个根装配失败不该拖累后面的根（玩家排在 Player，坏掉一个不该让全场景停摆）
+                try
+                {
+                    batch[i].Attach();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
+        }
+
+        private static int CompareSceneRoots(ISceneRoot a, ISceneRoot b)
+        {
+            return a.Order.CompareTo(b.Order);
+        }
+
+        /// <summary>按 Order 升序插入。List.Sort 不稳定，同 Order 的根会被换位，这里用插入排序保住注册顺序。</summary>
+        private static void InsertByOrder(List<ISceneRoot> list, ISceneRoot root)
+        {
+            int i = list.Count;
+            while (i > 0 && CompareSceneRoots(list[i - 1], root) > 0) i--;
+
+            list.Insert(i, root);
         }
 
         private void Update()
         {
+            AttachPending();
+
+            if (_inputProvider == null) return;
+
             _inputProvider.Tick();
         }
 
         private void FixedUpdate()
         {
+            // 先装配再驱动：场景根的第一帧就要能跑
+            AttachPending();
+
+            // 切换场景那一帧旧玩家可能已经销毁，引用会短暂是“伪 null”
+            if (playerController == null) return;
+
             playerController.FixedTick();
         }
     }

@@ -12,6 +12,11 @@ namespace Refraction.Presentation
         /// <summary>地面层级。与 ProjectSettings/TagManager 中第 7 项 Ground 对应，索引为 6。</summary>
         private const int GroundLayer = 6;
 
+        private void Awake()
+        {
+            Init();
+        }
+
         public void Init()
         {
             // 递归取到所有子物体（含未激活），跳过挂脚本的根节点本身

@@ -5,7 +5,6 @@ using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Refraction.Presentation.Actor
 {
@@ -13,10 +12,12 @@ namespace Refraction.Presentation.Actor
     {
         public int Order => SceneOrder.Player;
 
-        private const float _spawnY = -10f;
-        private GameRoot _root;
+        [SerializeField]
+        private float _spawnY = -10f;
 
+        private GameRoot _root;
         private bool _attached = false;
+        private bool _warnedNoGrounded;
         private InputProvider _inputProvider;
         private InputBuffer _buffer;
         private PlayerLogic _logic;
@@ -28,11 +29,6 @@ namespace Refraction.Presentation.Actor
         [Tooltip("玩家参数资产。应与 MoveMotor 上引用的是同一份配置。")]
         [SerializeField]
         private PlayerConfig config;
-
-        [Tooltip("重生点。掉到 _spawnY 以下后被送回这里。")]
-        [SerializeField]
-        private Transform _spawnT;
-
 
         private void Start()
         {
@@ -46,22 +42,41 @@ namespace Refraction.Presentation.Actor
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
 
-
         private void OnEnable()
         {
             EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
         }
+
         private void OnDisable()
         {
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
         }
 
+        /// <summary>
+        /// 场景根装配：接上场景根持有的输入源，再按上一场景那扇门指定的落点摆好。
+        /// GameRoot 在注册后的下一个驱动帧调用，必须幂等。
+        /// </summary>
         public void Attach()
         {
-            throw new System.NotImplementedException();
+            if (_attached) return;
+
+            _root ??= GameRoot.Instance;
+            if (_root == null || _root.Input == null)
+            {
+                Debug.LogError("[PlayerController] GameRoot 还没装配好输入源，无法接入。");
+                return;
+            }
+
+            Attach(_root.Input);
+
+            // 从门里进来就落到那扇门的位置；首关没有落点，保持场景里摆的位置
+            if (_root.TryConsumeEntryPoint(out Vector2 entry))
+            {
+                _logic.SpawnTo(entry);
+            }
         }
 
-        public void Attach(InputProvider inputProvider)
+        private void Attach(InputProvider inputProvider)
         {
             Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
             Require.Assigned(config, nameof(PlayerController), nameof(config));
@@ -89,14 +104,26 @@ namespace Refraction.Presentation.Actor
 
             _logic.FixedTick(context);
 
-            if (context.WorldInfo.Pos.y < _spawnY)
+            // 掉出世界：回到逻辑层记下的最后一次落脚点
+            if (context.WorldInfo.Pos.y < _spawnY && !_logic.RespawnToLastGrounded())
             {
-                _logic.SpawnTo(_spawnT ? _spawnT.position : new Vector2(0, 0));
+                WarnNoGroundedPoint();
             }
+        }
+
+        private void WarnNoGroundedPoint()
+        {
+            if (_warnedNoGrounded) return;
+
+            _warnedNoGrounded = true;
+            Debug.LogWarning("[PlayerController] 掉出世界，但还没有任何落脚点记录（出生后一次都没踩过地），无处可回。");
         }
 
         public void OnRequestPlayerPosChange(RequestPlayerPosChange evt)
         {
+            // 还没 Attach 就被点名传送（切场景时事件可能早到），忽略而不是空引用
+            if (!_attached) return;
+
             _logic.SpawnTo(evt.Pos);
         }
     }
