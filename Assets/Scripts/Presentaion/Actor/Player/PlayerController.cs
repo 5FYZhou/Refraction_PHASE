@@ -2,14 +2,19 @@
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
+using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot
     {
+        public int Order => SceneOrder.Player;
+
         private const float _spawnY = -10f;
+        private GameRoot _root;
 
         private bool _attached = false;
         private InputProvider _inputProvider;
@@ -27,6 +32,34 @@ namespace Refraction.Presentation.Actor
         [Tooltip("重生点。掉到 _spawnY 以下后被送回这里。")]
         [SerializeField]
         private Transform _spawnT;
+
+
+        private void Start()
+        {
+            _root = GameRoot.Instance;
+            _root.RegisterSceneRoot(this);
+        }
+
+        private void OnDestroy()
+        {
+            // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
+            if (_root != null) _root.UnregisterSceneRoot(this);
+        }
+
+
+        private void OnEnable()
+        {
+            EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
+        }
+        private void OnDisable()
+        {
+            EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
+        }
+
+        public void Attach()
+        {
+            throw new System.NotImplementedException();
+        }
 
         public void Attach(InputProvider inputProvider)
         {
@@ -60,6 +93,11 @@ namespace Refraction.Presentation.Actor
             {
                 _logic.SpawnTo(_spawnT ? _spawnT.position : new Vector2(0, 0));
             }
+        }
+
+        public void OnRequestPlayerPosChange(RequestPlayerPosChange evt)
+        {
+            _logic.SpawnTo(evt.Pos);
         }
     }
 }
