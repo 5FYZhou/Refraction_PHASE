@@ -74,6 +74,16 @@ namespace Refraction.Presentation
         [SerializeField]
         private GroundProbeSettings groundProbe = new();
 
+        [Header("贴地吸附")]
+        [Tooltip("踩地时把刚体放回地面上。\n关掉就退回纯物理落地：脚下离地几厘米也会被判成踩地，而逻辑层踩地后不再施加重力，角色会一直悬在那一高度。")]
+        [SerializeField]
+        private bool snapToGround = true;
+
+        [Tooltip("吸附后脚底与地面之间保留的间隙（米）。\n0.005 与 Box2D 的 linear slop 相同，正好是物理引擎自己落地后的静止间隙。")]
+        [Min(0f)]
+        [SerializeField]
+        private float groundSkin = 0.005f;
+
         [Header("墙面检测 · 胶囊射线")]
         [Tooltip("探墙用的胶囊射线参数。沿角色朝向扫，只看基本正对角色的面。")]
         [SerializeField]
@@ -81,6 +91,7 @@ namespace Refraction.Presentation
 
         private Rigidbody2D _rb;
         private MoveLedger _ledger;
+        private Collider2D _bodyCollider;
 
         private readonly RaycastHit2D[] _hits = new RaycastHit2D[8];
         private Collider2D[] _selfColliders = new Collider2D[0];
@@ -138,6 +149,9 @@ namespace Refraction.Presentation
 
             InitRb();
             _selfColliders = GetComponentsInChildren<Collider2D>(true);
+            _bodyCollider = GetComponent<Collider2D>();
+            if (_bodyCollider == null && _selfColliders.Length > 0)
+                _bodyCollider = _selfColliders[0];
             _ledger = new MoveLedger(
                 readVelocity: () => _rb.velocity,
                 writeVelocity: v => _rb.velocity = v);
@@ -148,16 +162,20 @@ namespace Refraction.Presentation
         {
             _rb = GetComponent<Rigidbody2D>();
             _rb.bodyType = RigidbodyType2D.Dynamic;
-            _rb.gravityScale = 0f;
+            _rb.gravityScale = 0f; 
+            _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
         /// <summary>
         /// 采样一次世界：先圆形射线探地面，再沿当前朝向做胶囊射线探墙。
         /// 结果打包成逻辑层的 <see cref="WorldInfo"/>，由表现层（PlayerController）放进 LogicContext。
+        /// 踩地时顺手把刚体贴回地面（见 <see cref="SettleOnGround"/>），逻辑层拿到的是"已经站好了"的身体。
         /// </summary>
         public WorldInfo SampleWorld()
         {
             _grounded = ProbeGround();
+
+            if (_grounded) SettleOnGround();
 
             int facing = FacingSign;
             _touchingWall = ProbeWall(facing, out _wallHit);
@@ -257,6 +275,71 @@ namespace Refraction.Presentation
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// 踩地时把刚体贴到地面上，并丢掉物理引擎写进刚体的竖直速度。
+        ///
+        /// 为什么必须由这里做：地面探测是一条 0.08 的圆形射线，脚下间隙只要小于约 0.06 就算"踩地"，
+        /// 而物理引擎落地后的静止间隙只有 0.005。两者之间这段距离就意味着角色可以停在半空——
+        /// 逻辑层一判定踩地就不再施加重力（见 MoveLedger.ApplyGravity），悬着的脚再也落不下来。
+        /// 之后再起跳、正常落地回到贴地高度，看上去就是"跳一次 y 就少了几厘米"。
+        ///
+        /// 同理，站在地面时接触恢复/边角顶起给刚体加的 +vy 会被下一帧当成角色自己的上升速度
+        /// （MoveLedger 的帧首速度直接读刚体），表现出来就是"在地上向右走时 y 速度 &gt; 0"。
+        /// 竖直速度在"逻辑接管重力"时只允许逻辑层写，所以这里一律清零。
+        ///
+        /// 注意：贴地只改位置和竖直速度，水平速度完全不动，撞墙停下等反馈仍然照旧。
+        /// </summary>
+        private void SettleOnGround()
+        {
+            if (!snapToGround) return;
+
+            // 探针的"脚"（origin）不一定压在碰撞体最低点上，这段差值交给碰撞体自己算，
+            // 所以改探针 origin 或胶囊尺寸都不用动这里。
+            float footOffset = groundProbe.origin.y
+                               - LocalColliderBottom() * Mathf.Abs(transform.lossyScale.y);
+            float gap = _groundHit.distance - footOffset;   // 正=悬空，负=陷进地面
+
+            if (Mathf.Abs(gap - groundSkin) > 0.0001f)
+            {
+                Vector2 pos = _rb.position;
+                pos.y += groundSkin - gap;   // 悬空则下移贴地，陷入则上抬出地面
+                _rb.position = pos;
+            }
+
+            if (config.enableGravity && _rb.velocity.y != 0f)
+            {
+                Vector2 velocity = _rb.velocity;
+                _rb.velocity = new Vector2(velocity.x, 0f);
+            }
+        }
+
+        /// <summary>
+        /// 碰撞体最低点相对角色根节点的高度（局部空间，未乘缩放）。
+        /// 未知形状退回世界包围盒，保证不会因为没适配的碰撞体而算错方向。
+        /// </summary>
+        private float LocalColliderBottom()
+        {
+            switch (_bodyCollider)
+            {
+                case CapsuleCollider2D capsule:
+                    float half = (capsule.direction == CapsuleDirection2D.Horizontal
+                        ? capsule.size.x
+                        : capsule.size.y) * 0.5f;
+                    return capsule.offset.y - half;
+
+                case BoxCollider2D box:
+                    return box.offset.y - box.size.y * 0.5f;
+
+                case CircleCollider2D circle:
+                    return circle.offset.y - circle.radius;
+
+                default:
+                    return _bodyCollider != null
+                        ? _bodyCollider.bounds.min.y - transform.position.y
+                        : -1f;
+            }
         }
 
         private bool ProbeWall(int side, out RaycastHit2D result)
