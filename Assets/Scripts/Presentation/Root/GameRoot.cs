@@ -28,6 +28,7 @@ namespace Refraction.Presentation
         private LevelManager _levelMgr;
         private DoorReader _doorReader;
         private UIMgr _uiMgr;
+        private ResMgr _resMgr;
 
         private Vector2 _entryPoint;
         private bool _hasEntryPoint;
@@ -36,6 +37,7 @@ namespace Refraction.Presentation
         public InputProvider Input => _inputProvider;
 
         public UIMgr UIMgr { get => _uiMgr; }
+        public ResMgr ResMgr { get => _resMgr; }
 
         protected override void Awake()
         {

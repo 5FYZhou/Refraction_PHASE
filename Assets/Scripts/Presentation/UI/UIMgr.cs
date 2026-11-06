@@ -64,12 +64,12 @@ namespace Refraction.Presentation.UI
         private UIMgr()
         {
             //动态创建唯一的Canvas和EventSystem（摄像机）
-            //uiCamera = GameObject.Instantiate(ResMgr.Instance.Load<GameObject>("ui/UICamera")).GetComponent<Camera>();
+            uiCamera = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>("ui/UICamera")).GetComponent<Camera>();
             //ui摄像机过场景不移除 专门用来渲染UI面板
             GameObject.DontDestroyOnLoad(uiCamera.gameObject);
 
             //动态创建Canvas
-            //uiCanvas = GameObject.Instantiate(ResMgr.Instance.Load<GameObject>("ui/Canvas")).GetComponent<Canvas>();
+            uiCanvas = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>("ui/Canvas")).GetComponent<Canvas>();
             //设置使用的UI摄像机
             uiCanvas.worldCamera = uiCamera;
             //过场景不移除
@@ -82,7 +82,7 @@ namespace Refraction.Presentation.UI
             systemLayer = uiCanvas.transform.Find("System");
 
             //动态创建EventSystem
-            //uiEventSystem = GameObject.Instantiate(ResMgr.Instance.Load<GameObject>("ui/EventSystem")).GetComponent<EventSystem>();
+            uiEventSystem = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>("ui/EventSystem")).GetComponent<EventSystem>();
             GameObject.DontDestroyOnLoad(uiEventSystem.gameObject);
         }
 
@@ -151,38 +151,38 @@ namespace Refraction.Presentation.UI
             //不存在面板 先存入字典当中 占个位置 之后如果又显示 我才能得到字典中的信息进行判断
             panelDic.Add(panelName, new PanelInfo<T>(callBack));
 
-            //ResMgr.Instance.LoadAsync<GameObject>("ui/Panel/" + panelName, (res) =>
-            //{
+            GameRoot.Instance.ResMgr.LoadAsync<GameObject>("ui/Panel/" + panelName, (res) =>
+            {
 
-            //    //取出字典中已经占好位置的数据
-            //    PanelInfo<T> panelInfo = panelDic[panelName] as PanelInfo<T>;
-            //    //表示异步加载结束前 就想要隐藏该面板了 
-            //    if (panelInfo.isHide)
-            //    {
-            //        panelDic.Remove(panelName);
-            //        return;
-            //    }
+                //取出字典中已经占好位置的数据
+                PanelInfo<T> panelInfo = panelDic[panelName] as PanelInfo<T>;
+                //表示异步加载结束前 就想要隐藏该面板了 
+                if (panelInfo.isHide)
+                {
+                    panelDic.Remove(panelName);
+                    return;
+                }
 
-            //    //层级的处理
-            //    Transform father = GetLayerFather(layer);
-            //    //避免没有按指定规则传递层级参数 避免为空
-            //    if (father == null)
-            //        father = middleLayer;
-            //    //将面板预设体创建到对应父对象下 并且保持原本的缩放大小
-            //    GameObject panelObj = GameObject.Instantiate(res, father, false);
+                //层级的处理
+                Transform father = GetLayerFather(layer);
+                //避免没有按指定规则传递层级参数 避免为空
+                if (father == null)
+                    father = middleLayer;
+                //将面板预设体创建到对应父对象下 并且保持原本的缩放大小
+                GameObject panelObj = GameObject.Instantiate(res, father, false);
 
-            //    //获取对应UI组件返回出去
-            //    T panel = panelObj.GetComponent<T>();
-            //    //显示面板时执行的默认方法
-            //    panel.ShowMe();
-            //    //传出去使用
-            //    panelInfo.callBack?.Invoke(panel);
-            //    //回调执行完 将其清空 避免内存泄漏
-            //    panelInfo.callBack = null;
-            //    //存储panel
-            //    panelInfo.panel = panel;
+                //获取对应UI组件返回出去
+                T panel = panelObj.GetComponent<T>();
+                //显示面板时执行的默认方法
+                panel.ShowMe();
+                //传出去使用
+                panelInfo.callBack?.Invoke(panel);
+                //回调执行完 将其清空 避免内存泄漏
+                panelInfo.callBack = null;
+                //存储panel
+                panelInfo.panel = panel;
 
-            //});
+            });
         }
 
         /// <summary>
