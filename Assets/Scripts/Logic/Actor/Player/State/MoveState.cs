@@ -3,10 +3,7 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>
-    /// 地面行走。目标速度恒为 moveSpeed，姿态带来的减速由 MoveLedger 的速度乘数（SetSpeedScaleX）处理，
-    /// 本状态不需要知道自己在站着还是蹲着。
-    /// </summary>
+    /// <summary>地面行走，目标速度恒为 moveSpeed；姿态减速走 MoveLedger 的速度乘数，本状态不区分站/蹲</summary>
     public sealed class MoveState : BaseState<MovementStateTag, LogicContext>
     {
         public override MovementStateTag Tag => MovementStateTag.Move;

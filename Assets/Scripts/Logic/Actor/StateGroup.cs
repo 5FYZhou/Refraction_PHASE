@@ -30,14 +30,13 @@ namespace Refraction.Logic.Actor
         }
 
 
-        /// <summary> 检查是否能抢占 </summary>
+        /// <summary>只做判定：Commit 可能因目标重复而不执行，副作用别放这里</summary>
         protected virtual bool TryDecidePreempt(in TContext ctx, out TTag target)
         {
             target = EmptyTag;
             return false;
         }
 
-        /// <summary> 提交抢占 </summary>
         protected virtual bool TryCommitPreempt(in TContext ctx, TTag target)
         {
             return false;
@@ -47,7 +46,7 @@ namespace Refraction.Logic.Actor
         {
             IState<TTag, TContext> current = machine.CurrentState;
 
-            // 首帧无当前状态，抢占照常判定，判不中才落到基础态
+            // 首帧没有当前状态，抢占照常判定，判不中才落到基础态
             if (TryDecidePreempt(ctx, out TTag target)
                 && (current == null || !target.Equals(current.Tag))
                 && TryCommitPreempt(ctx, target))

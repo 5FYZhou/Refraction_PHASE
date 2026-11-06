@@ -10,7 +10,7 @@ namespace Refraction.Logic
         public readonly bool Dash;
         public readonly bool JumpHeld;
 
-        /// <summary>下蹲键是否按住。姿态是持续状态而不是按下沿，所以取按住而不是沿。</summary>
+        /// <summary>下蹲键是否按住：姿态是持续状态而不是按下沿</summary>
         public readonly bool CrouchHeld;
 
         public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld)
@@ -23,19 +23,16 @@ namespace Refraction.Logic
         }
     }
 
-    /// <summary> 当前帧开始时的世界快照 </summary>
+    /// <summary>当前帧开始时的世界快照</summary>
     public readonly struct WorldInfo
     {
-        /// <summary>是否站在地面。</summary>
         public readonly bool Grounded;
 
-        /// <summary>是否贴墙。</summary>
         public readonly bool TouchingWall;
 
-        /// <summary>墙面所在方向：-1 在左，1 在右。</summary>
+        /// <summary>墙面所在方向：-1 在左，1 在右</summary>
         public readonly int WallSide;
 
-        /// <summary> 当前帧开始时的速度  </summary>
         public readonly Vector2 FrameStartVelocity;
         public readonly int Face;
         public readonly Vector2 Pos;

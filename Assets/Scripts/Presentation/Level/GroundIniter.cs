@@ -2,11 +2,7 @@
 
 namespace Refraction.Presentation
 {
-    /// <summary>
-    /// 地面初始化：把摆好的子物体统统变成可探测的地面。
-    /// 场景里子物体只负责位置和缩放（Transform + SpriteRenderer），
-    /// 碰撞框和层级由这里统一补齐，避免手动一个个挂。
-    /// </summary>
+    /// <summary>把子物体统一补成可探测地面：场景只管摆位置和缩放，Layer 与碰撞框由这里补</summary>
     public class GroundIniter : MonoBehaviour
     {
         /// <summary>地面层级。与 ProjectSettings/TagManager 中第 7 项 Ground 对应，索引为 6。</summary>
@@ -19,7 +15,7 @@ namespace Refraction.Presentation
 
         public void Init()
         {
-            // 递归取到所有子物体（含未激活），跳过挂脚本的根节点本身
+            // true = 未激活的子物体也要算，否则隐藏的地面踩不到
             Transform[] children = GetComponentsInChildren<Transform>(true);
 
             for (int i = 0; i < children.Length; i++)
@@ -32,18 +28,14 @@ namespace Refraction.Presentation
             }
         }
 
-        /// <summary>
-        /// 保证物体上有且只有一个 BoxCollider2D。已有的话原样保留，
-        /// 那是美术/关卡手动调过的，不要覆盖。
-        /// </summary>
+        /// <summary>已有 BoxCollider2D 就原样保留：那是关卡手调的，覆盖会把地形改掉</summary>
         private static void EnsureCollider(GameObject target)
         {
             if (target.TryGetComponent(out BoxCollider2D _)) return;
 
             BoxCollider2D box = target.AddComponent<BoxCollider2D>();
 
-            // 新建的碰撞框是 1×1，按精灵实际尺寸补齐。
-            // 否则非 1×1 的精灵会踩空或者陷进地面里。
+            // 新建的框是 1×1，按精灵实际尺寸补齐，否则非 1×1 的精灵会踩空或陷进地面
             if (target.TryGetComponent(out SpriteRenderer spriteRenderer)
                 && spriteRenderer.sprite != null)
             {

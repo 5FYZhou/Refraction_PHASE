@@ -44,8 +44,7 @@ namespace Refraction.Presentation.Actor
 
         private void Awake()
         {
-            // 放在 Awake：GameRoot 可能在 Start 之前就调到 Attach/Tick，
-            // 那一帧 view 还没解析出来就会先报一次"找不到 View"
+            // 必须放 Awake：GameRoot 可能在 Start 前就调 Attach/Tick，那帧 view 还没解析，会先报一次“找不到 View”
             CacheView();
         }
 
@@ -71,10 +70,7 @@ namespace Refraction.Presentation.Actor
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
         }
 
-        /// <summary>
-        /// 场景根装配：接上场景根持有的输入源，再按上一场景那扇门指定的落点摆好。
-        /// GameRoot 在注册后的下一个驱动帧调用，必须幂等。
-        /// </summary>
+        /// <summary>场景根装配：接上输入源，再按上一场景那扇门指定的落点摆好；GameRoot 在注册后的下一个驱动帧调用，必须幂等</summary>
         public void Attach()
         {
             if (_attached) return;
@@ -97,7 +93,7 @@ namespace Refraction.Presentation.Actor
             _logic = new(moveMotor, config, _buffer);
             _attached = true;
 
-            // 从门里进来就落到那扇门的位置；首关没有落点，保持场景里摆的位置
+            // 从门里进来就落到那扇门；首关没有落点，保持场景里摆的位置
             if (_root.TryConsumeEntryPoint(out Vector2 entry))
             {
                 _logic.SpawnTo(entry);
@@ -154,11 +150,7 @@ namespace Refraction.Presentation.Actor
             _logic.SpawnTo(evt.Pos);
         }
 
-        /// <summary>
-        /// 应用逻辑层给的 View 缩放。以脚底为锚点：View 的枢轴在身体中心，
-        /// 只改 scale 会让人从中间往里缩——脚跟着抬起来 0.65（1 − 0.35）。
-        /// 所以缩放的同时把 View 整体下移 (1 − scale.y) × 脚底到枢轴的距离，脚才留在原地。
-        /// </summary>
+        /// <summary>应用逻辑层给的 View 缩放：枢轴在身体中心，只改 scale 脚会离地（蹲下抬起 0.65），所以同时下移 (1 − scale.y) × 脚底到枢轴的距离</summary>
         public void SetViewScale(Vector2 scale)
         {
             if (view == null)
@@ -177,23 +169,12 @@ namespace Refraction.Presentation.Actor
             view.localPosition = pos;
         }
 
-        /// <summary>
-        /// 层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）。
-        /// MoveMotor 找的也是这两个名字，两边必须一致。
-        /// </summary>
+        /// <summary>层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）；MoveMotor 找的也是这两个名字，两边必须一致</summary>
         private const string ViewChildName = "View";
         private const string BottomChildName = "Bottom";
 
-        /// <summary>
-        /// 记下 View 站立时的本地姿态与脚底相对枢轴的高度，蹲下缩放要围着脚底做。
-        ///
-        /// 名字直接从层级里取，不依赖 Inspector 连线：
-        /// Bottom 是 View 的**直接子节点**，所以要 view.Find("Bottom") 而不是 transform.Find——
-        /// 后者只扫 Player 的一级子物体，永远找不到，蹲下就会退化成以身体中心为锚点（脚浮起来）。
-        ///
-        /// 基准取 localPosition / localScale：SetViewScale 写回去的也是 localPosition，
-        /// 存世界坐标会在关卡根节点不在原点时把人整体甩出去。
-        /// </summary>
+        /// <summary>记下 View 站立时的本地姿态与脚底相对枢轴的高度，蹲下缩放围着脚底做</summary>
+        /// <remarks>Bottom 是 View 的直接子节点，必须 view.Find 而不是 transform.Find——后者只扫 Player 的一级子物体，找不到就以身体中心为锚点（脚浮起来）；基准取 localPosition / localScale，存世界坐标会在关卡根节点不在原点时把人整体甩出去</remarks>
         private void CacheView()
         {
             view = transform.Find(ViewChildName);
@@ -224,7 +205,7 @@ namespace Refraction.Presentation.Actor
                 return;
             }
 
-            // 直接子节点：本地坐标乘 View 的基础缩放，就是"脚底到枢轴"的本地距离（正常为负）
+            // 底边的本地 y 乘 View 基础缩放，就是脚底到枢轴的本地距离（正常为负）
             _viewBottomOffset = bottom.localPosition.y * _viewBaseScale.y;
 
             // 初始就当"已经应用过站姿"：第一帧逻辑层给的也是 1，不必重复写一次 Transform

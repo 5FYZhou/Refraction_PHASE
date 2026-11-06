@@ -2,17 +2,11 @@
 
 namespace Refraction.Foundation
 {
-    /// <summary>
-    /// 装配校验：序列化引用为空就当场抛错。
-    /// 空引用拖到运行几帧后才炸时，堆栈已经指不回是哪个字段没连了。
-    /// </summary>
+    /// <summary>装配校验：引用为空当场抛错，空引用拖到几帧后炸时堆栈已指不回是哪个字段没连</summary>
     public static class Require
     {
-        /// <summary>
-        /// 要求引用已装配，返回原值方便链式使用。
-        /// 泛型约束到 <see cref="Object"/> 是有意的：这样 == null 走的是 Unity 的重载，
-        /// 被销毁的对象（伪 null）也能被识别出来。
-        /// </summary>
+        /// <summary>要求引用已装配，返回原值便于链式调用</summary>
+        /// <remarks>约束到 Object 是有意的：== null 走 Unity 重载，才能识别已销毁对象的伪 null</remarks>
         public static T Assigned<T>(T value, string owner, string field) where T : Object
         {
             if (value == null)

@@ -11,10 +11,7 @@ using UnityEngine.SceneManagement;
 
 namespace Refraction.Presentation
 {
-    /// <summary>
-    /// 场景根：全场唯一的常驻对象。
-    /// 持有输入源与关卡推进器，维护场景根注册表，并在每次切场景后把世界侧整体换成新场景的。
-    /// </summary>
+    /// <summary>场景根：全场唯一常驻对象，持有输入源与关卡推进器，切场景后把世界侧整体换成新场景的</summary>
     public class GameRoot : Singleton<GameRoot>
     {
         [Tooltip("当前玩家。首关用这里的引用，之后由玩家自己注册时替换。")]
@@ -43,10 +40,7 @@ namespace Refraction.Presentation
         {
             base.Awake();
 
-            // 新场景里也摆着一份 GameRoot。Singleton 已经把这个重复的 Destroy 掉了，
-            // 但销毁要到帧末才生效，Awake / OnEnable 照样会走完。
-            // 这里必须原地退场：否则它会替真正的根把新场景再装配一遍，
-            // 然后带着刚建好的地面、输入、关卡推进器一起被销毁。
+            // 重复实例要到帧末才销毁，Awake 仍会走完：必须原地退场，否则它会替真正的根把新场景再装配一遍，再带着刚建好的东西一起被销毁
             if (Instance != this)
             {
                 enabled = false;
@@ -66,8 +60,7 @@ namespace Refraction.Presentation
 
         private void OnEnable()
         {
-            // 装配失败（enabled = false）或重复实例走不到这里；
-            // 但被手动 Disable 再 Enable 时输入源已经释放，同样要挡住。
+            // 手动 Disable 再 Enable 时输入源已被释放，必须靠这个空判断挡住
             if (_inputProvider == null) return;
 
             _inputProvider.Init();
@@ -98,8 +91,7 @@ namespace Refraction.Presentation
 
             _inputProvider = new();
 
-            // 这里不能用 gameObject.scene：base.Awake 里已经把自己 DontDestroyOnLoad 了，
-            // 取到的是 DontDestroyOnLoad 场景而不是关卡场景。
+            // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
             _levelMgr = new LevelManager(_doorReader.LevelId, _doorReader);
         }
@@ -125,10 +117,7 @@ namespace Refraction.Presentation
             if (root is PlayerController player && playerController == player) playerController = null;
         }
 
-        /// <summary>
-        /// 取走本关的进关落点，一次性。
-        /// 没有落点就返回 false，调用方保持场景里摆的位置，别把 (0,0) 当默认值用。
-        /// </summary>
+        /// <summary>取走本关的进关落点，一次性。没有落点返回 false，调用方保持场景里摆的位置，别把 (0,0) 当默认值</summary>
         public bool TryConsumeEntryPoint(out Vector2 position)
         {
             position = _entryPoint;
@@ -147,11 +136,7 @@ namespace Refraction.Presentation
             Rebind(scene);
         }
 
-        /// <summary>
-        /// 切场景后重挂世界侧：落点、地面、关卡推进器。
-        /// sceneLoaded 是唯一安全的时机——新场景的 Awake / OnEnable 都跑完了，
-        /// 而场景根还没注册（它们在 Start 里注册），正好把要用的数据先摆好。
-        /// </summary>
+        /// <summary>切场景后重挂世界侧。只在这个时机安全：新场景的 Awake / OnEnable 已跑完，场景根还没在 Start 里注册</summary>
         private void Rebind(Scene scene)
         {
             if (_inputProvider == null) return;
@@ -162,8 +147,7 @@ namespace Refraction.Presentation
             // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
             _doorReader = FindOrCreateDoorReader(scene);
 
-            // 落点先算好：玩家在 Start 里注册、下个驱动帧才 Attach，
-            // 那会儿再回来找门就晚了，也容易撞上“门已经销毁”的时序
+            // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
             _hasEntryPoint = false;
             if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId);
 
@@ -181,8 +165,7 @@ namespace Refraction.Presentation
                 return;
             }
 
-            // 落点压在门的触发器范围内，DoorReader 命中时会顺手屏蔽该门的进入，
-            // 不然下一个物理步就会再发一次切场景请求，两个场景来回弹
+            // 落点压在门的触发器范围内：DoorReader 命中时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
             if (!_doorReader.TryGetPos(doorId, out Vector2 point))
             {
                 Debug.LogError($"[GameRoot] 关卡 {_doorReader.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
@@ -193,10 +176,7 @@ namespace Refraction.Presentation
             _hasEntryPoint = true;
         }
 
-        /// <summary>
-        /// 取本关的门读取器。场景里显式挂一份最好；没挂就运行时补一个——
-        /// 门索引是装配期的必需品，缺了玩家就落不到指定的门。
-        /// </summary>
+        /// <summary>取本关的门读取器：场景里没挂就运行时补一个，门索引是装配期必需品，缺了玩家落不到指定的门</summary>
         private static DoorReader FindOrCreateDoorReader(Scene scene)
         {
             DoorReader reader = FindInScene<DoorReader>(scene);
@@ -234,12 +214,11 @@ namespace Refraction.Presentation
 
             for (int i = 0; i < batch.Length; i++)
             {
-                // 注册后、Attach 前就被销毁的根（整场景被换掉）要跳过：
-                // 接口之间的 == null 不走 Unity 的伪 null 重载，这里必须先转成 Object
+                // 注册后、Attach 前就被销毁的根要跳过：接口之间的 == null 不走 Unity 的伪 null 重载，必须先转成 Object
                 UnityEngine.Object target = batch[i] as UnityEngine.Object;
                 if (target == null) continue;
 
-                // 单个根装配失败不该拖累后面的根（玩家排在 Player，坏掉一个不该让全场景停摆）
+                // 单个根装配失败不该拖累后面的根：坏掉一个不该让全场景停摆
                 try
                 {
                     batch[i].Attach();
@@ -256,7 +235,7 @@ namespace Refraction.Presentation
             return a.Order.CompareTo(b.Order);
         }
 
-        /// <summary>按 Order 升序插入。List.Sort 不稳定，同 Order 的根会被换位，这里用插入排序保住注册顺序。</summary>
+        /// <summary>按 Order 升序插入：List.Sort 不稳定，同 Order 的根会被换位，这里用插入排序保住注册顺序</summary>
         private static void InsertByOrder(List<ISceneRoot> list, ISceneRoot root)
         {
             int i = list.Count;

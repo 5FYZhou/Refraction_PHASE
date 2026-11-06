@@ -44,13 +44,12 @@ namespace Refraction.Logic.Actor
          
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {
-            // 离地：按竖直速度分成上升段和下落段（> 0 上升，≤ 0 下落）
+            // 离地按竖直速度分上升/下落（> 0 上升，≤ 0 下落）
             if (!ctx.WorldInfo.Grounded)
             {
                 return ctx.WorldInfo.FrameStartVelocity.y > 0f ? MovementStateTag.Jump : MovementStateTag.Fall;
             }
 
-            // 如果有速度 回到Move
             if (ctx.InputSnapshot.Move.sqrMagnitude > 0) return MovementStateTag.Move;
             return MovementStateTag.Idle;
         }
@@ -63,7 +62,7 @@ namespace Refraction.Logic.Actor
             {
                 _lastGroundedTime = ctx.GameTime.now;
 
-                // 只有重新落地时才恢复土狼机会、空中跳次数与空中冲刺次数
+                // 只在落地那一帧恢复土狼机会与空中次数
                 if (!_wasGrounded)
                 {
                     _coyoteConsumed = false;
@@ -79,7 +78,7 @@ namespace Refraction.Logic.Actor
         protected override bool TryDecidePreempt(in LogicContext ctx, out MovementStateTag target)
         {
             target = EmptyTag;
-            // 如果冲刺没在冷却 冲刺能抢占
+
             if (CanDash(ctx))
             {
                 target = MovementStateTag.Dash;
@@ -98,7 +97,7 @@ namespace Refraction.Logic.Actor
                     // 消费掉这次按下，避免同一次按键反复起跳
                     return TryConsumeJump(ctx.GameTime.now);
                 case MovementStateTag.AirJump:
-                    // 空中跳同样要消费输入，成功后扣掉一次空中跳机会
+                    // 同样要消费输入，成功才扣一次机会
                     if (!TryConsumeJump(ctx.GameTime.now)) return false;
                     _airJumpsUsed++;
                     return true;
@@ -111,10 +110,7 @@ namespace Refraction.Logic.Actor
             return false;
         }
 
-        /// <summary>
-        /// 判定这一帧的跳跃该落到哪个状态：踩地或土狼窗口内是地面跳，离地且还有空中跳次数则是空中跳。
-        /// 都判不中返回 <see cref="EmptyTag"/>。
-        /// </summary>
+        /// <summary>这一帧的跳跃该落到哪：踩地或土狼窗口内是地面跳，离地且还有次数是空中跳，都判不中返回 EmptyTag</summary>
         private MovementStateTag DecideJump(in LogicContext ctx)
         {
             float now = ctx.GameTime.now;
@@ -122,11 +118,9 @@ namespace Refraction.Logic.Actor
             // 冲刺期间不接受起跳
             if (machine.CurrentState?.Tag == MovementStateTag.Dash) return EmptyTag;
 
-            // 下蹲期间不给跳：地面跳、土狼跳、空中跳一并挡在这里。
-            // 这里不消费输入，所以起身后在缓冲窗口内按下的跳仍会照常生效
+            // 下蹲期间一键挡掉三种跳；这里不消费输入，起身后缓冲窗口内的跳仍照常生效
             if (!_posture.CanJump) return EmptyTag;
 
-            // 跳跃键不在缓冲窗口里
             if (!_buffer.CanConsume(InputType.Jump, now, _config.inputBufferTime)) return EmptyTag;
 
             if (ctx.WorldInfo.Grounded) return MovementStateTag.Jump;
@@ -135,7 +129,7 @@ namespace Refraction.Logic.Actor
             if (!_coyoteConsumed && now - _lastGroundedTime <= _config.coyoteTime)
                 return MovementStateTag.Jump;
 
-            // 土狼用掉（或已过期）后，剩余次数内可以空中跳
+            // 土狼用掉或过期后，按剩余次数空中跳
             if (_airJumpsUsed < _config.maxAirJumps) return MovementStateTag.AirJump;
 
             return EmptyTag;

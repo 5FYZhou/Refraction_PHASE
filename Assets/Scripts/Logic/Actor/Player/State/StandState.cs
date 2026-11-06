@@ -2,10 +2,7 @@
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>
-    /// 站立：姿态的基础态，不施加任何限制。
-    /// 不会自行结束——进下蹲由 <see cref="PostureGroup"/> 的抢占判定发起。
-    /// </summary>
+    /// <summary>站立：基础态不施加任何限制，也不会自行结束，进下蹲靠 PostureGroup 的抢占判定</summary>
     public sealed class StandState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.Stand;

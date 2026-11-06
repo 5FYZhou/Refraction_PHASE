@@ -8,7 +8,6 @@ namespace Refraction.Logic.Actor
 {
     public abstract class ActorLogic : IFixedTickable, ITickable
     {
-        // 移动
         private IMoveMotor _motor;
 
         public ActorLogic(IMoveMotor motor) 

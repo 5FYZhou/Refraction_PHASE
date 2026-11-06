@@ -31,7 +31,7 @@ namespace Refraction.Logic.Move
 
         public float DeltaTime => _dt;
 
-        /// <remarks>config 折算成 Motion 快照，事后改 SO 不生效</remarks>
+        /// <remarks>只有 enableGravity 与 fallGravity 在此快照，其余字段每帧读 SO</remarks>
         public void Configure(PlayerConfig config)
         {
             Config = config;
@@ -70,13 +70,13 @@ namespace Refraction.Logic.Move
             _delta = Vector2.zero;
             _accel = Vector2.zero;
 
-            // 乘数一次性：上一帧声明的到这一帧开头就失效，门禁必须每帧重新提交，否则"这一帧被推了一下"会变成"从此一直被限速"。
+            // 乘数每帧复位：门禁必须每帧重新提交，否则"这一帧"会变成"从此一直被限速"
             _speedScaleX = 1f;
         }
 
         public void Commit()
         {
-            // 零提交帧不写速度，没有变更就不覆盖引擎。
+            // 零提交不写：每帧覆盖会抹掉引擎自己改的速度
             if (!HasSubmission) return;
 
             _writeVelocity(_frameStart + SubmittedDelta);
@@ -116,7 +116,7 @@ namespace Refraction.Logic.Move
             SetVelocity(Vector2.zero);
         }
 
-        /// <summary>移动层的"走"：有惯性按加速度逼近，零惯性当帧直达，只修改x轴速度；方向可未归一化，零向量表示没有期望方向</summary>
+        /// <summary>有惯性按加速度逼近，零惯性当帧直达，只修改x轴速度；方向可未归一化，零向量表示没有期望方向</summary>
         public void MoveTowardsX(Vector2 direction, float speed)
         {
             float target = direction.x == 0f ? 0f
@@ -142,9 +142,6 @@ namespace Refraction.Logic.Move
             ApproachX(0f);
         }
 
-        /// <summary>
-        /// 向目标水平速度渐进逼近。
-        /// </summary>
         private void ApproachX(float target)
         {
             float current = Velocity.x;
@@ -204,7 +201,7 @@ namespace Refraction.Logic.Move
         {
             if (!_enableGravity) return;
 
-            // 站在地面且没有向上运动时，不再施加重力
+            // 踩地就熄灭竖直速度，否则重力在接触面上逐帧累积
             if (ctx.WorldInfo.Grounded && Velocity.y <= 0f)
             {
                 SetVelocityY(0f);

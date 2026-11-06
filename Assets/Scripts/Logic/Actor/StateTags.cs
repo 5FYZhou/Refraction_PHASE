@@ -21,10 +21,10 @@ namespace Refraction.Logic.Actor
         None = 0,
         Stand,
 
-        /// <summary>已完全蹲下：身体、移速都已到位，限制生效。</summary>
+        /// <summary>已完全蹲下，限制生效</summary>
         Crouch,
 
-        /// <summary>下蹲前摇：身体与移速在站立值和蹲姿值之间线性过渡，可被打断。</summary>
+        /// <summary>下蹲前摇：身体与移速线性过渡到蹲姿，可被打断</summary>
         CrouchingTransition
     }
 }

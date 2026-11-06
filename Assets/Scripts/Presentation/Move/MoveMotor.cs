@@ -7,10 +7,7 @@ using UnityEngine;
 namespace Refraction.Presentation
 {
     #region 物理检测参数定义
-    /// <summary>
-    /// 地面探测参数：圆形射线（CircleCast）从脚下向下扫。
-    /// 属于表现层的物理查询参数，逻辑层不感知；改这里即可调手感。
-    /// </summary>
+    /// <summary>地面探测参数：圆形射线从脚下向下扫，只归表现层，逻辑层不感知</summary>
     [System.Serializable]
     public sealed class GroundProbeSettings
     {
@@ -34,10 +31,7 @@ namespace Refraction.Presentation
         public LayerMask layerMask = ~0;
     }
 
-    /// <summary>
-    /// 墙面探测参数：胶囊射线（CapsuleCast）朝角色面向方向扫。
-    /// 方向与探测区域都会随角色朝向左右镜像。
-    /// </summary>
+    /// <summary>墙面探测参数：胶囊射线沿朝向扫，origin.x 与扫描方向都随朝向镜像，少镜像一边就只剩单向探墙</summary>
     [System.Serializable]
     public sealed class WallProbeSettings
     {
@@ -64,10 +58,7 @@ namespace Refraction.Presentation
         public LayerMask layerMask = ~0;
     }
 
-    /// <summary>
-    /// 头顶探测参数：圆形射线（CircleCast）从蹲姿头顶向上扫到站姿头顶。
-    /// 用来判断"松开下蹲键后能不能站起来"。
-    /// </summary>
+    /// <summary>头顶探测参数：圆形射线从蹲姿头顶扫到站姿头顶，用来判断松开下蹲后能不能站起</summary>
     [System.Serializable]
     public sealed class HeadProbeSettings
     {
@@ -83,6 +74,7 @@ namespace Refraction.Presentation
     }
     #endregion
 
+    /// <summary>表现层的移动执行器：只做物理查询与写刚体，移动规则和帧序见 Docs/说明/玩家状态机.md</summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MoveMotor : MonoBehaviour, IMoveMotor
     {
@@ -135,7 +127,6 @@ namespace Refraction.Presentation
         private Rigidbody2D _rb;
         private MoveLedger _ledger;
 
-        // 碰撞体的原始几何。蹲下只改运行时尺寸，起身要能原样还原
         private Vector2 _baseColliderSize;
         private Vector2 _baseColliderOffset;
         private float _baseColliderBottom;
@@ -155,7 +146,7 @@ namespace Refraction.Presentation
         private RaycastHit2D _groundHit;
         private RaycastHit2D _wallHit;
 
-        /// <summary>站立姿态下的身体高度（世界单位）。有顶/底参考点就量参考点，没有就量碰撞体。</summary>
+        /// <summary>有顶底参考点就量参考点，没有就量碰撞体</summary>
         public float BodyHeight => _baseBodyHeight;
 
         private Vector2 _face;
@@ -209,11 +200,7 @@ namespace Refraction.Presentation
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
-        /// <summary>
-        /// 采样一次世界：先圆形射线探地面，再沿当前朝向做胶囊射线探墙。
-        /// 结果打包成逻辑层的 <see cref="WorldInfo"/>，由表现层（PlayerController）放进 LogicContext。
-        /// 踩地时顺手把刚体贴回地面（见 <see cref="SettleOnGround"/>），逻辑层拿到的是"已经站好了"的身体。
-        /// </summary>
+        /// <summary>采样一次世界：先探地面并贴回，再探墙——贴地会改刚体位置，顺序反了墙探针量到的是没贴地的身体</summary>
         public WorldInfo SampleWorld()
         {
             _grounded = ProbeGround();
@@ -273,9 +260,7 @@ namespace Refraction.Presentation
 
         public void SetGravityEnable(bool enable) => _ledger.SetGravityEnable(enable);
 
-        /// <summary>
-        /// 必须在apply前
-        /// </summary>
+        /// <summary>必须在 ApplyGravity 之前调：ledger 在同一帧读这个值，晚了要等下一帧才生效</summary>
         public void SetGravity(float gravity) => _ledger.SetGravity(gravity);
 
         private void SetFace(Vector2 face)
@@ -293,28 +278,15 @@ namespace Refraction.Presentation
         /// <summary>身体高度倍率的下限，防止配置写 0 把碰撞体压成一条线。</summary>
         private const float MinBodyScale = 0.05f;
 
-        /// <summary>
-        /// 把身体压到 <paramref name="scale"/> 倍高（1 = 站立）。
-        ///
-        /// 做法是改碰撞体自己的 size / offset，不去压 transform 的 scale：
-        /// · 非等比缩放一个胶囊会让它的形状退化（半径比半高还大，宽度比总高还宽），
-        ///   物理层烘出来的形状会和预期不符，脚底位置也跟着漂——蹲下的抖动就是这么来的；
-        /// · 改 size 是精确的，脚底由 offset 补回来，始终停在原地；
-        /// · 不依赖碰撞体必须是子物体：挂在根节点上也能安全地改高度，不会把 View 一起压扁。
-        ///
-        /// 竖直胶囊还有个硬约束：高度不能小于宽度，否则形状非法。身高压到宽度以下时，
-        /// 宽度跟着压到身高（蹲下的人本来就窄一点），起身时一并还原。
-        ///
-        /// 墙探针的竖直尺寸与中心跟着一起走，否则蹲着还在用站立高度探墙，人已经矮了一半却照样"贴墙"。
-        /// </summary>
+        /// <summary>改碰撞体 size 与 offset 压身高，不压 transform.scale：非等比缩放会让胶囊退化，脚底跟着漂</summary>
+        /// <remarks>脚底由 offset 补回、原地不动；竖直胶囊高度不得小于宽度，压到更矮时宽度跟着收；墙探针 height 与 origin.y 同步，否则蹲着还用站立高度探墙</remarks>
         public void SetBodyScale(float scale)
         {
             if (bodyCollider == null) return;
 
             scale = Mathf.Clamp(scale, MinBodyScale, 1f);
 
-            // 幂等：过渡期间每帧都会报一次，形状没变就别碰碰撞体——
-            // 改一次形状就等于让物理重算一次接触，白改只会引入连续的小扰动
+            // 幂等：差值小于 0.0005 视为没变——过渡期每帧都调，改形状等于让物理重算接触，白改会引入小扰动
             if (Mathf.Abs(scale - _bodyScale) < 0.0005f) return;
             _bodyScale = scale;
 
@@ -339,20 +311,15 @@ namespace Refraction.Presentation
                     return;
             }
 
-            // 形状绕着中点缩，中点就要跟着下移，墙探针同步
+            // 形状绕中点缩，墙探针跟着下移
             float centerDrop = (_baseColliderSize.y - size.y) * 0.5f
                                * Mathf.Abs(bodyCollider.transform.lossyScale.y);
             wallProbe.height = _baseWallHeight * scale;
             wallProbe.origin.y = _baseWallOriginY - centerDrop;
         }
 
-        /// <summary>
-        /// 头顶能否腾出从 <paramref name="crouchHeight"/> 到 <paramref name="standHeight"/> 的空间。
-        /// 探测圆的**底边**压在蹲姿头顶（所以圆心要再抬一个 radius），向上扫 standHeight − crouchHeight，
-        /// 扫完底边正好落在站姿头顶。扫到任何实体就站不直。
-        /// 触发器（门、区域）不算阻挡，否则站在门口会起不来；自身碰撞体也不算——
-        /// 不能只靠 layerMask 排除，谁把 mask 设成 ~0 就会永远站不起来。
-        /// </summary>
+        /// <summary>头顶能否腾出 crouchHeight 到 standHeight 的空间：圆心比蹲姿头顶再抬一个 radius，圆的底边才正好压在头上</summary>
+        /// <remarks>触发器（门、区域）与自身碰撞体都不算阻挡：只靠 layerMask 排除，谁把 mask 设成 ~0 就永远站不起来</remarks>
         public bool CanStandUp(float standHeight, float crouchHeight)
         {
             if (bodyCollider == null) return true;
@@ -380,10 +347,7 @@ namespace Refraction.Presentation
             return true;
         }
 
-        /// <summary>
-        /// 没连线参考点时才按名字找：View/Bottom（脚底）、View/Top（头顶）。
-        /// 名字与 PlayerController 用的是同一套，改层级时两边一起改。
-        /// </summary>
+        /// <summary>没连线参考点才按名字找 View/Bottom 与 View/Top；改层级要连 PlayerController 一起改，那边按同一套名字找</summary>
         private void CacheRefs()
         {
             if (feetRef != null && headRef != null) return;
@@ -399,7 +363,7 @@ namespace Refraction.Presentation
         private const string BottomNode = "Bottom";
         private const string TopNode = "Top";
 
-        /// <summary>记下站立时的身体数据。蹲下只改运行时状态，起身要能原样还原。</summary>
+        /// <summary>记下站立时的碰撞体与墙探针尺寸，蹲下只改运行时值，起身靠这些还原</summary>
         private void CacheBodyMetrics()
         {
             if (bodyCollider == null) return;
@@ -440,13 +404,7 @@ namespace Refraction.Presentation
             }
         }
 
-        /// <summary>
-        /// 脚底的世界高度。有参考点就用参考点量出"脚底相对根节点"的偏移。
-        ///
-        /// 基准必须是 <see cref="_rb"/> 的位置而不是 transform.position：贴地吸附写的是刚体，
-        /// Transform 要等这一帧物理步结束才会跟上。一个读 Transform 一个写刚体，
-        /// 探针拿到的就是上一帧的身体，纠偏量算在旧位置上——误差每帧过冲一次，就是那个原地微抖。
-        /// </summary>
+        /// <summary>脚底世界高度：基准取刚体而非 transform——贴地写的是刚体，Transform 要等物理步结束才跟上，混用会拿上一帧身体纠偏</summary>
         private float FeetWorldY()
         {
             if (feetRef != null) return _rb.position.y + (feetRef.position.y - transform.position.y);
@@ -454,7 +412,7 @@ namespace Refraction.Presentation
             return bodyCollider != null ? _rb.position.y + ColliderBottomOffset() : _rb.position.y;
         }
 
-        /// <summary>头顶参考点的世界横向位置，头顶探测的圆心用它对齐身体。同样以刚体位置为基准。</summary>
+        /// <summary>头顶参考点的世界横向位置，同样以刚体位置为基准</summary>
         private float HeadWorldX()
         {
             if (headRef == null) return _rb.position.x;
@@ -462,11 +420,7 @@ namespace Refraction.Presentation
             return _rb.position.x + (headRef.position.x - transform.position.x);
         }
 
-        /// <summary>
-        /// 碰撞体最低点相对角色根节点的高度（世界单位，已含子物体自身的缩放与位移）。
-        /// 碰撞体不在根节点上时必须把 localPosition 和子物体缩放都算进来：
-        /// 只乘根节点缩放的话，脚会被算在错误的高度上，贴地吸附就会把人往下拽。
-        /// </summary>
+        /// <summary>碰撞体最低点相对根节点的高度（世界单位）：挂在子物体上时要把 localPosition 与子缩放算进来，只乘根缩放会把脚算错、贴地时把人往下拽</summary>
         private float ColliderBottomOffset()
         {
             if (bodyCollider == null) return -1f;
@@ -474,7 +428,6 @@ namespace Refraction.Presentation
             Transform body = bodyCollider.transform;
             float rootScaleY = Mathf.Abs(transform.lossyScale.y);
 
-            // 碰撞体还挂在根节点上：没有子物体那一层
             if (body == transform) return LocalColliderBottom() * rootScaleY;
 
             return body.localPosition.y * rootScaleY
@@ -495,8 +448,6 @@ namespace Refraction.Presentation
         #region 物理检测
         private bool ProbeGround()
         {
-            // 以脚底为基准起扫：抬 lift 的高度，扫到脚底下方 distance 为止。
-            // 抬起来是为了脚陷进地面时探针不从地面内部开始扫——那会直接扫空，人被误判成离地。
             float feetY = FeetWorldY();
             Vector2 center = new(_rb.position.x, feetY + groundProbe.lift + groundProbe.radius);
             float travel = groundProbe.lift + groundProbe.distance;
@@ -517,7 +468,6 @@ namespace Refraction.Presentation
             {
                 RaycastHit2D hit = _hits[i];
                 if (hit.collider == null) continue;
-                // 只认法线足够朝上的面，把墙和陡坡排除掉
                 if (Vector2.Dot(hit.normal, Vector2.up) < minUp) continue;
                 if (hit.distance >= nearest) continue;
 
@@ -533,23 +483,8 @@ namespace Refraction.Presentation
             return true;
         }
 
-        /// <summary>
-        /// 踩地时把刚体贴到地面上，并丢掉物理引擎写进刚体的竖直速度。
-        ///
-        /// 为什么必须由这里做：地面探测是一条 0.08 的圆形射线，脚下间隙只要小于约 0.06 就算"踩地"，
-        /// 而物理引擎落地后的静止间隙只有 0.005。两者之间这段距离就意味着角色可以停在半空——
-        /// 逻辑层一判定踩地就不再施加重力（见 MoveLedger.ApplyGravity），悬着的脚再也落不下来。
-        /// 之后再起跳、正常落地回到贴地高度，看上去就是"跳一次 y 就少了几厘米"。
-        ///
-        /// 同理，站在地面时接触恢复/边角顶起给刚体加的 +vy 会被下一帧当成角色自己的上升速度
-        /// （MoveLedger 的帧首速度直接读刚体），表现出来就是"在地上向右走时 y 速度 &gt; 0"。
-        /// 竖直速度在"逻辑接管重力"时只允许逻辑层写，所以这里一律清零。
-        ///
-        /// 纠偏带死区：偏差在 snapDeadZone 以内一律不动。没有死区时，求解器每帧留下的那点
-        /// 残余误差都会触发一次瞬移，位置一变接触就要重算，身体就会原地来回抽。
-        ///
-        /// 注意：贴地只改位置和竖直速度，水平速度完全不动，撞墙停下等反馈仍然照旧。
-        /// </summary>
+        /// <summary>踩地后贴回地面并清零 vy：探针把脚下 0.08 内都算踩地，物理静止间隙只有 0.005，不贴就悬在半空且越跳越矮</summary>
+        /// <remarks>只改位置与 vy，水平速度不动；偏差在 snapDeadZone 内跳过，否则每帧瞬移会抖</remarks>
         private void SettleOnGround()
         {
             if (!snapToGround) return;
@@ -570,10 +505,7 @@ namespace Refraction.Presentation
             }
         }
 
-        /// <summary>
-        /// 碰撞体最低点相对角色根节点的高度（局部空间，未乘缩放）。
-        /// 未知形状退回世界包围盒，保证不会因为没适配的碰撞体而算错方向。
-        /// </summary>
+        /// <summary>碰撞体最低点相对根节点的局部高度（未乘缩放）；未知形状退回世界包围盒，宁可差一点也别把方向算反</summary>
         private float LocalColliderBottom()
         {
             switch (bodyCollider)
@@ -595,10 +527,7 @@ namespace Refraction.Presentation
             }
         }
 
-        /// <summary>
-        /// 碰撞体最高点相对角色根节点的高度（局部空间，未乘缩放）。
-        /// 与 <see cref="LocalColliderBottom"/> 同源，两者相减就是碰撞体的局部高度。
-        /// </summary>
+        /// <summary>碰撞体最高点相对根节点的局部高度（未乘缩放），改分支时必须与 LocalColliderBottom 同步，否则身高会算错</summary>
         private float LocalColliderTop()
         {
             switch (bodyCollider)
@@ -645,7 +574,6 @@ namespace Refraction.Presentation
             {
                 RaycastHit2D hit = _hits[i];
                 if (hit.collider == null) continue;
-                // 面必须基本正对角色，避免把地面/缓坡当成墙
                 if (Vector2.Dot(hit.normal, -dir) < minFacing) continue;
                 if (hit.distance >= nearest) continue;
 
@@ -660,7 +588,7 @@ namespace Refraction.Presentation
         {
             bool playing = Application.isPlaying;
 
-            // 地面：起点圆 + 终点圆 + 连接线 + 中心射线
+            // 非播放时没有刚体位置，退回 transform 与碰撞体底边
             float feetY = playing ? FeetWorldY() : transform.position.y + ColliderBottomOffset();
             Vector2 gStart = new(transform.position.x, feetY + groundProbe.lift + groundProbe.radius);
             Vector2 gEnd = gStart + Vector2.down * (groundProbe.lift + groundProbe.distance);
@@ -681,7 +609,6 @@ namespace Refraction.Presentation
                 Gizmos.DrawSphere(_groundHit.point, 0.03f);
             }
 
-            // 墙面：起点胶囊 + 终点胶囊 + 连接线 + 方向箭头
             int side = playing ? _wallSide : FacingSign;
             Vector2 wOrigin = (Vector2)transform.position
                               + new Vector2(wallProbe.origin.x * side, wallProbe.origin.y);
@@ -708,7 +635,7 @@ namespace Refraction.Presentation
                 Gizmos.DrawSphere(_wallHit.point, 0.03f);
             }
 
-            // 头顶：站姿头顶处的探测圆（圆的最低点正好贴着站立时的头顶）
+            // 头顶：圆心已抬了一个 radius，圆底边贴着站立头顶
             if (bodyCollider != null)
             {
                 float headY = playing ? feetY + _baseBodyHeight : bodyCollider.bounds.max.y;

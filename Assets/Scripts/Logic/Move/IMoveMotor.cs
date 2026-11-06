@@ -31,12 +31,10 @@ namespace Refraction.Logic.Move
         void ApplyGravity(in LogicContext ctx);
         void SetPosition(Vector2 position);
 
-        /// <summary>
-        /// 把身体高度改到 <paramref name="scale"/> 倍（1 = 站立）。碰撞体、墙探针的竖直尺寸一起缩放，脚底位置不动。
-        /// </summary>
+        /// <summary>身体高度缩到 scale 倍（1 = 站立）：碰撞体与墙探针的竖直尺寸一起缩放，脚底位置不动</summary>
         void SetBodyScale(float scale);
 
-        /// <summary>头顶是否有足够空间从 <paramref name="crouchHeight"/> 站起来到 <paramref name="standHeight"/>。</summary>
+        /// <summary>头顶是否有足够空间从 crouchHeight 站起来到 standHeight</summary>
         bool CanStandUp(float standHeight, float crouchHeight);
     }
 
@@ -58,10 +56,10 @@ namespace Refraction.Logic.Move
         /// <summary>帧末：有提交才写出一次</summary>
         void Commit();
 
-        /// <summary>累加一次冲量：一次性速度变化，不乘 Δt</summary>
+        /// <summary>一次性速度变化，不乘 Δt</summary>
         void AddImpulse(Vector2 deltaVelocity);
 
-        /// <summary>累加一次持续力：单位/秒²，本帧贡献 = 该值 × Δt</summary>
+        /// <summary>持续力：单位/秒²，本帧贡献 = 该值 × Δt</summary>
         void AddForce(Vector2 acceleration);
 
         void SetVelocity(Vector2 velocity);

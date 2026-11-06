@@ -13,7 +13,6 @@ namespace Refraction.Logic.Events
         private int _writeIndex;
         private int _publishDepth;
 
-        // HandlerCount：当前有效订阅者数量。
         public int HandlerCount => _writeIndex;
 
         public void Subscribe(Action<T> handler)
@@ -26,7 +25,6 @@ namespace Refraction.Logic.Events
             _writeIndex++;
         }
 
-        // 退订：尾部填充法。
         public void Unsubscribe(Action<T> handler)
         {
             if (handler == null) return;
@@ -48,7 +46,7 @@ namespace Refraction.Logic.Events
             _writeIndex = 0;
         }
 
-        /// <summary>发布事件。遍历快照：发布中增删的订阅者收不到本次事件；订阅者异常被隔离，不打断其余订阅者。</summary>
+        /// <summary>发布事件。遍历快照（顶层复用同一份数组，不产生分配）：发布中增删的订阅者收不到本次事件；订阅者异常被隔离</summary>
         public void Publish(in T evt)
         {
             int count = _writeIndex;
@@ -132,8 +130,8 @@ namespace Refraction.Logic.Events
         }
     }
 
-    // EventBus：非泛型门面。静态字段按封闭类型隔离，非泛型代码无法遍历，由 EventChannelRegistry 登记事件类型，重置时反射调用泛型 EventBus 的 Clear()。
-    // ClearAll 当前无调用方。不加 [RuntimeInitializeOnLoadMethod] 自动清理：当前开启 Domain Reload，进 Play 模式静态状态自动重置。
+    // EventBus：非泛型门面。静态字段按封闭类型隔离、非泛型代码无法遍历，靠 EventChannelRegistry 登记事件类型，重置时反射调用泛型 Clear()。
+    // 不加 [RuntimeInitializeOnLoadMethod] 自动清理：开启 Domain Reload 时进 Play 模式静态状态会自动重置。
     public static class EventBus
     {
         public static void ClearAll()

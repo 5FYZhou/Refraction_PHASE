@@ -10,7 +10,7 @@ namespace Refraction.Logic.Input
         Dash
     }
 
-    // 输入缓冲：窗口闭区间 now-window <= t <= now；时间由调用方传入须单调不减。
+    // 输入缓冲：窗口闭区间 now-window <= t <= now，时间由调用方传入、须单调不减。
     // 按下沿由本类产生：宿主不得自存"上一帧输入"，Push 必须先于逻辑层 Tick。
     public sealed class InputBuffer
     {
@@ -70,7 +70,7 @@ namespace Refraction.Logic.Input
             }
         }
 
-        // 帧序：先于逻辑层 Tick 调，缓冲区满时覆盖最旧样本；按下沿不能挪到渲染帧求（一渲染帧对应 0 或 2 个物理帧会丢沿）。
+        // 缓冲区满时覆盖最旧样本；按下沿不能挪到渲染帧求，一渲染帧对应 0 或 2 个物理帧会丢沿。
         public void Push(in InputSnapshot snapshot, float now)
         {
             _snapshots[_writeIndex++] = snapshot;
@@ -84,7 +84,6 @@ namespace Refraction.Logic.Input
         public bool CanConsume(InputType type, float now, float window)
             => IsInWindow(_pendingTimes[type], now, window);
 
-        // 消费成功返回 true，并作废缓存。
         public bool TryConsume(InputType type, float now, float window)
         {
             if (!CanConsume(type, now, window)) return false;

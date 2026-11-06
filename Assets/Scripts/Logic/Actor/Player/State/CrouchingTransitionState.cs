@@ -5,13 +5,8 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>
-    /// 下蹲前摇：从站姿过渡到蹲姿。
-    /// 身体高度与移速乘数在 crouchPrepareTime 内按同一条线性曲线推进到蹲姿值，走完交给 <see cref="CrouchState"/>。
-    ///
-    /// 本态是可打断的：松开下蹲键、离地、或被外部调用 <see cref="PostureGroup.InterruptToStand"/>，
-    /// 都立刻回站立，且移速乘数与身体/View 缩放瞬间恢复，不播放回弹过渡。
-    /// </summary>
+    /// <summary>下蹲前摇：身体高度与移速乘数在 crouchPrepareTime 内共用一条线性曲线，走完交给 CrouchState</summary>
+    /// <remarks>松键、离地或被 InterruptToStand 打断都立刻回站立，身体与缩放瞬间恢复，不播回弹过渡</remarks>
     public sealed class CrouchingTransitionState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.CrouchingTransition;
@@ -35,8 +30,7 @@ namespace Refraction.Logic.Actor
         /// <summary>过渡进度：0 = 完全站立，1 = 完全蹲下。</summary>
         public float Progress => _progress;
 
-        /// <summary>本态结束时该去哪个姿态：走完进蹲姿，被打断回站立。</summary>
-        /// <remarks>只在 <see cref="IsDone"/> 为 true 时被读到，所以未走完就一定是被打断了。</remarks>
+        /// <summary>走完进蹲姿，被打断回站立；只在 IsDone 为 true 时读，未走完就一定是被打断了</summary>
         public PostureStateTag NextTag => _finished ? PostureStateTag.Crouch : PostureStateTag.Stand;
 
         public override void Enter(in LogicContext ctx)
@@ -46,8 +40,7 @@ namespace Refraction.Logic.Actor
             _finished = false;
             _running = true;
 
-            // 进来先写一次 0 进度：过渡起点与站姿严格一致，
-            // 中途被打断时"恢复到什么值"也就只有一处定义
+            // 进来先写一次 0 进度：过渡起点与站姿严格一致，被打断时恢复到什么值也只有一处定义
             Apply(0f);
         }
 
@@ -72,12 +65,8 @@ namespace Refraction.Logic.Actor
             return Mathf.Clamp01((now - _enterTime) / duration);
         }
 
-        /// <summary>
-        /// 把进度落到身体高度与移速乘数上。
-        /// 两者共用同一条线性曲线：变矮和变慢是同一件事的两面，曲线分开会出现"人已经蹲下却还在全速跑"。
-        ///
-        /// 移速乘数每帧都必须重报——MoveLedger 帧首会把它复位成 1，漏报一帧那帧就恢复全程速度。
-        /// </summary>
+        /// <summary>把进度落到身体高度与移速乘数上，两者必须共用同一条曲线，分开会出现人已蹲下却还在全速跑</summary>
+        /// <remarks>移速乘数每帧都要重报：MoveLedger 帧首复位成 1，漏报一帧那帧就恢复全程速度</remarks>
         private void Apply(float progress)
         {
             _motor.SetBodyScale(Mathf.Lerp(1f, _config.crouchHeightRatio, progress));
@@ -86,11 +75,8 @@ namespace Refraction.Logic.Actor
 
         public override bool IsDone(in LogicContext ctx)
         {
-            // 松键 / 真正离地：被打断，立刻中止，不能停在半蹲。
-            //
-            // 打断时把 _finished 清掉：否则"进度刚好走满的那一帧同时离地"会走 NextTag 的蹲姿分支，
-            // 人在空中被压扁一帧，下一帧再被 CrouchState 的离地判定踢回站姿。
-            // 去向只看 _finished，两条路径就只有一个出口，不会再分叉。
+            // 松键 / 真正离地：被打断，立刻中止，不能停在半蹲
+            // 打断时清掉 _finished：否则"进度刚好走满那帧同时离地"会走蹲姿分支，人在空中被压扁一帧
             if (!ctx.InputSnapshot.CrouchHeld || !_ground.Grounded)
             {
                 _finished = false;
@@ -104,12 +90,7 @@ namespace Refraction.Logic.Actor
         {
             _running = false;
 
-            // 一律把身体推回站高：
-            // · 被打断 → 这就是"瞬间恢复"，不播回弹（头顶空间不在这里检查，见 InterruptToStand 的说明）；
-            // · 正常走完 → CrouchState.Enter 会在同一次 ChangeState 里立刻写回蹲姿高度，
-            //   两次写入落在同一帧，中间不会被渲染，也就不存在空档。
-            // 写成"无条件复原"是为了让打断路径只有一个出口：哪怕在"进度已满但状态机还没切"的那一帧
-            // 被外部打断，身体也不会留在半蹲高度上。
+            // 无条件复原站高：正常走完时 CrouchState.Enter 在同一帧写回蹲姿（中间不渲染），打断时这就是"瞬间恢复"
             _motor.SetBodyScale(1f);
 
             _progress = 0f;

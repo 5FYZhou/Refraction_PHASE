@@ -5,13 +5,8 @@ using UnityEngine.SceneManagement;
 
 namespace Refraction.Logic.Level
 {
-    /// <summary>
-    /// 关卡推进：收到 <see cref="RequestNextDoor"/> 后加载门指定的场景。
-    /// 门没指定关卡时，按 SceneName 的命名约定推导下一关；场景不存在则报错、留在本关。
-    /// 目标关卡就是当前关时不切场景，改为把玩家传送到本场景里 nextDoor 指定的门。
-    ///
-    /// 门的查询全部委托给 <see cref="IDoorReader"/>：逻辑层不认识 Door，也不做场景扫描。
-    /// </summary>
+    /// <summary>关卡推进：收到 RequestNextDoor 后加载门指定的场景，门没指定则按 SceneName 的命名约定推导下一关，场景不存在只报错并留在本关</summary>
+    /// <remarks>目标就是当前关时不重载，改为把玩家传送到本场景里 nextDoor 指定的门；门查询全部委托给 IDoorReader，逻辑层不认识 Door</remarks>
     public class LevelManager
     {
         private readonly int _curId;
@@ -48,11 +43,10 @@ namespace Refraction.Logic.Level
 
         private void OnRequestNextLevel(RequestNextDoor evt)
         {
-            // 门的触发器按碰撞体对触发，玩家身上有多个碰撞体时会连续进来多次，
-            // 这里挡住重复请求，避免同一帧多次 LoadScene
+            // 玩家身上多个碰撞体会让门触发连续进来多次，用 _loading 挡住，避免同一帧多次 LoadScene
             if (_loading) return;
 
-            // 门可以直接指定去哪一关（任意门）；没指定才退回命名约定里的下一关
+            // 门可以直接指定任意目标关；没指定才退回命名约定里的下一关
             int nextId;
 
             if (evt.nextLevel > 0)
@@ -69,8 +63,7 @@ namespace Refraction.Logic.Level
                 return;
             }
 
-            // 目标就是当前关：不重载整个场景，直接把玩家挪到本场景里指定的那扇门。
-            // 重载会把本关的状态全丢掉，而且同场景重载在本帧内根本看不到效果
+            // 目标就是当前关：不重载，直接挪到指定的门——重载会丢光本关状态，且本帧内根本看不到效果
             if (nextId == _curId)
             {
                 TeleportToDoor(evt.nextDoor);
@@ -96,21 +89,17 @@ namespace Refraction.Logic.Level
             }
             catch (Exception ex)
             {
-                // 加载失败就放开闸门和落点：否则这扇门以及后面所有门都会永久失效
+                // 加载失败要放开 _loading 与落点，否则这扇门以及后面所有门都会永久失效
                 _loading = false;
                 _pendingDoorId = 0;
                 Debug.LogError($"[LevelManager] 加载场景 \"{nextName}\" 失败：{ex.Message}");
             }
         }
 
-        /// <summary>
-        /// 同关内的门对门传送：不重载场景，把玩家送到本场景里 nextDoor 指定的门。
-        /// 用 <see cref="RequestPlayerPosChange"/> 发出去而不是直接抓玩家——逻辑层不认识玩家实体。
-        /// </summary>
+        /// <summary>同关内的门对门传送：用 RequestPlayerPosChange 发出去而不是直接抓玩家，逻辑层不认识玩家实体</summary>
         private void TeleportToDoor(int doorId)
         {
-            // 门指向本关却没给目标门（旧数据里 nextDoor 普遍是 0），
-            // 这时宁可报错也别把玩家丢到 (0,0) 去
+            // 门指向本关却没给目标门（旧数据里 nextDoor 普遍是 0）：宁可报错也别把玩家丢到 (0,0)
             if (doorId <= 0)
             {
                 Debug.LogError($"[LevelManager] 门指向当前关（id = {_curId}），但没有指定目标门（nextDoor = {doorId}），玩家原地不动。");
@@ -123,8 +112,7 @@ namespace Refraction.Logic.Level
                 return;
             }
 
-            // 「关卡 id + 门 id」才唯一确定一扇门：读取器绑在别的关卡上时，
-            // 同号的门其实是另一扇，按 id 落过去就是错的位置
+            // 关卡 id + 门 id 才唯一确定一扇门：读取器绑在别的关卡时，同号的门其实是另一扇，按 id 落过去就是错的位置
             if (_doorReader.LevelId != _curId)
             {
                 Debug.LogError($"[LevelManager] 门读取器绑定在关卡 {_doorReader.LevelId}，当前关卡是 {_curId}，拒绝按门 id 传送。");

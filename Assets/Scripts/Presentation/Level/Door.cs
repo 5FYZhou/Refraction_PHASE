@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Level
 {
-    /// <summary>
-    /// 关卡门：玩家碰到就请求切到 nextLevelId 里的 nextDoorId 号门。
-    /// 目标关卡留 0 就按命名约定去下一关；目标门留 0 就不指定落点。
-    /// </summary>
     public class Door : MonoBehaviour
     {
         [Tooltip("本门的编号，供上一关的门指向。同一场景内唯一。")]
@@ -25,10 +21,9 @@ namespace Refraction.Presentation.Level
 
         private float _enterBlockedUntil;
 
-        /// <summary>玩家从这扇门进关时应该站的位置。</summary>
         public Vector2 SpawnPoint => spawnAnchor != null ? spawnAnchor.position : transform.position;
 
-        /// <summary>让这扇门在接下来的一小段时间里不响应进入，避免刚落地就被自己再送走一次。</summary>
+        /// <summary>接下来 seconds 秒内不响应进入：落点就压在门触发器里，不屏蔽会被自己立刻再送走；只延长不缩短</summary>
         public void SuppressEnterFor(float seconds)
         {
             _enterBlockedUntil = Mathf.Max(_enterBlockedUntil, Time.time + seconds);

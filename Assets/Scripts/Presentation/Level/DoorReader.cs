@@ -6,17 +6,11 @@ using UnityEngine.SceneManagement;
 
 namespace Refraction.Presentation.Level
 {
-    /// <summary>
-    /// 本关的门索引：扫描场景里的所有 Door，按门 id 建表。
-    /// 属于关卡场景自己的一份，随场景销毁，不会像常驻对象那样缓存上一个场景的门。
-    ///
-    /// 一扇门由「关卡 id + 门 id」唯一确定：本读取器绑定在当前场景解析出的关卡 id 上，
-    /// 调 <see cref="TryGetPos"/> 前由调用方（LevelManager）核对关卡，避免拿错关的读取器查同号门。
-    /// 索引在 Attach 或第一次查询时建立一次，之后不再刷新——运行期增删门不支持。
-    /// </summary>
+    /// <summary>本关门索引：扫场景内所有 Door 按门 id 建表，随场景销毁，不会串到上一个场景</summary>
+    /// <remarks>索引只在 Attach 或首次查询时建一次，运行期增删门不支持；查门前调用方要先核对关卡 id，否则会拿错关的表查同号门</remarks>
     public sealed class DoorReader : MonoBehaviour, ISceneRoot, IDoorReader
     {
-        /// <summary>玩家刚被放到门的落点时，吞掉门的进入触发这么久，避免两扇门来回弹。</summary>
+        /// <summary>落点放下后吞掉门的进入触发这么久（秒），否则两扇门会来回弹</summary>
         private const float SuppressSeconds = 0.2f;
 
         private readonly Dictionary<int, Door> _doors = new();
@@ -28,7 +22,7 @@ namespace Refraction.Presentation.Level
 
         public int Order => SceneOrder.World;
 
-        /// <summary>从本场景名解析出的关卡 id。非 Level_正整数 命名时为 0，本关不会索引任何门。</summary>
+        /// <summary>本场景解析出的关卡 id；命名不合 Level_正整数 时为 0，本关不索引任何门</summary>
         public int LevelId 
         {
             get
@@ -42,7 +36,6 @@ namespace Refraction.Presentation.Level
             }
         }
 
-        /// <summary>已索引到的门数量，排查配置用。</summary>
         public int Count => _doors.Count;
 
         private void Awake()
@@ -63,14 +56,14 @@ namespace Refraction.Presentation.Level
 
         private void Start()
         {
-            // 抓住实例而不是每次去问 GameRoot.Instance：销毁期再问会当场造一个新的出来
+            // 抓住实例：销毁期再问 GameRoot.Instance 会当场造一个新的出来
             _root = GameRoot.Instance;
             _root?.RegisterSceneRoot(this);
         }
 
         private void OnDestroy()
         {
-            // 场景卸载时 GameRoot 已经清过表，这里只是兜底
+            // GameRoot 在场景卸载时已清过表，这里只是兜底
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
         private static int ResolveId()
@@ -92,7 +85,7 @@ namespace Refraction.Presentation.Level
 
             if (!_doors.TryGetValue(doorId, out Door door)) return false;
 
-            // 门在运行期被销毁（比如被别的逻辑回收）：当作没有，别把已销毁对象的位置当落点
+            // 门被销毁：清掉这条记录并当作没有，别拿已销毁对象的位置当落点
             if (door == null)
             {
                 _doors.Remove(doorId);
@@ -117,8 +110,7 @@ namespace Refraction.Presentation.Level
                 return;
             }
 
-            // 门可能挂在任意父节点的子物体里，所以从每个场景根往下找，不限定直接子物体；
-            // includeInactive：停用的门同样可能是别的门的落点
+            // 从每个场景根往下扫（门可挂在任意层），含未激活：停用的门也可能是别人的落点
             GameObject[] roots = gameObject.scene.GetRootGameObjects();
 
             for (int i = 0; i < roots.Length; i++)
@@ -138,7 +130,7 @@ namespace Refraction.Presentation.Level
 
             int id = door.SelfId;
 
-            // 0 与负数就是没配。这种门可以被人踩，但没法作为别人的落点——不拦下来会静默落到默认位置
+            // 0 与负数是没配：这种门能踩，但不能当别人的落点，不拦会静默落到默认位置
             if (id <= 0)
             {
                 Debug.LogError($"[DoorReader] 关卡 {_levelId} 里 {Describe(door)} 的 SelfId = {id} 非法（必须是正整数），已跳过。");

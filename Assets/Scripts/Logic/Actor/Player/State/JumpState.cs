@@ -5,10 +5,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>
-    /// 上升段：只在起跳那一帧写入竖直速度，之后交给重力接管；空中允许横移。
-    /// 竖直速度转为 ≤ 0 时结束，由状态组切到 <see cref="FallState"/>。
-    /// </summary>
+    /// <summary>上升段：只在起跳那一帧写入竖直速度，之后交给重力接管；vy 转为 ≤ 0 交给 FallState</summary>
     public sealed class JumpState : BaseState<MovementStateTag, LogicContext>
     {
         public override MovementStateTag Tag => MovementStateTag.Jump;
@@ -27,8 +24,7 @@ namespace Refraction.Logic.Actor
         {
             _jumpReleased = false;
 
-            // 上升途中被 Fallback 重新归到本态时不重复给速度；
-            // 踩地起跳（Grounded）和土狼跳（已离地但还在下坠/顶点，vy ≤ 0）都必须真正起跳
+            // 上升途中被 Fallback 归回本态时不重复给速度；踩地起跳与土狼跳（已离地但 vy ≤ 0）都必须真起跳
             if (ctx.WorldInfo.FrameStartVelocity.y > 0f) return;
 
             _motor.SetVelocityY(_config.jumpSpeed);

@@ -23,7 +23,7 @@ namespace Refraction.Logic.Actor
         {
             _jumpReleased = false;
 
-            // 每次空中跳都是一次全新的起跳，无论当前是下坠还是还在上升，都直接覆盖竖直速度
+            // 空中跳每次都是全新起跳，无论升降都直接覆盖竖直速度
             _motor.SetVelocityY(_config.airJumpSpeed);
 
             _motor.SetGravity(_config.riseGravity);
