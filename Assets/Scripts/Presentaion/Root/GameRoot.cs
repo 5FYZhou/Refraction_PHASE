@@ -5,6 +5,7 @@ using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Level;
+using Refraction.Presentation.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -26,12 +27,15 @@ namespace Refraction.Presentation
         private InputProvider _inputProvider;
         private LevelManager _levelMgr;
         private DoorReader _doorReader;
+        private UIMgr _uiMgr;
 
         private Vector2 _entryPoint;
         private bool _hasEntryPoint;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
+
+        public UIMgr UIMgr { get => _uiMgr; }
 
         protected override void Awake()
         {
@@ -266,6 +270,11 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Tick();
+
+            // 玩家还没注册（或在换场景的缝隙里）时跳过：Update 比 FixedUpdate 更容易撞上这一段
+            if (playerController == null) return;
+
+            playerController.Tick();
         }
 
         private void FixedUpdate()

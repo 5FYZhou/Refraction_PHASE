@@ -6,4 +6,9 @@ namespace Refraction.Logic
     {
         void FixedTick(LogicContext cxt);
     }
+
+    public interface ITickable
+    {
+        void Tick(LogicContext cxt);
+    }
 }

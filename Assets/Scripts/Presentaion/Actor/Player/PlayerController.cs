@@ -15,6 +15,15 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private float _spawnY = -10f;
 
+        [Tooltip("玩家参数资产。应与 MoveMotor 上引用的是同一份配置。")]
+        [SerializeField]
+        private PlayerConfig config;
+
+        [Tooltip("驱动刚体的执行器。逻辑层的移动/跳跃/冲刺指令最终都落到这里。")]
+        [SerializeField]
+        private MoveMotor moveMotor;
+
+
         private GameRoot _root;
         private bool _attached = false;
         private bool _warnedNoGrounded;
@@ -22,13 +31,23 @@ namespace Refraction.Presentation.Actor
         private InputBuffer _buffer;
         private PlayerLogic _logic;
 
-        [Tooltip("驱动刚体的执行器。逻辑层的移动/跳跃/冲刺指令最终都落到这里。")]
-        [SerializeField]
-        private MoveMotor moveMotor;
+        // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
+        private Transform view;
+        private Transform bottom;
 
-        [Tooltip("玩家参数资产。应与 MoveMotor 上引用的是同一份配置。")]
-        [SerializeField]
-        private PlayerConfig config;
+        // View 的原始姿态与底边：缩放要以脚底为锚点，必须知道它站立时站在哪儿
+        private Vector3 _viewBasePos;
+        private Vector3 _viewBaseScale;
+        private float _viewBottomOffset;
+        private Vector2 _curViewScale;
+        private bool _warnedNoView;
+
+        private void Awake()
+        {
+            // 放在 Awake：GameRoot 可能在 Start 之前就调到 Attach/Tick，
+            // 那一帧 view 还没解析出来就会先报一次"找不到 View"
+            CacheView();
+        }
 
         private void Start()
         {
@@ -67,27 +86,22 @@ namespace Refraction.Presentation.Actor
                 return;
             }
 
-            Attach(_root.Input);
+            Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
+            Require.Assigned(config, nameof(PlayerController), nameof(config));
+
+            _inputProvider = _root.Input;
+            _buffer = new(
+                Mathf.Max(config.inputBufferTime, config.dashBufferTime),
+                Mathf.RoundToInt(1f / Time.fixedDeltaTime)
+                );
+            _logic = new(moveMotor, config, _buffer);
+            _attached = true;
 
             // 从门里进来就落到那扇门的位置；首关没有落点，保持场景里摆的位置
             if (_root.TryConsumeEntryPoint(out Vector2 entry))
             {
                 _logic.SpawnTo(entry);
             }
-        }
-
-        private void Attach(InputProvider inputProvider)
-        {
-            Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
-            Require.Assigned(config, nameof(PlayerController), nameof(config));
-
-            _inputProvider = inputProvider;
-            _buffer = new (
-                Mathf.Max(config.inputBufferTime, config.dashBufferTime),
-                Mathf.RoundToInt(1f / Time.fixedDeltaTime)
-                );
-            _logic = new(moveMotor, config, _buffer);
-            _attached = true;
         }
 
         public void FixedTick()
@@ -111,6 +125,19 @@ namespace Refraction.Presentation.Actor
             }
         }
 
+        public void Tick()
+        {
+            // Attach 失败（缺输入源/缺配置）时 _logic 还没建出来，别在 Update 里空引用
+            if (!_attached) return;
+
+            _logic.Tick(new());
+            if (_curViewScale != _logic.CurViewScale)
+            {
+                _curViewScale = _logic.CurViewScale;
+                SetViewScale(_curViewScale);
+            }
+        }
+
         private void WarnNoGroundedPoint()
         {
             if (_warnedNoGrounded) return;
@@ -125,6 +152,92 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             _logic.SpawnTo(evt.Pos);
+        }
+
+        /// <summary>
+        /// 应用逻辑层给的 View 缩放。以脚底为锚点：View 的枢轴在身体中心，
+        /// 只改 scale 会让人从中间往里缩——脚跟着抬起来 0.65（1 − 0.35）。
+        /// 所以缩放的同时把 View 整体下移 (1 − scale.y) × 脚底到枢轴的距离，脚才留在原地。
+        /// </summary>
+        public void SetViewScale(Vector2 scale)
+        {
+            if (view == null)
+            {
+                WarnNoView();
+                return;
+            }
+
+            view.localScale = new Vector3(
+                _viewBaseScale.x * scale.x,
+                _viewBaseScale.y * scale.y,
+                _viewBaseScale.z);
+
+            Vector3 pos = _viewBasePos;
+            pos.y = _viewBasePos.y + _viewBottomOffset * (1f - scale.y);
+            view.localPosition = pos;
+        }
+
+        /// <summary>
+        /// 层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）。
+        /// MoveMotor 找的也是这两个名字，两边必须一致。
+        /// </summary>
+        private const string ViewChildName = "View";
+        private const string BottomChildName = "Bottom";
+
+        /// <summary>
+        /// 记下 View 站立时的本地姿态与脚底相对枢轴的高度，蹲下缩放要围着脚底做。
+        ///
+        /// 名字直接从层级里取，不依赖 Inspector 连线：
+        /// Bottom 是 View 的**直接子节点**，所以要 view.Find("Bottom") 而不是 transform.Find——
+        /// 后者只扫 Player 的一级子物体，永远找不到，蹲下就会退化成以身体中心为锚点（脚浮起来）。
+        ///
+        /// 基准取 localPosition / localScale：SetViewScale 写回去的也是 localPosition，
+        /// 存世界坐标会在关卡根节点不在原点时把人整体甩出去。
+        /// </summary>
+        private void CacheView()
+        {
+            view = transform.Find(ViewChildName);
+            if (view == null)
+            {
+                WarnNoView();
+                return;
+            }
+
+            bottom = view.Find(BottomChildName);
+
+            _viewBasePos = view.localPosition;
+            _viewBaseScale = view.localScale;
+
+            // y 压成 0 就再也换不回来了，宁可不做缩放
+            if (Mathf.Abs(_viewBaseScale.y) < 1e-4f)
+            {
+                _viewBottomOffset = 0f;
+                Debug.LogWarning($"[PlayerController] {ViewChildName} 的基础 y 缩放是 0，下蹲的身高变化不会生效。");
+                return;
+            }
+
+            if (bottom == null)
+            {
+                _viewBottomOffset = 0f;
+                Debug.LogWarning($"[PlayerController] 找不到 {ViewChildName}/{BottomChildName}，" +
+                                 "下蹲会以 View 枢轴（身体中心）为锚点缩放，脚会浮起来。");
+                return;
+            }
+
+            // 直接子节点：本地坐标乘 View 的基础缩放，就是"脚底到枢轴"的本地距离（正常为负）
+            _viewBottomOffset = bottom.localPosition.y * _viewBaseScale.y;
+
+            // 初始就当"已经应用过站姿"：第一帧逻辑层给的也是 1，不必重复写一次 Transform
+            _curViewScale = Vector2.one;
+        }
+
+        private void WarnNoView()
+        {
+            if (_warnedNoView) return;
+
+            _warnedNoView = true;
+            Debug.LogWarning($"[PlayerController] 层级里找不到 {ViewChildName} 子物体：下蹲不会反映到画面上" +
+                             "（碰撞体与移速仍会正常生效）。");
         }
     }
 }

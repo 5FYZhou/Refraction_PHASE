@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    public abstract class ActorLogic : IFixedTickable
+    public abstract class ActorLogic : IFixedTickable, ITickable
     {
         // 移动
         private IMoveMotor _motor;
@@ -20,11 +20,18 @@ namespace Refraction.Logic.Actor
         {
             _motor.BeginStep(ctx.GameTime.now, ctx.GameTime.deltaTime);
 
-            OnTick(in ctx);
+            OnFixedTick(in ctx);
 
             _motor.ApplyGravity(ctx);
             _motor.Commit();
         }
+
+        public void Tick(LogicContext ctx)
+        {
+            OnTick(ctx);
+        }
+
+        protected abstract void OnFixedTick(in LogicContext ctx);
 
         protected abstract void OnTick(in LogicContext ctx);
     }

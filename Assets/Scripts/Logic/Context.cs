@@ -9,12 +9,17 @@ namespace Refraction.Logic
         public readonly bool Jump;
         public readonly bool Dash;
         public readonly bool JumpHeld;
-        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld)
+
+        /// <summary>下蹲键是否按住。姿态是持续状态而不是按下沿，所以取按住而不是沿。</summary>
+        public readonly bool CrouchHeld;
+
+        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld)
         {
             this.Move = move;
             this.Jump = jump;
             this.Dash = dash;
             this.JumpHeld = jumpHeld;
+            this.CrouchHeld = crouchHeld;
         }
     }
 

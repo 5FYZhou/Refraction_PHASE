@@ -14,4 +14,17 @@ namespace Refraction.Logic.Actor
         Fall,
         Dash
     }
+
+    /// <summary>姿态：与移动正交的一组状态，站着还是蹲着。</summary>
+    public enum PostureStateTag
+    {
+        None = 0,
+        Stand,
+
+        /// <summary>已完全蹲下：身体、移速都已到位，限制生效。</summary>
+        Crouch,
+
+        /// <summary>下蹲前摇：身体与移速在站立值和蹲姿值之间线性过渡，可被打断。</summary>
+        CrouchingTransition
+    }
 }

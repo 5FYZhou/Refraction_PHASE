@@ -13,7 +13,7 @@ namespace Refraction.Logic.Move
         private Vector2 _frameStart;
         private Vector2 _delta;
         private Vector2 _accel;
-        private float _speedScale = 1f;
+        private float _speedScaleX = 1f;
         private float _now;
         private float _dt = 0.02f;
         private bool _enableGravity;
@@ -46,18 +46,18 @@ namespace Refraction.Logic.Move
         public Vector2 Velocity => _frameStart + SubmittedDelta;
 
         /// <summary>速度乘数，1=不缩放；写口夹取 NaN→1、负数→0、&gt;1→1</summary>
-        public float SpeedScale
+        public float SpeedScaleX
         {
-            get => _speedScale;
+            get => _speedScaleX;
             set
             {
                 if (float.IsNaN(value))
                 {
-                    _speedScale = 1f;
+                    _speedScaleX = 1f;
                     return;
                 }
 
-                _speedScale = value < 0f ? 0f : (value > 1f ? 1f : value);
+                _speedScaleX = value < 0f ? 0f : (value > 1f ? 1f : value);
             }
         }
 
@@ -71,7 +71,7 @@ namespace Refraction.Logic.Move
             _accel = Vector2.zero;
 
             // 乘数一次性：上一帧声明的到这一帧开头就失效，门禁必须每帧重新提交，否则"这一帧被推了一下"会变成"从此一直被限速"。
-            _speedScale = 1f;
+            _speedScaleX = 1f;
         }
 
         public void Commit()
@@ -120,7 +120,7 @@ namespace Refraction.Logic.Move
         public void MoveTowardsX(Vector2 direction, float speed)
         {
             float target = direction.x == 0f ? 0f
-                : Mathf.Sign(direction.x) * speed * _speedScale;
+                : Mathf.Sign(direction.x) * speed * _speedScaleX;
 
             if (Config.moveAcceleration <= 0f)
             {

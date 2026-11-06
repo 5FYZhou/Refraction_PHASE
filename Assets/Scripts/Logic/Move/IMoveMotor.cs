@@ -13,6 +13,7 @@ namespace Refraction.Logic.Move
         void SetVelocityX(float speed);
         void SetVelocityY(float speed);
         void SnapVelocity(Vector2 velocity);
+        void SetSpeedScaleX(float scale);
         void ScaleVelocityY(float multiplier);
 
         void SetGravityEnable(bool enable);
@@ -21,11 +22,22 @@ namespace Refraction.Logic.Move
 
     public interface IMoveMotor : IStateMove
     {
+        /// <summary>站立姿态下的碰撞体高度（世界单位，不含运行时压缩）。头顶探测用它在蹲高与站高之间留空间。</summary>
+        float BodyHeight { get; }
+
         void BeginStep(float now, float deltaTime);
         void Commit();
         void FaceTowards(Vector2 dir);
         void ApplyGravity(in LogicContext ctx);
         void SetPosition(Vector2 position);
+
+        /// <summary>
+        /// 把身体高度改到 <paramref name="scale"/> 倍（1 = 站立）。碰撞体、墙探针的竖直尺寸一起缩放，脚底位置不动。
+        /// </summary>
+        void SetBodyScale(float scale);
+
+        /// <summary>头顶是否有足够空间从 <paramref name="crouchHeight"/> 站起来到 <paramref name="standHeight"/>。</summary>
+        bool CanStandUp(float standHeight, float crouchHeight);
     }
 
     public interface IMoveLedger
@@ -38,7 +50,7 @@ namespace Refraction.Logic.Move
 
         /// <summary>速度乘数，1=不缩放；帧首复位</summary>
         /// <remarks>写口夹取 NaN→1、负数→0、&gt;1→1</remarks>
-        float SpeedScale { get; set; }
+        float SpeedScaleX { get; set; }
 
         /// <summary>帧首：读真值、清空累加区、复位速度乘数</summary>
         void BeginStep(float now, float deltaTime);

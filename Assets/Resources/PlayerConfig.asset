@@ -35,3 +35,9 @@ MonoBehaviour:
   apexGravity: 14
   jumpCutMultiplier: 0.4
   jumpCutGravity: 75
+  crouchPrepareTime: 0.1
+  crouchHeightRatio: 0.65
+  crouchMoveSpeedScale: 0.5
+  crouchAllowJump: 0
+  crouchAllowDash: 0
+  crouchGroundGrace: 0.08

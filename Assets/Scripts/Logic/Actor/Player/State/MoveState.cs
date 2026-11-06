@@ -3,14 +3,18 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
+    /// <summary>
+    /// 地面行走。目标速度恒为 moveSpeed，姿态带来的减速由 MoveLedger 的速度乘数（SetSpeedScaleX）处理，
+    /// 本状态不需要知道自己在站着还是蹲着。
+    /// </summary>
     public sealed class MoveState : BaseState<MovementStateTag, LogicContext>
     {
         public override MovementStateTag Tag => MovementStateTag.Move;
 
-        private IStateMove _motor;
-        private float _speed;
+        private readonly IStateMove _motor;
+        private readonly float _speed;
 
-        public MoveState(IStateMove motor, float speed) 
+        public MoveState(IStateMove motor, float speed)
         {
             _motor = motor;
             _speed = speed;

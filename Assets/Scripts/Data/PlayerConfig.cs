@@ -93,5 +93,28 @@ namespace Refraction.Data
         
         [Tooltip("上升期松开跳跃键后使用的重力加速度，配合 jumpCutMultiplier 让短按跳得更低。")]
         public float jumpCutGravity = 90f;
+
+        [Header("姿态 · 下蹲")]
+        [Tooltip("下蹲前摇时长（秒），也就是 CrouchingTransition 的时长：\n这段时间里身体高度与移速乘数一起从站姿值线性过渡到蹲姿值，跳跃/冲刺的限制要等过渡结束才生效。\n0 表示没有前摇，直接进蹲姿。")]
+        [Min(0f)]
+        public float crouchPrepareTime = 0f;
+
+        [Tooltip("下蹲时的身高倍率（相对站立高度）：0.65 表示只留 65% 的高度。\n碰撞体、墙探针、View 一起按这个倍率压扁，脚底位置不变。")]
+        [Range(0.05f, 1f)]
+        public float crouchHeightRatio = 0.65f;
+
+        [Tooltip("下蹲时的移速倍率：乘在 moveSpeed 上（走 MoveLedger 的速度乘数，不改加速度）。\n0.5 表示蹲下后只能走一半速度；设为 0 表示蹲下不能移动。")]
+        [Range(0f, 1f)]
+        public float crouchMoveSpeedScale = 0.5f;
+
+        [Tooltip("下蹲期间是否允许跳跃。默认禁止，后续按设计调整。")]
+        public bool crouchAllowJump = false;
+
+        [Tooltip("下蹲期间是否允许冲刺。默认禁止，后续按设计调整。")]
+        public bool crouchAllowDash = false;
+
+        [Tooltip("下蹲的离地宽限（秒）：蹲姿/前摇要连续离地超过这个时长才结束。\n踩地判定偶尔会掉一两帧（接触刷新、碰撞体刚改过高度），没有宽限的话人会被踢回站姿、下一帧又蹲下，看起来是每两帧抽一次。\n设 0 表示离地一帧就结束。")]
+        [Min(0f)]
+        public float crouchGroundGrace = 0.08f;
     }
 }

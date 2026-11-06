@@ -13,6 +13,7 @@ namespace Refraction.Logic.Actor
         private IMoveMotor _motor;
         private PlayerConfig _config;
         private InputBuffer _buffer;
+        private IPostureGate _posture;
         private DashState _dashState;
         private Cooldown _dashCooldown = new(); 
         private float _lastGroundedTime = float.NegativeInfinity;
@@ -21,11 +22,12 @@ namespace Refraction.Logic.Actor
         private int _airJumpsUsed;
         private int _airDashesUsed;
 
-        public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer) 
+        public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IPostureGate posture) 
         {
             _motor = motor;
             _config = config;
             _buffer = buffer;
+            _posture = posture;
             Init();
         }
 
@@ -120,6 +122,10 @@ namespace Refraction.Logic.Actor
             // 冲刺期间不接受起跳
             if (machine.CurrentState?.Tag == MovementStateTag.Dash) return EmptyTag;
 
+            // 下蹲期间不给跳：地面跳、土狼跳、空中跳一并挡在这里。
+            // 这里不消费输入，所以起身后在缓冲窗口内按下的跳仍会照常生效
+            if (!_posture.CanJump) return EmptyTag;
+
             // 跳跃键不在缓冲窗口里
             if (!_buffer.CanConsume(InputType.Jump, now, _config.inputBufferTime)) return EmptyTag;
 
@@ -158,6 +164,9 @@ namespace Refraction.Logic.Actor
         private bool CanDash(in LogicContext ctx)
         {
             float now = ctx.GameTime.now;
+
+            // 下蹲期间不给冲（含空中冲），同样不消费输入
+            if (!_posture.CanDash) return false;
 
             if (!_dashCooldown.CanUse(now)) return false;
 
