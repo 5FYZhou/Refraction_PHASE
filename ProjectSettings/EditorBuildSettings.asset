@@ -10,13 +10,19 @@ EditorBuildSettings:
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
     path: Assets/Scenes/Levels/Level_1.scene
-    guid: b4703beb7552e0e4b86bf4e48084c4a3
+    guid: 744539bf782dfed4f9da782a8f86e27e
   - enabled: 1
     path: Assets/Scenes/Levels/Level_2.scene
     guid: b91f7451da1678a4f9cc0a35b87094c2
   - enabled: 1
     path: Assets/Scenes/Levels/Level_3.scene
     guid: 3834aece7125e1b4ebae0c85dfc7d5a1
+  - enabled: 1
+    path: Assets/Scenes/Levels/Level_4.scene
+    guid: 8af63d0104f20d144906597e58a57027
+  - enabled: 1
+    path: Assets/Scenes/Levels/Level_5.scene
+    guid: b4703beb7552e0e4b86bf4e48084c4a3
   m_BuildProfiles: []
   m_configObjects: {}
   m_SlimFeaturesWeixinMiniGame:
