@@ -1,4 +1,5 @@
 ﻿using System;
+using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -14,6 +15,8 @@ namespace Refraction.Logic.Level
 
         private bool _loading;
         private int _pendingDoorId;
+        private MovementStateTag _pendingEntryTag;
+        private int _pendingEntryFace;
 
         public LevelManager(int id, IDoorReader doorReader = null)
         {
@@ -29,6 +32,11 @@ namespace Refraction.Logic.Level
         /// <summary>上一次成功发起的切场景请求里，目标场景指定的门 id；0 表示没指定。</summary>
         public int PendingDoorId => _pendingDoorId;
 
+        public MovementStateTag PendingEntryTag => _pendingEntryTag;
+
+        /// <summary>玩家触发那扇门时的朝向（-1 左 / 1 右）。</summary>
+        public int PendingEntryFace => _pendingEntryFace;
+
         public void Init()
         {
             EventBus<RequestNextDoor>.Subscribe(OnRequestNextLevel);
@@ -39,6 +47,8 @@ namespace Refraction.Logic.Level
             EventBus<RequestNextDoor>.Unsubscribe(OnRequestNextLevel);
             _loading = false;
             _pendingDoorId = 0;
+            _pendingEntryTag = MovementStateTag.None;
+            _pendingEntryFace = 0;
         }
 
         private void OnRequestNextLevel(RequestNextDoor evt)
@@ -66,7 +76,7 @@ namespace Refraction.Logic.Level
             // 目标就是当前关：不重载，直接挪到指定的门——重载会丢光本关状态，且本帧内根本看不到效果
             if (nextId == _curId)
             {
-                TeleportToDoor(evt.nextDoor);
+                TeleportToDoor(evt.nextDoor, evt.enterTag, evt.enterFace);
                 return;
             }
 
@@ -82,6 +92,8 @@ namespace Refraction.Logic.Level
 
             _loading = true;
             _pendingDoorId = evt.nextDoor;
+            _pendingEntryTag = evt.enterTag;
+            _pendingEntryFace = evt.enterFace;
 
             try
             {
@@ -92,12 +104,13 @@ namespace Refraction.Logic.Level
                 // 加载失败要放开 _loading 与落点，否则这扇门以及后面所有门都会永久失效
                 _loading = false;
                 _pendingDoorId = 0;
+                _pendingEntryFace = 0;
                 Debug.LogError($"[LevelManager] 加载场景 \"{nextName}\" 失败：{ex.Message}");
             }
         }
 
         /// <summary>同关内的门对门传送：用 RequestPlayerPosChange 发出去而不是直接抓玩家，逻辑层不认识玩家实体</summary>
-        private void TeleportToDoor(int doorId)
+        private void TeleportToDoor(int doorId, MovementStateTag enterTag, int enterFace)
         {
             // 门指向本关却没给目标门（旧数据里 nextDoor 普遍是 0）：宁可报错也别把玩家丢到 (0,0)
             if (doorId <= 0)
@@ -119,13 +132,13 @@ namespace Refraction.Logic.Level
                 return;
             }
 
-            if (!_doorReader.TryGetPos(doorId, out Vector2 position))
+            if (!_doorReader.TryGetEntry(doorId, out DoorEntry entry))
             {
                 Debug.LogError($"[LevelManager] 关卡 {_curId} 里找不到 id = {doorId} 的门，玩家原地不动。");
                 return;
             }
 
-            EventBus<RequestPlayerPosChange>.Publish(new RequestPlayerPosChange(position));
+            EventBus<RequestPlayerPosChange>.Publish(new RequestPlayerPosChange(entry, enterTag, enterFace));
         }
     }
 }

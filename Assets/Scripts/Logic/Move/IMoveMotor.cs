@@ -25,11 +25,15 @@ namespace Refraction.Logic.Move
         /// <summary>站立姿态下的碰撞体高度（世界单位，不含运行时压缩）。头顶探测用它在蹲高与站高之间留空间。</summary>
         float BodyHeight { get; }
 
+        float FeetOffsetY { get; }
+
         void BeginStep(float now, float deltaTime);
         void Commit();
         void FaceTowards(Vector2 dir);
         void ApplyGravity(in LogicContext ctx);
-        void SetPosition(Vector2 position);
+
+        /// <summary>瞬移并直写速度</summary>
+        void SpawnAt(Vector2 position, Vector2 velocity);
 
         /// <summary>身体高度缩到 scale 倍（1 = 站立）：碰撞体与墙探针的竖直尺寸一起缩放，脚底位置不动</summary>
         void SetBodyScale(float scale);

@@ -1,5 +1,7 @@
 ﻿
 
+using Refraction.Logic.Actor;
+using Refraction.Logic.Level;
 using UnityEngine;
 
 namespace Refraction.Logic.Events
@@ -9,17 +11,32 @@ namespace Refraction.Logic.Events
         public readonly int nextLevel;
         public readonly int nextDoor;
 
-        public RequestNextDoor(int nextLevel, int nextDoor)
+        public readonly MovementStateTag enterTag;
+
+        public readonly int enterFace;
+
+        public RequestNextDoor(int nextLevel, int nextDoor, MovementStateTag enterTag, int enterFace)
         {
             this.nextLevel = nextLevel;
             this.nextDoor = nextDoor;
+            this.enterTag = enterTag;
+            this.enterFace = enterFace;
         }
     }
 
     public readonly struct RequestPlayerPosChange
     {
-        public readonly Vector2 Pos;
+        public readonly DoorEntry Entry;
 
-        public RequestPlayerPosChange(Vector2 pos) { this.Pos = pos; }
+        public readonly MovementStateTag EnterTag;
+
+        public readonly int EnterFace;
+
+        public RequestPlayerPosChange(DoorEntry entry, MovementStateTag enterTag, int enterFace)
+        {
+            this.Entry = entry;
+            this.EnterTag = enterTag;
+            this.EnterFace = enterFace;
+        }
     }
 }

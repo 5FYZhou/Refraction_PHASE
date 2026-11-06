@@ -77,9 +77,9 @@ namespace Refraction.Presentation.Level
             EnsureIndexed();
         }
 
-        public bool TryGetPos(int doorId, out Vector2 position)
+        public bool TryGetEntry(int doorId, out DoorEntry entry)
         {
-            position = default;
+            entry = default;
 
             EnsureIndexed();
 
@@ -92,7 +92,7 @@ namespace Refraction.Presentation.Level
                 return false;
             }
 
-            position = door.SpawnPoint;
+            entry = door.ToEntry();
 
             // 落点压在门的触发器里，不吞掉接下来那次进入，这扇门会立刻把玩家再送走一次
             door.SuppressEnterFor(SuppressSeconds);

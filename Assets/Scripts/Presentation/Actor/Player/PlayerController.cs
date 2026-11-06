@@ -4,6 +4,7 @@ using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
+using Refraction.Logic.Level;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
@@ -22,6 +23,9 @@ namespace Refraction.Presentation.Actor
         [Tooltip("驱动刚体的执行器。逻辑层的移动/跳跃/冲刺指令最终都落到这里。")]
         [SerializeField]
         private MoveMotor moveMotor;
+
+        [SerializeField]
+        private GameObject bulletPre;
 
 
         private GameRoot _root;
@@ -94,10 +98,24 @@ namespace Refraction.Presentation.Actor
             _attached = true;
 
             // 从门里进来就落到那扇门；首关没有落点，保持场景里摆的位置
-            if (_root.TryConsumeEntryPoint(out Vector2 entry))
+            if (_root.TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace))
             {
-                _logic.SpawnTo(entry);
+                SpawnAtEntry(in entry, enterTag, enterFace);
             }
+        }
+
+        public MovementStateTag CurrentMovementTag =>
+            _attached && _logic != null ? _logic.CurrentTag : MovementStateTag.None;
+
+        /// <summary>-1 朝左，1 朝右；跨场景后新玩家还没有朝向。</summary>
+        public int CurrentFace => _attached && moveMotor != null ? moveMotor.FacingSign : 1;
+
+        private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
+        {
+            Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
+
+            _logic.SpawnTo(pivot);
+            _logic.BeginTransit(in entry, enterTag, enterFace);
         }
 
         public void FixedTick()
@@ -109,8 +127,6 @@ namespace Refraction.Presentation.Actor
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
             LogicContext context = new(snapshot, worldInfo, gameTime);
-
-            _buffer.Push(in snapshot, Time.fixedTime);
 
             _logic.FixedTick(context);
 
@@ -147,7 +163,7 @@ namespace Refraction.Presentation.Actor
             // 还没 Attach 就被点名传送（切场景时事件可能早到），忽略而不是空引用
             if (!_attached) return;
 
-            _logic.SpawnTo(evt.Pos);
+            SpawnAtEntry(in evt.Entry, evt.EnterTag, evt.EnterFace);
         }
 
         /// <summary>应用逻辑层给的 View 缩放：枢轴在身体中心，只改 scale 脚会离地（蹲下抬起 0.65），所以同时下移 (1 − scale.y) × 脚底到枢轴的距离</summary>

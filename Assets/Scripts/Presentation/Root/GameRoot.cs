@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Refraction.Foundation;
+using Refraction.Logic.Actor;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
@@ -27,7 +28,9 @@ namespace Refraction.Presentation
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
 
-        private Vector2 _entryPoint;
+        private DoorEntry _entry;
+        private MovementStateTag _entryTag;
+        private int _entryFace;
         private bool _hasEntryPoint;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
@@ -117,10 +120,12 @@ namespace Refraction.Presentation
             if (root is PlayerController player && playerController == player) playerController = null;
         }
 
-        /// <summary>取走本关的进关落点，一次性。没有落点返回 false，调用方保持场景里摆的位置，别把 (0,0) 当默认值</summary>
-        public bool TryConsumeEntryPoint(out Vector2 position)
+        /// <summary>取走本关的进门口数据、进门时的移动状态与朝向，一次性。没有落点返回 false，调用方保持场景摆放</summary>
+        public bool TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace)
         {
-            position = _entryPoint;
+            entry = _entry;
+            enterTag = _entryTag;
+            enterFace = _entryFace;
 
             if (!_hasEntryPoint) return false;
 
@@ -149,7 +154,7 @@ namespace Refraction.Presentation
 
             // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
             _hasEntryPoint = false;
-            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId);
+            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, _levelMgr?.PendingEntryTag ?? MovementStateTag.None, _levelMgr != null ? _levelMgr.PendingEntryFace : 0);
 
             // 推进器换成新关的：旧的那个还订阅着 RequestNextDoor，不 Dispose 会和新的一起响应
             _levelMgr?.Dispose();
@@ -157,7 +162,7 @@ namespace Refraction.Presentation
             _levelMgr.Init();
         }
 
-        private void ResolveEntryPoint(Scene scene, int doorId)
+        private void ResolveEntryPoint(Scene scene, int doorId, MovementStateTag enterTag, int enterFace)
         {
             if (_doorReader == null)
             {
@@ -166,13 +171,15 @@ namespace Refraction.Presentation
             }
 
             // 落点压在门的触发器范围内：DoorReader 命中时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
-            if (!_doorReader.TryGetPos(doorId, out Vector2 point))
+            if (!_doorReader.TryGetEntry(doorId, out DoorEntry entry))
             {
                 Debug.LogError($"[GameRoot] 关卡 {_doorReader.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
                 return;
             }
 
-            _entryPoint = point;
+            _entry = entry;
+            _entryTag = enterTag;
+            _entryFace = enterFace;
             _hasEntryPoint = true;
         }
 

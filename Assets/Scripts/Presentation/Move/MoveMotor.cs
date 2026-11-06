@@ -149,6 +149,9 @@ namespace Refraction.Presentation
         /// <summary>有顶底参考点就量参考点，没有就量碰撞体</summary>
         public float BodyHeight => _baseBodyHeight;
 
+        /// <summary>脚底到枢轴的高度差</summary>
+        public float FeetOffsetY => feetRef != null ? feetRef.position.y - transform.position.y : ColliderBottomOffset();
+
         private Vector2 _face;
         public Vector2 Face
         {
@@ -268,10 +271,10 @@ namespace Refraction.Presentation
             Face = face;
         }
 
-        public void SetPosition(Vector2 position)
+        public void SpawnAt(Vector2 position, Vector2 velocity)
         {
             _rb.position = position;
-            _rb.velocity = Vector2.zero;
+            _rb.velocity = velocity;
         }
 
         #region 身体尺寸
