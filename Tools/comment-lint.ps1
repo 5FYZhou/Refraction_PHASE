@@ -1,0 +1,559 @@
+﻿<#
+注释守卫（Comment Lint）—— 本仓注释规范的唯一机器判据。
+
+它解决什么问题：
+  注释不像代码：编译器不会因为它变多而报错，本工程也一个测试都没有。
+  而本工程的边界、时序、单位全靠注释落字（单程序集，四层只靠命名空间自觉，见 AGENTS.md §2），
+  于是"写多"必然发生，且没有任何东西会拦住它。本脚本就是那条拦线。
+
+三条判据：
+  ① 预算：每个文件的「注释有效字符数」不得超过 Tools/comment-budget.json 里登记的上限 + 容差。
+          上限 < 实测 <= 上限+容差 → 黄字 WARN，不阻断（吸收合并带进来的噪声）；
+          实测 > 上限+容差 → exit 1。预算只降不升；确需净增必须走提交说明 + -Mode seal。
+  ② 标签：注释里出现 <summary> / <remarks> 以外的 XML 标签即为违规
+          （<see cref> 必须降级成纯文本类型名）；<summary>/<remarks> 允许跨行，
+          但必须在同一个连续注释块内配平。
+          **存量豁免**：入库时已存在的违规标签按文件登记在 budget.json 的 tagAllow 里，
+          只要求"不新增"（见 §9 问答与 -Mode seal）。
+  ③ 代码零改动：-Mode verify -Base <rev> 逐行比对非注释代码与某个 git 版本是否一致。
+
+覆盖面：Assets/Scripts/** 下的手写 C#。
+  不覆盖 Generated/（InputActions 生成物，改了必丢，见 AGENTS.md §3）。
+
+容差缓冲（为什么不是零容差）：-Mode seal 登记的是封印当时的实测值，逐文件额度天然零余量，
+  于是"上游分支多写一行注释"这种与本次改动无关的噪声，也会让合并方当场变红。
+  所以给每个文件留一条**有界**缓冲：容差 = 预算 0 → 0（封印语义是"此处不许有注释"），
+  否则 clamp(预算 ÷ 2, 20, 50)。下限 20 是因为口径把 "// " 后那个空格也计 1 个字符——
+  一行 15 字符的注释实际记 16，留 20 才兜得住"一行短注释"。
+  硬线仍在"上限 + 容差"，且天花板 50 远小于一次严重膨胀的量级。
+
+口径（与预算表同源，别另立一套）：
+  逐行取注释正文，剔除 `//`、`///`、`/*`、`*/` 标记本身与换行符；**标记之后的空格、
+  行尾空格、块注释续行的缩进都计入**（`// 文本` 比 `//文本` 多算 1 个字符）；
+  其余（文字/标点/XML 标签）自然全部计入。// 与 /* */ 均按 C# 词法处理，
+  字符串字面量与字符字面量里的 `//` 不会被误判成注释；
+  [Tooltip("…")] / [Header("…")] 里的中文**是代码**，不进注释口径（见 Docs/工程/注释规范.md §4.8）。
+
+用法：
+  pwsh Tools/comment-lint.ps1                    # = -Mode check，跑全部判据，违规 exit 1
+  pwsh Tools/comment-lint.ps1 -Mode report       # 打印逐文件预算/现值/余量表（按超支降序）
+  pwsh Tools/comment-lint.ps1 -Mode report -Top 30
+  pwsh Tools/comment-lint.ps1 -Mode tags         # 只查 XML 标签白名单（含存量对比）
+  pwsh Tools/comment-lint.ps1 -Mode verify -Base <rev>   # 证明"只改了注释"
+  pwsh Tools/comment-lint.ps1 -Mode seal         # 清理验收后，用当前工作区重新封印预算
+  pwsh Tools/comment-lint.ps1 -Mode check -StagedOnly     # 只看 git 已暂存/已改动的 .cs
+
+退出码：0 = 通过；1 = 有违规或前置检查失败。
+基线（2026-11-06 首次封印，见 Tools/comment-budget.json 的 sealedOn / sealedAt）。
+#>
+[CmdletBinding()]
+param(
+    [ValidateSet('check', 'report', 'tags', 'verify', 'seal')]
+    [string]$Mode = 'check',
+    [string]$Root = '',
+    [string]$Base = '',
+    [int]$Top = 20,
+    [switch]$StagedOnly
+)
+
+$ErrorActionPreference = 'Stop'
+
+# git 的输出是 UTF-8 字节流；PowerShell 默认按控制台代码页（本机 GBK）解码，
+# 中文注释与文件 BOM 会一起变成乱码，-Mode verify 会因此误报"代码被改动"。
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$scriptDir = $PSScriptRoot
+if (-not $Root) { $Root = Split-Path -Parent $scriptDir }
+$budgetPath = Join-Path $scriptDir 'comment-budget.json'
+
+# 生成物目录：目录名在历史上出现过 `Genereted` 的拼写，两种都排掉（见 AGENTS.md §3）
+$excludeRe = '[\\/](Generated|Genereted)[\\/]'
+
+# ======================================================================
+# 0 · 判定常数
+# ======================================================================
+
+# 未登记进预算表的文件（新增文件）按此密度上限判定。
+# 首次封印时全仓密度 6.22（20356 字符 / 3274 代码行）；上限取 8.0，
+# 给"正常写几句为什么"留余量，又能拦住整篇设计论证。接口 / 纯枚举文件密度天然更高，
+# 按文件单独登记（见 Docs/工程/注释规范.md §9），不吃这条。
+$densityCap = 8.0
+
+# 新文件的最小额度：短文件（十几行）按密度算出来的额度只有一百多字符，
+# 一个接口写两句契约就超了。给一个地板值，避免把"小文件"逼成没注释。
+$newFileFloor = 250
+
+# 容差缓冲：上限 < 实测 <= 上限+容差 → WARN（exit 0）；超出容差才 exit 1。
+$tolCap = 50
+$tolFloor = 20
+
+function Get-Tolerance {
+    param([int]$Budget)
+
+    if ($Budget -le 0) { return 0 }
+    return [math]::Min($tolCap, [math]::Max($tolFloor, [int][math]::Floor($Budget / 2)))
+}
+
+# ======================================================================
+# 1 · C# 词法扫描：把源码切成"代码行"与"注释正文"
+# ======================================================================
+
+function Scan-Cs {
+    param([string]$Text)
+
+    $Text = $Text.Replace([string][char]0xFEFF, '')
+    $len = $Text.Length
+    $i = 0
+    $line = 0
+    $codeCur = New-Object System.Text.StringBuilder
+    $comCur = New-Object System.Text.StringBuilder
+    $codeLines = New-Object System.Collections.ArrayList
+    $comLines = New-Object System.Collections.ArrayList
+    $comChars = 0
+
+    while ($i -lt $len) {
+        $c = $Text[$i]
+
+        if ($c -eq "`n") {
+            [void]$codeLines.Add($codeCur.ToString()); [void]$comLines.Add($comCur.ToString().Trim())
+            $codeCur.Clear() | Out-Null; $comCur.Clear() | Out-Null
+            $line++; $i++; continue
+        }
+        if ($c -eq "`r") { $i++; continue }
+
+        if ($c -eq '/' -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '/') {
+            $i += 2
+            while ($i -lt $len -and $Text[$i] -ne "`n") {
+                if ($Text[$i] -ne "`r") { [void]$comCur.Append($Text[$i]); $comChars++ }
+                $i++
+            }
+            continue
+        }
+        if ($c -eq '/' -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '*') {
+            $i += 2
+            while ($i -lt $len) {
+                if ($Text[$i] -eq '*' -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '/') { $i += 2; break }
+                if ($Text[$i] -eq "`n") {
+                    [void]$codeLines.Add($codeCur.ToString()); [void]$comLines.Add($comCur.ToString().Trim())
+                    $codeCur.Clear() | Out-Null; $comCur.Clear() | Out-Null
+                    $line++; $i++; continue
+                }
+                if ($Text[$i] -ne "`r") { [void]$comCur.Append($Text[$i]); $comChars++ }
+                $i++
+            }
+            continue
+        }
+        if ($c -eq '@' -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '"') {
+            [void]$codeCur.Append('@"'); $i += 2
+            while ($i -lt $len) {
+                $d = $Text[$i]
+                if ($d -eq "`n") {
+                    [void]$codeLines.Add($codeCur.ToString()); [void]$comLines.Add('')
+                    $codeCur.Clear() | Out-Null; $line++; $i++; continue
+                }
+                if ($d -eq '"' -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '"') { [void]$codeCur.Append('""'); $i += 2; continue }
+                if ($d -eq '"') { [void]$codeCur.Append('"'); $i++; break }
+                [void]$codeCur.Append($d); $i++
+            }
+            continue
+        }
+        if ($c -eq '"') {
+            [void]$codeCur.Append('"'); $i++
+            while ($i -lt $len) {
+                $d = $Text[$i]
+                if ($d -eq "`n") {
+                    [void]$codeLines.Add($codeCur.ToString()); [void]$comLines.Add('')
+                    $codeCur.Clear() | Out-Null; $line++; $i++; continue
+                }
+                if ($d -eq '\') { if ($i + 1 -lt $len) { [void]$codeCur.Append($d).Append($Text[$i + 1]); $i += 2; continue } }
+                if ($d -eq '"') { [void]$codeCur.Append('"'); $i++; break }
+                [void]$codeCur.Append($d); $i++
+            }
+            continue
+        }
+        if ($c -eq "'") {
+            [void]$codeCur.Append("'"); $i++
+            while ($i -lt $len) {
+                $d = $Text[$i]
+                if ($d -eq '\') { if ($i + 1 -lt $len) { [void]$codeCur.Append($d).Append($Text[$i + 1]); $i += 2; continue } }
+                if ($d -eq "'") { [void]$codeCur.Append("'"); $i++; break }
+                [void]$codeCur.Append($d); $i++
+            }
+            continue
+        }
+        if ($c -ne ' ' -and $c -ne "`t") { [void]$codeCur.Append($c) }
+        $i++
+    }
+    [void]$codeLines.Add($codeCur.ToString()); [void]$comLines.Add($comCur.ToString().Trim())
+
+    [pscustomobject]@{
+        Lines    = $line + 1
+        ComChars = $comChars
+        Code     = $codeLines
+        Com      = $comLines
+    }
+}
+
+# 注释行里出现的 XML 标签名。两个刻意放宽的地方，防误报：
+#   · 单字母大写名（Clear<T>()、Span<T> 这类泛型书写）不算标签；
+#   · 必须像标签（有闭合 `</x>` / 自闭合 `<x/>` / 带属性 `<x ...>`）才判。
+function Get-BadTags {
+    param([string[]]$ComLines)
+
+    $ok = @('summary', 'remarks')
+    $bad = New-Object System.Collections.ArrayList
+    foreach ($cl in $ComLines) {
+        if ([string]::IsNullOrEmpty($cl)) { continue }
+        foreach ($m in [regex]::Matches($cl, '</?([A-Za-z][A-Za-z0-9_.]*)(\s[^<>]*)?/?>')) {
+            # 闭合标签不单独计数：一对 <param>…</param> 只算 1 处，避免"处数"翻倍
+            if ($m.Value.StartsWith('</')) { continue }
+            $name = $m.Groups[1].Value
+            if ($name -in $ok) { continue }
+            # 泛型占位：单个大写字母，如 <T> / <TKey>
+            if ($name -cmatch '^[A-Z][A-Za-z0-9]?$' -and $name.Length -le 2) { continue }
+            [void]$bad.Add($name)
+        }
+    }
+    return @($bad)
+}
+
+# 「注释是否配平」的可判定形态：**`<summary>` / `<remarks>` 允许跨行，但必须在同一个连续注释块内开闭**。
+# 块与块之间由非注释行分隔；块结束时仍有未闭合的开标签、或出现多余的闭合标签，才是违规。
+# 同一行里 `<summary>…</summary>` 与另一行 `<remarks>…</remarks>` 是两条独立注释，合法。
+function Get-UnbalancedLines {
+    param([string[]]$ComLines)
+
+    $bad = New-Object System.Collections.ArrayList
+    $opened = @{}
+    for ($i = 0; $i -lt $ComLines.Count; $i++) {
+        $cl = $ComLines[$i]
+        if ([string]::IsNullOrEmpty($cl)) {
+            foreach ($tag in @($opened.Keys)) {
+                # Scan-Cs 的 Com 数组是逐物理行产出的，下标 = 行号 - 1
+                [void]$bad.Add([pscustomobject]@{ Line = $opened[$tag]; Tag = $tag; Text = $ComLines[$opened[$tag] - 1] })
+            }
+            $opened = @{}
+            continue
+        }
+        foreach ($tag in @('summary', 'remarks')) {
+            $open = ([regex]::Matches($cl, "<$tag(\s[^<>]*)?>")).Count
+            $close = ([regex]::Matches($cl, "</$tag>")).Count
+            if ($open -gt $close) {
+                if (-not $opened.ContainsKey($tag)) { $opened[$tag] = $i + 1 }
+            }
+            elseif ($close -gt $open) {
+                if ($opened.ContainsKey($tag)) { $opened.Remove($tag) }
+                else { [void]$bad.Add([pscustomobject]@{ Line = ($i + 1); Tag = $tag; Text = $cl }) }
+            }
+        }
+    }
+    foreach ($tag in @($opened.Keys)) {
+        [void]$bad.Add([pscustomobject]@{ Line = $opened[$tag]; Tag = $tag; Text = $ComLines[$opened[$tag] - 1] })
+    }
+    return $bad
+}
+
+# ======================================================================
+# 2 · 文件清单
+# ======================================================================
+
+function Get-TargetFiles {
+    if ($StagedOnly) {
+        $rel = & git -C $Root diff --name-only --cached --diff-filter=ACMR 2>$null
+        $rel += & git -C $Root diff --name-only --diff-filter=ACMR 2>$null
+        $out = New-Object System.Collections.ArrayList
+        foreach ($r in $rel) {
+            if ($r -notmatch '\.cs$') { continue }
+            if ($r -notmatch '^Assets/Scripts/') { continue }
+            if ($r -match $excludeRe) { continue }
+            $p = Join-Path $Root $r
+            if (Test-Path -LiteralPath $p) { [void]$out.Add((Get-Item -LiteralPath $p)) }
+        }
+        return @($out | Sort-Object FullName -Unique)
+    }
+
+    $scripts = Join-Path $Root 'Assets/Scripts'
+    if (-not (Test-Path -LiteralPath $scripts)) { throw "找不到源码目录：$scripts" }
+
+    return @(Get-ChildItem -Path $scripts -Recurse -Filter *.cs -File |
+            Where-Object { $_.FullName -notmatch $excludeRe } | Sort-Object FullName)
+}
+
+function Get-RelPath {
+    param([string]$FullName)
+
+    # 用 .NET 而非字符串替换：$Root 是否带尾分隔符、分隔符是 / 还是 \ 都能算对
+    return ([System.IO.Path]::GetRelativePath($Root, $FullName) -replace '\\', '/')
+}
+
+# ======================================================================
+# 3 · 读预算表
+# ======================================================================
+
+function Read-Budget {
+    if (-not (Test-Path -LiteralPath $budgetPath)) { return $null }
+    $j = Get-Content -Raw -LiteralPath $budgetPath | ConvertFrom-Json
+    $map = @{}
+    foreach ($p in $j.files.PSObject.Properties) { $map[$p.Name] = [int]$p.Value }
+    $tagMap = @{}
+    if ($j.tagAllow) { foreach ($p in $j.tagAllow.PSObject.Properties) { $tagMap[$p.Name] = [int]$p.Value } }
+    if ($j.densityCap) { $script:densityCap = [double]$j.densityCap }
+    return [pscustomobject]@{ Map = $map; TagMap = $tagMap; Raw = $j }
+}
+
+# ======================================================================
+# 4 · -Mode seal / report / check / tags / verify
+# ======================================================================
+
+$files = Get-TargetFiles
+if ($files.Count -eq 0) {
+    if ($StagedOnly) {
+        Write-Host '没有改动过的 .cs（-StagedOnly 只检查暂存 / 工作区改动），跳过。' -ForegroundColor Green
+        exit 0
+    }
+    throw '没有扫到任何 .cs —— 路径或排除规则不对？'
+}
+
+# ---------- seal ----------
+if ($Mode -eq 'seal') {
+    $old = Read-Budget
+    $rows = [ordered]@{}
+    $tagRows = [ordered]@{}
+    foreach ($f in $files) {
+        $s = Scan-Cs -Text ([System.IO.File]::ReadAllText($f.FullName))
+        $rel = Get-RelPath $f.FullName
+        $rows[$rel] = $s.ComChars
+
+        # 只登记"确实有存量违规"的文件：0 的不写，免得表变成噪声
+        $badCount = @(Get-BadTags -ComLines $s.Com).Count
+        if ($badCount -gt 0) { $tagRows[$rel] = $badCount }
+    }
+
+    $head = & git -C $Root rev-parse --short HEAD 2>$null
+    if (-not $head) { $head = 'nogit' }
+
+    $obj = [ordered]@{
+        note        = '注释预算表：每个文件的注释有效字符上限。只降不升；上调必须写明理由（个别文件定点上调该条目，全表重封印才跑 -Mode seal）。口径见 Docs/工程/注释规范.md §5。覆盖面：Assets/Scripts/** 的手写 C#，不含 Generated/。tagAllow 是白名单外 XML 标签的存量豁免（按文件计处数），同样只降不升。'
+        sealedAt    = [string]$head
+        sealedOn    = (Get-Date -Format 'yyyy-MM-dd')
+        densityCap  = $densityCap
+        files       = $rows
+        tagAllow    = $tagRows
+        budgetRaises = [ordered]@{}
+    }
+    $obj | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $budgetPath -Encoding utf8
+
+    $sum = ($rows.Values | Measure-Object -Sum).Sum
+    $tagSum = ($tagRows.Values | Measure-Object -Sum).Sum
+    Write-Host ("封印完成：{0} 个文件，注释合计 {1} 字符；标签存量豁免 {2} 处 / {3} 个文件  (sealedAt={4})" -f `
+            $rows.Count, $sum, $tagSum, $tagRows.Count, $head) -ForegroundColor Green
+
+    if ($old) {
+        $up = @(); $down = @()
+        foreach ($k in $rows.Keys) {
+            if (-not $old.Map.ContainsKey($k)) { $up += "+$k=$($rows[$k])（新登记）"; continue }
+            if ($rows[$k] -gt $old.Map[$k]) { $up += "+${k}: $($old.Map[$k]) → $($rows[$k])" }
+            elseif ($rows[$k] -lt $old.Map[$k]) { $down += "-${k}: $($old.Map[$k]) → $($rows[$k])" }
+        }
+        foreach ($k in $old.Map.Keys) { if (-not $rows.Contains($k)) { $down += "-$k（文件已消失）" } }
+        if ($up.Count) { Write-Host "`n预算上调（必须在提交说明里解释）：" -ForegroundColor Yellow; $up | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow } }
+        if ($down.Count) { Write-Host "`n预算下调：$($down.Count) 个文件"; $down | Select-Object -First 10 | ForEach-Object { Write-Host "  $_" } }
+    }
+    exit 0
+}
+
+# ---------- 逐文件度量 ----------
+$rows = New-Object System.Collections.ArrayList
+foreach ($f in $files) {
+    $rel = Get-RelPath $f.FullName
+    $s = Scan-Cs -Text ([System.IO.File]::ReadAllText($f.FullName))
+    [void]$rows.Add([pscustomobject]@{
+            File    = $rel
+            C       = $s.ComChars
+            CodeLn  = @($s.Code | Where-Object { $_ -ne '' }).Count
+            Density = 0.0
+            Budget  = 0
+            Tol     = 0
+            Over    = 0
+            State   = 'OK'
+            BadTags = 0
+            TagAllow = 0
+        })
+}
+foreach ($r in $rows) {
+    if ($r.CodeLn -gt 0) { $r.Density = [math]::Round($r.C / $r.CodeLn, 2) }
+}
+
+# ---------- tags ----------
+if ($Mode -eq 'tags') {
+    $budget = Read-Budget
+    $tagMap = @{}
+    if ($budget) { $tagMap = $budget.TagMap }
+
+    $hit = 0; $newTotal = 0; $oldTotal = 0
+    foreach ($f in $files) {
+        $s = Scan-Cs -Text ([System.IO.File]::ReadAllText($f.FullName))
+        $bad = Get-BadTags -ComLines $s.Com
+        $unbal = Get-UnbalancedLines -ComLines $s.Com
+        $rel = Get-RelPath $f.FullName
+
+        $allow = 0
+        if ($tagMap.ContainsKey($rel)) { $allow = $tagMap[$rel] }
+        $oldTotal += [math]::Min($bad.Count, $allow)
+        if ($bad.Count -gt $allow) { $newTotal += $bad.Count - $allow }
+
+        if ($bad.Count -le $allow -and $unbal.Count -eq 0 -and $bad.Count -eq 0) { continue }
+        if ($bad.Count -le $allow -and $unbal.Count -eq 0) { continue }
+
+        $hit++
+        if ($bad.Count -gt $allow) {
+            Write-Host ("{0}`n    新增违规标签 {1} 处（存量豁免 {2}）：{3}" -f $rel, ($bad.Count - $allow), $allow, ($bad -join ', ')) -ForegroundColor Red
+        }
+        foreach ($u in ($unbal | Select-Object -First 5)) {
+            Write-Host ("{0}:{1}`n    注释块未配平: <{2}> 自本行开启后未闭合" -f $rel, $u.Line, $u.Tag) -ForegroundColor Red
+        }
+    }
+
+    if ($newTotal -eq 0 -and $hit -eq 0) {
+        Write-Host ("TAGS OK：{0} 个文件，没有新增的违规标签；存量豁免 {1} 处（只减不增）" -f $files.Count, $oldTotal) -ForegroundColor Green
+        exit 0
+    }
+    if ($newTotal -eq 0) {
+        Write-Host ("`nTAGS OK（含 {0} 个文件仍有存量标签，未新增）：共 {1} 处豁免。" -f $hit, $oldTotal) -ForegroundColor Green
+        exit 0
+    }
+    Write-Host ("`n新增违规标签 {0} 处，另有 {1} 个文件的注释块未配平。" -f $newTotal, $hit) -ForegroundColor Red
+    exit 1
+}
+
+# ---------- verify ----------
+if ($Mode -eq 'verify') {
+    if (-not $Base) { throw '-Mode verify 需要 -Base <git rev>（例：-Base 7b0e178）' }
+
+    $problems = New-Object System.Collections.ArrayList
+    $checked = 0; $newFiles = 0
+    foreach ($f in $files) {
+        $rel = Get-RelPath $f.FullName
+        $baseText = & git -C $Root show "${Base}:$rel" 2>$null
+        if ($LASTEXITCODE -ne 0) { $newFiles++; continue }
+        $checked++
+        $o = Scan-Cs -Text ($baseText -join "`n")
+        $n = Scan-Cs -Text ([System.IO.File]::ReadAllText($f.FullName))
+
+        $oc = @($o.Code | Where-Object { $_ -ne '' } | ForEach-Object { $_ -replace '\s', '' })
+        $nc = @($n.Code | Where-Object { $_ -ne '' } | ForEach-Object { $_ -replace '\s', '' })
+
+        if ($oc.Count -ne $nc.Count) {
+            [void]$problems.Add("$rel : 代码行数 $($oc.Count) → $($nc.Count)")
+            continue
+        }
+        for ($k = 0; $k -lt $oc.Count; $k++) {
+            if ($oc[$k] -ne $nc[$k]) {
+                [void]$problems.Add("$rel : 代码第 $($k + 1) 行不同  '$($oc[$k])'  →  '$($nc[$k])'")
+                break
+            }
+        }
+    }
+    if ($problems.Count -gt 0) {
+        Write-Host ("代码本体被改动（{0} 处）：" -f $problems.Count) -ForegroundColor Red
+        $problems | Select-Object -First 40 | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Host ("VERIFY PASS：{0} 个文件的非注释代码与 {1} 逐行一致（{2} 个文件在 {1} 里不存在，跳过）" -f $checked, $Base, $newFiles) -ForegroundColor Green
+    exit 0
+}
+
+# ---------- 预算判定 ----------
+$budget = Read-Budget
+if (-not $budget) {
+    if ($Mode -eq 'report') { $budget = [pscustomobject]@{ Map = @{}; TagMap = @{}; Raw = $null } }
+    else { throw "找不到预算表：$budgetPath（先跑 pwsh Tools/comment-lint.ps1 -Mode seal）" }
+}
+
+$violations = New-Object System.Collections.ArrayList
+$warnings = New-Object System.Collections.ArrayList
+foreach ($f in $files) {
+    $rel = Get-RelPath $f.FullName
+    $s = Scan-Cs -Text ([System.IO.File]::ReadAllText($f.FullName))
+    $row = $rows | Where-Object { $_.File -eq $rel }
+    $bad = Get-BadTags -ComLines $s.Com
+    $unbal = Get-UnbalancedLines -ComLines $s.Com
+    $row.BadTags = $bad.Count
+
+    if ($budget.Map.ContainsKey($rel)) { $row.Budget = $budget.Map[$rel] }
+    else { $row.Budget = [math]::Max($newFileFloor, [int][math]::Floor($densityCap * $row.CodeLn)) }
+
+    $row.TagAllow = 0
+    if ($budget.TagMap.ContainsKey($rel)) { $row.TagAllow = $budget.TagMap[$rel] }
+
+    $row.Over = $row.C - $row.Budget
+    $row.Tol = Get-Tolerance -Budget $row.Budget
+    if ($row.Over -gt $row.Tol) {
+        $row.State = 'FAIL'
+        # 注意：-f 的逗号参数表在**方法实参**里会被当成参数分隔符，必须再套一层括号。
+        [void]$violations.Add(("[预算] {0}`n        注释 {1} 字符 > 上限 {2} + 容差 {3}（超 {4}）" -f $rel, $row.C, $row.Budget, $row.Tol, $row.Over))
+    }
+    elseif ($row.Over -gt 0) {
+        $row.State = 'WARN'
+        # 容差区只告警不阻断：合并带进来的上游注释常常落在这里
+        [void]$warnings.Add(("[预算·容差区] {0}`n        注释 {1} 字符 = 上限 {2} + {3}（容差 {4}，未阻断）" -f $rel, $row.C, $row.Budget, $row.Over, $row.Tol))
+    }
+    if ($bad.Count -gt $row.TagAllow) {
+        [void]$violations.Add(("[标签] {0}`n        新增违规标签 {1} 处（存量豁免 {2}）: {3}" -f $rel, ($bad.Count - $row.TagAllow), $row.TagAllow, ($bad -join ', ')))
+    }
+    if ($unbal.Count -gt 0) {
+        $first = $unbal[0]
+        [void]$violations.Add(("[未配平] {0}:{1}`n        <{2}> 自本行开启后在注释块内未闭合" -f $rel, $first.Line, $first.Tag))
+    }
+}
+
+# 预算表里的孤儿条目（文件被删/改名）
+$orphans = @($budget.Map.Keys | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_)) })
+
+if ($Mode -eq 'report') {
+    $rows | Sort-Object Over -Descending | Select-Object -First $Top File, C, Budget, Tol, Over, State, Density, CodeLn, BadTags, TagAllow |
+        Format-Table -AutoSize | Out-String -Width 260 | Write-Host
+    $totC = ($rows | Measure-Object C -Sum).Sum
+    $totL = ($rows | Measure-Object CodeLn -Sum).Sum
+    $totB = ($rows | Measure-Object Budget -Sum).Sum
+    Write-Host ("合计：注释 {0} 字符 / 代码 {1} 行 = 密度 {2}（新文件上限 {3}）" -f `
+            $totC, $totL, [math]::Round($totC / $totL, 3), $densityCap)
+    Write-Host ("预算合计 {0}；硬超标 {1} 个 / 容差区 {2} 个 / 合规 {3} 个" -f `
+            $totB, @($rows | Where-Object { $_.State -eq 'FAIL' }).Count, `
+            @($rows | Where-Object { $_.State -eq 'WARN' }).Count, `
+            @($rows | Where-Object { $_.State -eq 'OK' }).Count)
+    Write-Host ("容差：上限 < 实测 <= 上限+容差 记 WARN 不阻断（预算 0 → 0，否则 clamp(预算/2, {0}, {1})）" -f $tolFloor, $tolCap)
+    if ($orphans.Count) { Write-Host ("预算表孤儿条目 {0} 个（文件已不存在，建议重跑 -Mode seal）" -f $orphans.Count) -ForegroundColor Yellow }
+    exit 0
+}
+
+# ---------- check ----------
+$totC = ($rows | Measure-Object C -Sum).Sum
+$totL = ($rows | Measure-Object CodeLn -Sum).Sum
+$tagStock = ($rows | Measure-Object BadTags -Sum).Sum
+$tagAllowTotal = ($rows | Measure-Object TagAllow -Sum).Sum
+Write-Host ("注释 {0} 字符 / 代码 {1} 行 = 密度 {2}；文件 {3} 个；硬超标 {4} 个；容差区 {5} 个（WARN，不阻断）；标签存量 {6} 处（豁免 {7}）" -f `
+        $totC, $totL, [math]::Round($totC / $totL, 3), $rows.Count, `
+        @($rows | Where-Object { $_.State -eq 'FAIL' }).Count, @($rows | Where-Object { $_.State -eq 'WARN' }).Count, $tagStock, $tagAllowTotal)
+
+if ($orphans.Count) {
+    Write-Host ("`n预算表孤儿条目 {0} 个（文件已不存在）：" -f $orphans.Count) -ForegroundColor Yellow
+    $orphans | Select-Object -First 10 | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    Write-Host '  这不是失败，但预算表该重跑 -Mode seal 了。' -ForegroundColor Yellow
+}
+
+if ($warnings.Count -gt 0) {
+    Write-Host ("`n容差区告警 {0} 条（不阻断；建议下次集中清理时压回）：" -f $warnings.Count) -ForegroundColor Yellow
+    $warnings | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    if ($warnings.Count -gt 20) { Write-Host ("  … 其余 {0} 条见 -Mode report" -f ($warnings.Count - 20)) -ForegroundColor Yellow }
+}
+
+if ($violations.Count -gt 0) {
+    Write-Host ("`n违规 {0} 条：" -f $violations.Count) -ForegroundColor Red
+    $violations | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+    Write-Host "`n规范见 Docs/工程/注释规范.md" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host 'LINT OK：没有硬超标，也没有新增的白名单外标签。' -ForegroundColor Green
+exit 0

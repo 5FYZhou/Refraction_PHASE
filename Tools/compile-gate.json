@@ -1,0 +1,14 @@
+{
+  "note": "编译门基线：warningBaseline 是逐警告编号的存量条数（只降不升）；guardAllow 是边界/驱动守卫的存量放行项（Key 形如 layer:路径 或 driver:路径）；ignoredCodes 是与代码无关的构建噪音。修好一处就跑 -Seal 让它从表里消失。口径与用法见 Tools/compile-gate.ps1 文件头。",
+  "sealedAt": "6806629",
+  "sealedOn": "2026-11-06",
+  "warningBaseline": {
+    "CS0649": 2
+  },
+  "ignoredCodes": [
+    "MSB3277"
+  ],
+  "guardAllow": [
+    "layer:Assets/Scripts/Foundation/StateMachine.cs"
+  ]
+}
