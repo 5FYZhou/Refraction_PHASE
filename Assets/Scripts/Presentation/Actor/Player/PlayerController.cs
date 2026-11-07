@@ -7,6 +7,7 @@ using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Combat;
+using Refraction.Presentation.UI;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
@@ -147,6 +148,13 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
             _logic.FixedTick(context);
+
+            EventBus<PlayerDebugSnapshot>.Publish(new(
+                context.WorldInfo.FrameStartVelocity,
+                moveMotor.LedgerVelocity,
+                _logic.CurrentTag,
+                _logic.PostureTag,
+                _logic.AttackTag));
 
             // 掉出世界：回到逻辑层记下的最后一次落脚点
             if (context.WorldInfo.Pos.y < _spawnY && !_logic.RespawnToLastGrounded())

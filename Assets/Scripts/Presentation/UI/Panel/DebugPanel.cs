@@ -1,0 +1,92 @@
+﻿using System.Text;
+using Refraction.Logic.Events;
+using TMPro;
+using UnityEngine;
+
+namespace Refraction.Presentation.UI
+{
+    /// <summary>场景级调试面板：画布与实例都由场景持有，随场景销毁；加载时向 UIMgr 自注册</summary>
+    /// <remarks>只订阅事件、不持有玩家对象，因此删掉本面板不会影响任何已有逻辑；文本按 refreshInterval 抽样重建，避免逐帧产生垃圾</remarks>
+    public sealed class DebugPanel : BasePanel
+    {
+        public override E_UILayer Layer => E_UILayer.Scene;
+
+        public override bool CanBeHideByKey => false;
+
+        public override bool LiveWithScene => true;
+
+        /// <summary>子物体名，必须与预制体里那个 TMP 文本一致，改名后面板只是不刷新</summary>
+        private const string TextNodeName = "TxtInfo";
+
+        [Tooltip("文本刷新间隔（秒）。逐帧重建字符串会持续产生垃圾，按这个间隔抽样一次")]
+        [Min(0f)]
+        [SerializeField]
+        private float refreshInterval = 0.05f;
+
+        private readonly StringBuilder _builder = new(160);
+
+        private TMP_Text _text;
+        private float _nextRefresh;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            _text = GetComponent<TMP_Text>(TextNodeName);
+        }
+
+        /// <summary>保留预制体里写的占位文本：第一帧快照到达前也能看出面板活着</summary>
+        protected override bool KeepAuthoredTxt(string name) => true;
+
+        protected override void RegisterSelf()
+        {
+            base.RegisterSelf();
+            root.UIMgr.RegisterPanel(this);
+        }
+
+        protected override void UnRegisterSelf()
+        {
+            // 退出播放时 GameRoot 可能先于本面板销毁
+            if (root == null) return;
+
+            root.UIMgr.UnregisterPanel(this);
+        }
+
+        private void OnEnable()
+        {
+            EventBus<PlayerDebugSnapshot>.Subscribe(OnSnapshot);
+        }
+
+        private void OnDisable()
+        {
+            EventBus<PlayerDebugSnapshot>.Unsubscribe(OnSnapshot);
+        }
+
+        private void OnSnapshot(PlayerDebugSnapshot snapshot)
+        {
+            if (_text == null) return;
+
+            float now = Time.unscaledTime;
+            if (now < _nextRefresh) return;
+
+            _nextRefresh = now + refreshInterval;
+
+            _builder.Clear();
+            AppendVelocity("帧首速度", snapshot.FrameStartVelocity);
+            AppendVelocity("账本速度", snapshot.LedgerVelocity);
+
+            _builder.Append("移动 ").Append(snapshot.Move.ToString())
+                    .Append("\n姿态 ").Append(snapshot.Posture.ToString())
+                    .Append("\n攻击 ").Append(snapshot.Attack.ToString());
+
+            _text.SetText(_builder);
+        }
+
+        /// <summary>固定两位小数：速度是连续量，整数位跳动看不出一帧内的变化</summary>
+        private void AppendVelocity(string label, Vector2 velocity)
+        {
+            _builder.Append(label).Append(" (")
+                    .Append(velocity.x.ToString("F2")).Append(", ")
+                    .Append(velocity.y.ToString("F2")).Append(")\n");
+        }
+    }
+}

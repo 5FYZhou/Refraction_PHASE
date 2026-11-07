@@ -46,6 +46,10 @@ namespace Refraction.Logic.Actor
 
         public MovementStateTag CurrentTag => _moveGroup.CurrentTag;
 
+        public PostureStateTag PostureTag => _postureGroup.Current;
+
+        public AttackStateTag AttackTag => _attackGroup.Current;
+
         protected override void OnFixedTick(in LogicContext ctx)
         {
             // 记在移动之前：帧末位置可能已被推出平台边缘

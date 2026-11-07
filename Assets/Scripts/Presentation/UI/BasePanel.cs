@@ -2,8 +2,6 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.TextCore.Text;
-using UnityEngine.U2D;
 using UnityEngine.UI;
 
 
@@ -17,7 +15,7 @@ namespace Refraction.Presentation.UI
 
         private readonly HashSet<string> _ignoreName = new()
     {
-        "Text (TMP)","Button",
+        "Button",
         "Image","RawImage","Background","Checkmark","Label",
         "Text (Legacy)","Arrow","Placeholder","Fill","Handle",
         "Viewport","Scrollbar Horizontal","Scrollbar Vertical"
@@ -36,7 +34,7 @@ namespace Refraction.Presentation.UI
 
         protected virtual void OnDestroy()
         {
-            
+            UnRegisterSelf();
         }
 
         protected virtual void RegisterSelf()
@@ -99,6 +97,7 @@ namespace Refraction.Presentation.UI
                         OnButtonClicked(buttonName);
                     });
                 }
+                // 所有text都拿到，以设置字体
                 else if (component is TMP_Text text)
                 {
                     if (!KeepAuthoredTxt(component.name))
@@ -138,6 +137,10 @@ namespace Refraction.Presentation.UI
 
             return null;
         }
+
+        #endregion
+
+        #region UI样式
 
         #endregion
     }

@@ -255,6 +255,8 @@ namespace Refraction.Presentation
             _ledger.Commit();
         }
 
+        public Vector2 LedgerVelocity => _ledger != null ? _ledger.Velocity : Vector2.zero;
+
         public void ApplyGravity(in LogicContext ctx) => _ledger.ApplyGravity(ctx);
 
         public void SnapVelocity(Vector2 velocity) => _ledger.SnapVelocity(velocity, SetFace);

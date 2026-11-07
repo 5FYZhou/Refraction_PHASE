@@ -36,7 +36,7 @@ namespace Refraction.Presentation
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
 
-        public UIMgr UIMgr { get => _uiMgr; }
+        public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
         public ResMgr ResMgr { get => _resMgr; }
 
         protected override void Awake()
