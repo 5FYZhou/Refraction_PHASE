@@ -45,6 +45,8 @@ MonoBehaviour:
   attackCooldown: 0.35
   bulletSpeed: 18
   recoilSpeedX: 8
+  recoilSpeedUp: 8
+  recoilSpeedDown: 8
   attackPrepareTime: 0.08
   attackRecoverTime: 0.12
   crouchGroundGrace: 0.08

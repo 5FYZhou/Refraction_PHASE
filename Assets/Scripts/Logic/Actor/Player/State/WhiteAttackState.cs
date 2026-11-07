@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>开火那一帧：以玩家中心为起点按朝向生成子弹，并沿朝向反向叠加一份外部速度作为后坐力</summary>
+    /// <summary>开火那一帧：以玩家中心为起点按朝向与上下输入生成子弹，后坐力沿弹道反向叠加外部速度</summary>
     /// <remarks>IsDone 恒 true，Enter 里的副作用整个攻击周期只发生一次；速度与伤害都只读 PlayerConfig</remarks>
     public sealed class WhiteAttackState : BaseState<AttackStateTag, LogicContext>
     {
@@ -25,11 +25,11 @@ namespace Refraction.Logic.Actor
 
         public override void Enter(in LogicContext ctx)
         {
-            int face = ctx.WorldInfo.Face;
+            Vector2 direction = AttackAim.Direction(ctx.WorldInfo.Face, ctx.InputSnapshot.Move.y);
 
             _launcher.Launch(new BulletSpawn(
-                ctx.WorldInfo.Pos, face, _config.bulletSpeed, _config.bulletDamage));
-            _motor.AddExternalVelocity(new Vector2(-face * _config.recoilSpeedX, 0f));
+                ctx.WorldInfo.Pos, direction, _config.bulletSpeed, _config.bulletDamage));
+            _motor.AddExternalVelocity(AttackAim.RecoilSpeed(direction, _config));
         }
 
         public override void Tick(in LogicContext ctx) { }

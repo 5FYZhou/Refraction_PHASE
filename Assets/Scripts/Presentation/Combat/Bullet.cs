@@ -23,8 +23,10 @@ namespace Refraction.Presentation.Combat
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            rb.velocity = new Vector2(spawn.Face * spawn.Speed, 0f);
-
+            rb.velocity = spawn.Direction * spawn.Speed;
+            // 默认朝右（+X），直接按飞行方向旋转
+            float angle = Mathf.Atan2(spawn.Direction.y, spawn.Direction.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
             transform.position = new Vector3(spawn.Origin.x, spawn.Origin.y, transform.position.z);
         }
 

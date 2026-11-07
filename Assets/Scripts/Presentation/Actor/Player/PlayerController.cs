@@ -152,6 +152,7 @@ namespace Refraction.Presentation.Actor
             EventBus<PlayerDebugSnapshot>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,
                 moveMotor.LedgerVelocity,
+                context.WorldInfo.Grounded,
                 _logic.CurrentTag,
                 _logic.PostureTag,
                 _logic.AttackTag));

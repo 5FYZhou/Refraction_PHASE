@@ -135,6 +135,14 @@ namespace Refraction.Data
         [Min(0f)]
         public float recoilSpeedX = 8f;
 
+        [Tooltip("斜上 45° 开火时的后坐力（单位/秒）：沿弹道反向叠加，横向与竖直分量各为 0.707 × 该值。\n0 表示斜上射击没有后坐力。")]
+        [Min(0f)]
+        public float recoilSpeedUp = 8f;
+
+        [Tooltip("斜下 45° 开火时的后坐力（单位/秒）：沿弹道反向叠加，横向与竖直分量各为 0.707 × 该值。\n0 表示斜下射击没有后坐力。")]
+        [Min(0f)]
+        public float recoilSpeedDown = 8f;
+
         [Tooltip("攻击前摇时长（秒）：按下攻击键到生成子弹之间的等待。\n0 表示没有前摇，按键当帧就开火。")]
         [Min(0f)]
         public float attackPrepareTime = 0.08f;
