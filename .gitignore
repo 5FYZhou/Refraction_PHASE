@@ -15,6 +15,9 @@
 # 门禁输出的原始日志归档，仅用于批次归因，不入库
 /.gate-logs/
 
+# 测试运行产物（-runTests 的 XML 与日志）
+/[Tt]est[Rr]esults/
+
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
 *.blend1.meta
