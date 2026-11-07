@@ -14,6 +14,22 @@ namespace Refraction.Logic.Actor
         bool CanDash { get; }
     }
 
+    /// <summary>踩地宽限：连续离地超过 grace 才算真离地，否则接触刷新掉一帧就让姿态每两帧抽一次</summary>
+    /// <remarks>每帧先 Feed 再读 Grounded，同帧所有判定看同一个结论</remarks>
+    public sealed class GroundGrace
+    {
+        private float _lastGroundedTime = float.NegativeInfinity;
+
+        /// <summary>本帧算不算还站在地上</summary>
+        public bool Grounded { get; private set; }
+
+        public void Feed(bool grounded, float now, float grace)
+        {
+            if (grounded) _lastGroundedTime = now;
+            Grounded = grounded || now - _lastGroundedTime <= grace;
+        }
+    }
+
     /// <summary>姿态状态组：Stand → CrouchingTransition（前摇）→ Crouch，起身回 Stand；只管禁令与身高倍率，不碰移动与物理</summary>
     /// <remarks>移动侧通过 IPostureGate 读禁令，身体尺寸交给 IMoveMotor，View 缩放交给 PlayerController</remarks>
     public class PostureGroup : StateGroup<PostureStateTag, LogicContext>, IPostureGate
@@ -23,6 +39,7 @@ namespace Refraction.Logic.Actor
         private readonly PlayerConfig _config;
         private readonly IMoveMotor _motor;
         private readonly CrouchingTransitionState _transitionState;
+        private readonly GroundGrace _ground = new();
 
         /// <summary>被打断后要松手才能重新蹲：否则按住 S 的玩家下一帧就被自动拖回前摇，打断等于没发生。</summary>
         private bool _needReleaseToCrouch;
@@ -31,11 +48,11 @@ namespace Refraction.Logic.Actor
         {
             _config = config;
             _motor = motor;
-            _transitionState = new CrouchingTransitionState(motor, config);
+            _transitionState = new CrouchingTransitionState(motor, config, _ground);
 
             RegisterState(new StandState());
             RegisterState(_transitionState);
-            RegisterState(new CrouchState(motor, config));
+            RegisterState(new CrouchState(motor, config, _ground));
         }
 
         /// <summary>当前姿态，首帧还没进过状态机时为 PostureStateTag.None，按站姿算</summary>
@@ -97,6 +114,9 @@ namespace Refraction.Logic.Actor
         /// <summary>推进姿态。必须在移动组之前调用，否则同帧读到的禁令会晚一帧。</summary>
         public void Tick(in LogicContext ctx)
         {
+            // 先喂踩地宽限：同帧内前摇与 Crouch 的结束判定要看到同一结论
+            _ground.Feed(ctx.WorldInfo.Grounded, ctx.GameTime.now, _config.crouchGroundGrace);
+
             if (_needReleaseToCrouch && !ctx.InputSnapshot.CrouchHeld)
                 _needReleaseToCrouch = false;
 
@@ -136,12 +156,12 @@ namespace Refraction.Logic.Actor
             return target != EmptyTag;
         }
 
-        /// <summary>触发条件：按住下蹲键。不判踩地——空中进入下蹲后落地已在蹲姿，低矮通道不会卡</summary>
+        /// <summary>触发条件：踩地且按住下蹲键；空中不给蹲，落地那一帧才进来</summary>
         private bool CanCrouch(in LogicContext ctx)
         {
             if (_needReleaseToCrouch) return false;
 
-            return ctx.InputSnapshot.CrouchHeld;
+            return ctx.InputSnapshot.CrouchHeld && ctx.WorldInfo.Grounded;
         }
 
         /// <summary>能否起身：松开下蹲键只是想起身，还得头顶有空间才站得直</summary>

@@ -6,23 +6,25 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>下蹲前摇：身体高度与移速乘数在 crouchPrepareTime 内共用一条线性曲线，走完交给 CrouchState</summary>
-    /// <remarks>松键或被 InterruptToStand 打断都立刻回站立，身体与缩放瞬间恢复，不播回弹过渡</remarks>
+    /// <remarks>松键、离地或被 InterruptToStand 打断都立刻回站立，身体与缩放瞬间恢复，不播回弹过渡</remarks>
     public sealed class CrouchingTransitionState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.CrouchingTransition;
 
         private readonly IMoveMotor _motor;
         private readonly PlayerConfig _config;
+        private readonly GroundGrace _ground;
 
         private float _enterTime;
         private float _progress;
         private bool _finished;
         private bool _running;
 
-        public CrouchingTransitionState(IMoveMotor motor, PlayerConfig config)
+        public CrouchingTransitionState(IMoveMotor motor, PlayerConfig config, GroundGrace ground)
         {
             _motor = motor;
             _config = config;
+            _ground = ground;
         }
 
         /// <summary>过渡进度：0 = 完全站立，1 = 完全蹲下。</summary>
@@ -73,9 +75,9 @@ namespace Refraction.Logic.Actor
 
         public override bool IsDone(in LogicContext ctx)
         {
-            // 松键：被打断，立刻中止，不能停在半蹲
-            // 打断时清掉 _finished：否则"进度刚好走满那帧同时松键"会走蹲姿分支，多蹲一帧才被踢回来
-            if (!ctx.InputSnapshot.CrouchHeld)
+            // 松键 / 真正离地：被打断，立刻中止，不能停在半蹲
+            // 打断时清掉 _finished：否则"进度刚好走满那帧同时离地"会走蹲姿分支，人在空中被压扁一帧
+            if (!ctx.InputSnapshot.CrouchHeld || !_ground.Grounded)
             {
                 _finished = false;
                 return true;

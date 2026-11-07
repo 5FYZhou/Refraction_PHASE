@@ -4,18 +4,20 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>已完全蹲下：身体与移速停在蹲姿值；起身由 PostureGroup 判（松键且头顶有空间），本态不自建结束条件</summary>
+    /// <summary>已完全蹲下：身体与移速停在蹲姿值；起身由 PostureGroup 判（松键且头顶有空间），本态只在自己离地时结束</summary>
     public sealed class CrouchState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.Crouch;
 
         private readonly IMoveMotor _motor;
         private readonly PlayerConfig _config;
+        private readonly GroundGrace _ground;
 
-        public CrouchState(IMoveMotor motor, PlayerConfig config)
+        public CrouchState(IMoveMotor motor, PlayerConfig config, GroundGrace ground)
         {
             _motor = motor;
             _config = config;
+            _ground = ground;
         }
 
         public override void Enter(in LogicContext ctx)
@@ -30,8 +32,11 @@ namespace Refraction.Logic.Actor
             _motor.SetSpeedScaleX(_config.crouchMoveSpeedScale);
         }
 
-        /// <summary>永不自结束：姿态与踩地解耦（空中也蹲），起身只走 PostureGroup 抢占那一处判据</summary>
-        public override bool IsDone(in LogicContext ctx) => false;
+        /// <summary>离地即结束（空中不给蹲）；判定走 crouchGroundGrace 宽限，否则会被踢回站姿又立刻蹲下、每两帧抽一次</summary>
+        public override bool IsDone(in LogicContext ctx)
+        {
+            return !_ground.Grounded;
+        }
 
         public override void Exit()
         {

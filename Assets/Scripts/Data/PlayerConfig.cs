@@ -113,6 +113,10 @@ namespace Refraction.Data
         [Tooltip("下蹲期间是否允许冲刺。默认禁止，后续按设计调整。")]
         public bool crouchAllowDash = false;
 
+        [Tooltip("下蹲的离地宽限（秒）：蹲姿/前摇要连续离地超过这个时长才结束。\n踩地判定偶尔会掉一两帧（接触刷新、碰撞体刚改过高度），没有宽限的话人会被踢回站姿、下一帧又蹲下，看起来是每两帧抽一次。\n设 0 表示离地一帧就结束。")]
+        [Min(0f)]
+        public float crouchGroundGrace = 0.08f;
+
         [Header("外部速度")]
         [Tooltip("外部速度修正的衰减率（单位/秒²）：后坐力、击退等叠加在常规移动速度上的分量，每帧朝 0 线性衰减。\n0 表示不衰减，角色会一直被这份速度推着走。")]
         [Min(0f)]
