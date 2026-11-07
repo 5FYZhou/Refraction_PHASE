@@ -13,6 +13,7 @@ namespace Refraction.Logic.Move
         private Vector2 _frameStart;
         private Vector2 _delta;
         private Vector2 _accel;
+        private readonly ExternalVelocity _external = new();
         private float _speedScaleX = 1f;
         private float _now;
         private float _dt = 0.02f;
@@ -61,30 +62,39 @@ namespace Refraction.Logic.Move
             }
         }
 
-        /// <remarks>时刻与 Δt 由驱动方给出</remarks>
         public void BeginStep(float now, float deltaTime)
         {
             _now = now;
             _dt = deltaTime;
-            _frameStart = _readVelocity();
+
+            // 状态只该看到常规速度：把上帧写进刚体的外部部分剥掉
+            _frameStart = _external.Strip(_readVelocity());
             _delta = Vector2.zero;
             _accel = Vector2.zero;
 
             // 乘数每帧复位：门禁必须每帧重新提交，否则"这一帧"会变成"从此一直被限速"
             _speedScaleX = 1f;
+
+            _external.Decay(Config.externalDeceleration, _dt);
         }
 
         public void Commit()
         {
-            // 零提交不写：每帧覆盖会抹掉引擎自己改的速度
-            if (!HasSubmission) return;
+            // 零提交不写：每帧覆盖会抹掉引擎自己改的速度；但外部速度在衰减时得写，否则人一直被推着走
+            if (!HasSubmission && !_external.Dirty) return;
 
-            _writeVelocity(_frameStart + SubmittedDelta);
+            Vector2 final = Velocity + _external.Value;
+            _writeVelocity(final);
+            _external.MarkApplied(final);
         }
 
         public void AddImpulse(Vector2 deltaVelocity) => _delta += deltaVelocity;
 
         public void AddForce(Vector2 acceleration) => _accel += acceleration;
+
+        public void AddExternalVelocity(Vector2 velocity) => _external.Add(velocity);
+
+        public void ResetExternal() => _external.Clear();
 
         public void SnapVelocity(Vector2 velocity, System.Action<Vector2> facing)
         {

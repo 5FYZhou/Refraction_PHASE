@@ -32,7 +32,7 @@ namespace Refraction.Logic.Actor
         private int _dirX;
         private float _beginTime;
         private bool _pendingDash;
-        private Vector2 _dashDir;
+        private Vector2 _dashDir = Vector2.zero;
 
         private float _launchVy;
         private float _flightTime;
@@ -86,7 +86,7 @@ namespace Refraction.Logic.Actor
             if (_mode == Mode.Dash) return ctx;
 
             // 水平到了就收掉假输入，别一路推着玩家冲过落点
-            InputSnapshot fake = new(new Vector2(_xDone ? 0f : _dirX, 0f), false, false, false, false);
+            InputSnapshot fake = new(new Vector2(_xDone ? 0f : _dirX, 0f), false, false, false, false, false);
             return new LogicContext(fake, ctx.WorldInfo, ctx.GameTime);
         }
 

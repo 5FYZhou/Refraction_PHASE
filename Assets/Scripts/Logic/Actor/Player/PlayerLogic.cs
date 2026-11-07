@@ -1,4 +1,5 @@
 ﻿using Refraction.Data;
+using Refraction.Logic.Combat;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Logic.Move;
@@ -10,6 +11,7 @@ namespace Refraction.Logic.Actor
     {
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
+        private AttackGroup _attackGroup;
         private TransitMotor _transit;
         private IMoveMotor _motor;
         private InputBuffer _buffer;
@@ -23,10 +25,11 @@ namespace Refraction.Logic.Actor
         private int _pendingEntryFace;
         private bool _hasPendingEntry;
 
-        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer) : base(motor)
+        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher) : base(motor)
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
+            _attackGroup = new(config, motor, launcher);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
@@ -64,6 +67,8 @@ namespace Refraction.Logic.Actor
             _postureGroup.Tick(in tick);
 
             _moveGroup.Tick(in tick);
+
+            _attackGroup.Tick(in tick);
 
             _transit.AfterTick(in tick);
         }

@@ -4,11 +4,15 @@ using UnityEngine;
 
 namespace Refraction.Logic.Move
 {
+    /// <summary>状态只拿窄接口</summary>
     public interface IStateMove
     {
         void MoveTowardsX(Vector2 direction, float speed);
         void BrakeTowardsX();
         void AddImpulse(Vector2 deltaVelocity);
+
+        /// <summary>叠加外部速度：不覆盖常规速度，逐帧衰减</summary>
+        void AddExternalVelocity(Vector2 velocity);
 
         void SetVelocityX(float speed);
         void SetVelocityY(float speed);
@@ -18,11 +22,13 @@ namespace Refraction.Logic.Move
 
         void SetGravityEnable(bool enable);
         void SetGravity(float gravity);
+        /// <summary>身体高度倍率（1=站立），脚底不动</summary>
+        void SetBodyScale(float scale);
     }
 
     public interface IMoveMotor : IStateMove
     {
-        /// <summary>站立姿态下的碰撞体高度（世界单位，不含运行时压缩）。头顶探测用它在蹲高与站高之间留空间。</summary>
+        /// <summary>站立碰撞体高度（不含运行时压缩）</summary>
         float BodyHeight { get; }
 
         float FeetOffsetY { get; }
@@ -35,10 +41,7 @@ namespace Refraction.Logic.Move
         /// <summary>瞬移并直写速度</summary>
         void SpawnAt(Vector2 position, Vector2 velocity);
 
-        /// <summary>身体高度缩到 scale 倍（1 = 站立）：碰撞体与墙探针的竖直尺寸一起缩放，脚底位置不动</summary>
-        void SetBodyScale(float scale);
-
-        /// <summary>头顶是否有足够空间从 crouchHeight 站起来到 standHeight</summary>
+        /// <summary>头顶空间是否够从蹲姿站起</summary>
         bool CanStandUp(float standHeight, float crouchHeight);
     }
 
@@ -51,7 +54,6 @@ namespace Refraction.Logic.Move
         Vector2 FrameStartVelocity { get; }
 
         /// <summary>速度乘数，1=不缩放；帧首复位</summary>
-        /// <remarks>写口夹取 NaN→1、负数→0、&gt;1→1</remarks>
         float SpeedScaleX { get; set; }
 
         /// <summary>帧首：读真值、清空累加区、复位速度乘数</summary>
@@ -65,6 +67,8 @@ namespace Refraction.Logic.Move
 
         /// <summary>持续力：单位/秒²，本帧贡献 = 该值 × Δt</summary>
         void AddForce(Vector2 acceleration);
+
+        void AddExternalVelocity(Vector2 velocity);
 
         void SetVelocity(Vector2 velocity);
     }

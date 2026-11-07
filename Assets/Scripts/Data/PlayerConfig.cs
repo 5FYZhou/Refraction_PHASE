@@ -112,5 +112,35 @@ namespace Refraction.Data
 
         [Tooltip("下蹲期间是否允许冲刺。默认禁止，后续按设计调整。")]
         public bool crouchAllowDash = false;
+
+        [Header("外部速度")]
+        [Tooltip("外部速度修正的衰减率（单位/秒²）：后坐力、击退等叠加在常规移动速度上的分量，每帧朝 0 线性衰减。\n0 表示不衰减，角色会一直被这份速度推着走。")]
+        [Min(0f)]
+        public float externalDeceleration = 40f;
+
+        [Header("攻击 · 白")]
+        [Tooltip("白色子弹命中的伤害点数（点）。生成时写进 Bullet，怪物受伤逻辑接入后由它读取。\n0 表示不造成伤害。")]
+        [Min(0f)]
+        public float bulletDamage = 1f;
+
+        [Tooltip("两次攻击之间的最短间隔（秒）。从触发攻击那一帧起算，前摇与后摇都算在间隔内。\n0 表示无冷却，攻击组回到 None 后下一帧即可再攻击。")]
+        [Min(0f)]
+        public float attackCooldown = 0.35f;
+
+        [Tooltip("子弹的飞行速度（单位/秒）。生成时直接写成子弹刚体的水平速度，不受重力影响。\n0 表示子弹原地不动。")]
+        [Min(0f)]
+        public float bulletSpeed = 18f;
+
+        [Tooltip("开火时的后坐力：沿朝向反向叠加一份外部速度（单位/秒），不直接改写常规移动速度。\n最终速度 = 常规移动速度 + 外部速度，外部部分按 externalDeceleration 衰减；0 表示无后坐力。")]
+        [Min(0f)]
+        public float recoilSpeedX = 8f;
+
+        [Tooltip("攻击前摇时长（秒）：按下攻击键到生成子弹之间的等待。\n0 表示没有前摇，按键当帧就开火。")]
+        [Min(0f)]
+        public float attackPrepareTime = 0.08f;
+
+        [Tooltip("攻击后摇时长（秒）：开火后到攻击组回到 None 的等待，期间不响应新的攻击输入。\n0 表示没有后摇，开火后回到 None 即可再攻击（仍受 attackCooldown 限制）。")]
+        [Min(0f)]
+        public float attackRecoverTime = 0.12f;
     }
 }

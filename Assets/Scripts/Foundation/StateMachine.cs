@@ -52,8 +52,6 @@ namespace Refraction.Foundation
             _currentState = nextState;
             _currentState.Enter(ctx);
 
-            Debug.Log(_currentState.Tag.ToString());
-
             return true;
         }
     }

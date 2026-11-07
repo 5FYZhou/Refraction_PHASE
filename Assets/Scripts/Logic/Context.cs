@@ -13,13 +13,16 @@ namespace Refraction.Logic
         /// <summary>下蹲键是否按住：姿态是持续状态而不是按下沿</summary>
         public readonly bool CrouchHeld;
 
-        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld)
+        public readonly bool Attack;
+
+        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld, bool attack)
         {
             this.Move = move;
             this.Jump = jump;
             this.Dash = dash;
             this.JumpHeld = jumpHeld;
             this.CrouchHeld = crouchHeld;
+            this.Attack = attack;
         }
     }
 

@@ -239,6 +239,8 @@ namespace Refraction.Presentation
             _ledger.AddImpulse(deltaVelocity);
         }
 
+        public void AddExternalVelocity(Vector2 velocity) => _ledger.AddExternalVelocity(velocity);
+
         public void BrakeTowardsX()
         {
             _ledger.BrakeTowardsX();
@@ -275,6 +277,7 @@ namespace Refraction.Presentation
         {
             _rb.position = position;
             _rb.velocity = velocity;
+            _ledger.ResetExternal();
         }
 
         #region 身体尺寸

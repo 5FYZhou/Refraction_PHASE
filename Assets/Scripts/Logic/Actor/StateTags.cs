@@ -27,4 +27,12 @@ namespace Refraction.Logic.Actor
         /// <summary>下蹲前摇：身体与移速线性过渡到蹲姿，可被打断</summary>
         CrouchingTransition
     }
+
+    public enum AttackStateTag
+    {
+        None = 0,
+        WhiteAttackPrepare,
+        WhiteAttack,
+        WhiteAttackRecover
+    }
 }

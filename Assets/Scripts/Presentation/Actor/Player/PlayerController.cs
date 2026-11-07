@@ -2,14 +2,16 @@
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
+using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
+using Refraction.Presentation.Combat;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IBulletLauncher
     {
         public int Order => SceneOrder.Player;
 
@@ -24,6 +26,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private MoveMotor moveMotor;
 
+        [Tooltip("子弹预制体。")]
         [SerializeField]
         private GameObject bulletPre;
 
@@ -88,13 +91,14 @@ namespace Refraction.Presentation.Actor
 
             Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
             Require.Assigned(config, nameof(PlayerController), nameof(config));
+            Require.Assigned(bulletPre, nameof(GameObject), nameof(bulletPre));
 
             _inputProvider = _root.Input;
             _buffer = new(
                 Mathf.Max(config.inputBufferTime, config.dashBufferTime),
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
-            _logic = new(moveMotor, config, _buffer);
+            _logic = new(moveMotor, config, _buffer, this);
             _attached = true;
 
             // 从门里进来就落到那扇门；首关没有落点，保持场景里摆的位置
@@ -116,6 +120,20 @@ namespace Refraction.Presentation.Actor
 
             _logic.SpawnTo(pivot);
             _logic.BeginTransit(in entry, enterTag, enterFace);
+        }
+
+        public void Launch(in BulletSpawn spawn)
+        {
+            if (bulletPre == null)
+            {
+                Debug.LogError("[PlayerController] 找不到子弹预制体，本次开火不生成子弹。");
+                return;
+            }
+
+            GameObject go = Instantiate(bulletPre);
+            Bullet bullet = go.GetComponent<Bullet>();
+            if (bullet == null) bullet = go.AddComponent<Bullet>();
+            bullet.Init(in spawn);
         }
 
         public void FixedTick()
