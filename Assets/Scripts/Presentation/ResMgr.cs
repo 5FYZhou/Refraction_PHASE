@@ -41,7 +41,7 @@ namespace Refraction.Presentation
         // 加载中与已加载的全部记录
         private Dictionary<string, ResInfoBase> resDic = new Dictionary<string, ResInfoBase>();
 
-        private ResMgr() { }
+        public ResMgr() { }
 
         /// <summary>同步加载：键 = 路径 + "_" + 类型名，所有读写点必须逐字一致，改一处就查不到</summary>
         public T Load<T>(string path) where T : UnityEngine.Object

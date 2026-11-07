@@ -37,7 +37,7 @@ namespace Refraction.Presentation
         public InputProvider Input => _inputProvider;
 
         public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
-        public ResMgr ResMgr { get => _resMgr; }
+        public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
 
         protected override void Awake()
         {

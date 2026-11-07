@@ -30,6 +30,7 @@ namespace Refraction.Presentation.UI
             components.Clear();
             FindComponentsOnChildren();
             RegisterSelf();
+            ApplyTxtStyle();
         }
 
         protected virtual void OnDestroy()
@@ -80,7 +81,7 @@ namespace Refraction.Presentation.UI
 
             foreach (var component in componentsInChildren)
             {
-                // 精确名字匹配：Unity 给重名子物体加序号后缀（Image (1)），带序号的漏网者是 Graphic，走下面 else if。
+                // 精确匹配名字：重名子物体带 (1) 后缀，会落到下面的 Graphic 分支
                 if (_ignoreName.Contains(component.name))
                 {
                     continue;
@@ -97,7 +98,6 @@ namespace Refraction.Presentation.UI
                         OnButtonClicked(buttonName);
                     });
                 }
-                // 所有text都拿到，以设置字体
                 else if (component is TMP_Text text)
                 {
                     if (!KeepAuthoredTxt(component.name))
@@ -105,7 +105,7 @@ namespace Refraction.Presentation.UI
                 }
                 else if (component is Graphic)
                 {
-                    // 纯图形不绑定也不告警：每个 Image 都会落到这里，出声会把真正的绑定缺失盖掉
+                    // 纯图形不绑定也不告警，否则会把真正的绑定缺失盖掉
                 }
                 else if (component is LayoutGroup || component is Mask || component is RectMask2D)
                 {
@@ -141,6 +141,24 @@ namespace Refraction.Presentation.UI
         #endregion
 
         #region UI样式
+
+        [Tooltip("面板文本样式，默认正文。Default 表示不动预制体里各自的字号与字体")]
+        [SerializeField]
+        protected TxtStyle txtStyle = TxtStyle.Body;
+
+        /// Awake 里统一套一遍，覆盖预制体里各自调的字号
+        private void ApplyTxtStyle()
+        {
+            if (txtStyle == TxtStyle.Default) return;
+
+            TMP_FontAsset font = root.UIMgr.GetFont(txtStyle);
+            TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                UIStyle.SetTxtStyle(texts[i], txtStyle, font);
+            }
+        }
 
         #endregion
     }

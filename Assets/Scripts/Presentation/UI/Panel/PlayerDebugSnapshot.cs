@@ -12,6 +12,9 @@ namespace Refraction.Presentation.UI
         /// <summary>账本算完、尚未写回刚体的速度；与上一行不等就说明外部速度或提交没对上</summary>
         public readonly Vector2 LedgerVelocity;
 
+        /// <summary>物理帧开始时地面探针给出的踩地判定</summary>
+        public readonly bool Grounded;
+
         public readonly MovementStateTag Move;
 
         public readonly PostureStateTag Posture;
@@ -21,12 +24,14 @@ namespace Refraction.Presentation.UI
         public PlayerDebugSnapshot(
             Vector2 frameStartVelocity,
             Vector2 ledgerVelocity,
+            bool grounded,
             MovementStateTag move,
             PostureStateTag posture,
             AttackStateTag attack)
         {
             FrameStartVelocity = frameStartVelocity;
             LedgerVelocity = ledgerVelocity;
+            Grounded = grounded;
             Move = move;
             Posture = posture;
             Attack = attack;

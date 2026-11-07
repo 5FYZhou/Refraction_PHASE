@@ -20,7 +20,7 @@ namespace Refraction.Presentation.UI
         System,
     }
 
-    /// 预制体名必须等于面板类名（按 typeof(T).Name 找）
+    /// 预制体名必须等于面板类名
     public class UIMgr
     {
         private abstract class BasePanelInfo
@@ -77,9 +77,19 @@ namespace Refraction.Presentation.UI
         private const string UI_EVENT_SYS_KEY = "ui/EventSystem";
         private const string UI_PANEL_PREFIX = "ui/Panel/";
 
+        // 标题暂无独立字资产，先与正文共用
+        private static readonly Dictionary<TxtStyle, string> fontResPaths = new()
+        {
+            { TxtStyle.Body, "Font/SIMHEI SDF" },
+            { TxtStyle.Title, "Font/SIMHEI SDF" },
+        };
+
+        // ResMgr.Load 每次都加引用计数，必须缓存
+        private readonly Dictionary<TxtStyle, TMP_FontAsset> fontCache = new();
+
         private readonly Dictionary<string, BasePanelInfo> panelDic = new Dictionary<string, BasePanelInfo>();
 
-        // 整栈倒出暂存，避免每次分配
+        // 整栈倒出暂存
         private readonly List<BasePanelInfo> _stackScratch = new();
 
         private readonly Dictionary<E_UILayer, Stack<BasePanelInfo>> openPanels = new()
@@ -123,17 +133,12 @@ namespace Refraction.Presentation.UI
             IsReady = true;
         }
 
-        /// 拆除三件套，幂等
+        /// 拆除三件套
         public void Dispose()
         {
             if (!IsReady) return;
 
             IsReady = false;
-
-            foreach (KeyValuePair<string, BasePanelInfo> kv in panelDic)
-            {
-                //AssetModule.Release(UI_PANEL_PREFIX + kv.Key);
-            }
 
             panelDic.Clear();
 
@@ -153,6 +158,20 @@ namespace Refraction.Presentation.UI
             middleLayer = null;
             topLayer = null;
             systemLayer = null;
+        }
+
+
+        /// Default 与未登记的样式返回 null，调用方保留原字体
+        public TMP_FontAsset GetFont(TxtStyle style)
+        {
+            if (fontCache.TryGetValue(style, out TMP_FontAsset cached)) return cached;
+
+            TMP_FontAsset font = null;
+            if (fontResPaths.TryGetValue(style, out string path))
+                font = GameRoot.Instance.ResMgr.Load<TMP_FontAsset>(path);
+
+            fontCache[style] = font;
+            return font;
         }
 
 
@@ -299,7 +318,7 @@ namespace Refraction.Presentation.UI
             panelDic.Add(panelName, new PanelInfo<T>(this, callBack));
 
             // 协程必须由常驻的 GameRoot 托管
-            GameRoot.Instance.ResMgr.LoadAsync<GameObject>("ui/Panel/" + panelName, (res) =>
+            GameRoot.Instance.ResMgr.LoadAsync<GameObject>(UI_PANEL_PREFIX + panelName, (res) =>
             {
 
                 PanelInfo<T> panelInfo = panelDic[panelName] as PanelInfo<T>;

@@ -74,7 +74,8 @@ namespace Refraction.Presentation.UI
             AppendVelocity("帧首速度", snapshot.FrameStartVelocity);
             AppendVelocity("账本速度", snapshot.LedgerVelocity);
 
-            _builder.Append("移动 ").Append(snapshot.Move.ToString())
+            _builder.Append("触地 ").Append(snapshot.Grounded ? "是" : "否")
+                    .Append("\n移动 ").Append(snapshot.Move.ToString())
                     .Append("\n姿态 ").Append(snapshot.Posture.ToString())
                     .Append("\n攻击 ").Append(snapshot.Attack.ToString());
 
