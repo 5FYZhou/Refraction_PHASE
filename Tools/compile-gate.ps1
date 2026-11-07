@@ -143,7 +143,8 @@ function New-GateProject {
         [string]$OutPath,
         [string]$AssemblyName,
         [System.IO.FileInfo[]]$Files,
-        [string]$ExtraProjectRef
+        [string]$ExtraProjectRef,
+        [string]$ExtraReferences
     )
 
     if ($Files.Count -eq 0) { return $null }
@@ -158,6 +159,9 @@ function New-GateProject {
     if ($ExtraProjectRef) {
         $block += "  <ItemGroup>`n    <ProjectReference Include=""$ExtraProjectRef"" />`n  </ItemGroup>`n"
     }
+    if ($ExtraReferences) {
+        $block += "  <ItemGroup>`n$ExtraReferences  </ItemGroup>`n"
+    }
 
     $anchor = '<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />'
     if ($text -notmatch [regex]::Escape($anchor)) { throw "工程模板结构变了（找不到 Microsoft.CSharp.targets 导入）：$template" }
@@ -167,16 +171,35 @@ function New-GateProject {
     return $OutPath
 }
 
-# 路径里含名为 Editor 的目录 → Unity 会把它编进 Assembly-CSharp-Editor，本工程目前没有这类文件
+# 路径里含名为 Editor 的目录 → Unity 会把它编进 Assembly-CSharp-Editor
 $runtimeFiles = @($csFiles | Where-Object { $_.FullName -notmatch '[\\/]Editor[\\/]' })
 $editorFiles  = @($csFiles | Where-Object { $_.FullName -match '[\\/]Editor[\\/]' })
+
+# 测试程序集要额外的 nunit / TestRunner 引用：模板 csproj 里没有，Unity 生成时才注入。
+# 包缓存目录名带版本号，按前缀找；找不到就不加，交给编译直接报错（别静默跳过整块测试）
+$testReferences = ''
+$nunitPkg = Get-ChildItem (Join-Path $root 'Library/PackageCache') -Directory -Filter 'com.unity.ext.nunit*' -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if ($nunitPkg) {
+    $nunitDll = Get-ChildItem $nunitPkg.FullName -Recurse -File -Filter 'nunit.framework.dll' -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($nunitDll) {
+        $testReferences += '    <Reference Include="nunit.framework"><HintPath>' + $nunitDll.FullName + '</HintPath></Reference>' + "`n"
+    }
+}
+foreach ($asm in @('UnityEngine.TestRunner', 'UnityEditor.TestRunner')) {
+    $dll = Join-Path $root "Library/ScriptAssemblies/$asm.dll"
+    if (Test-Path -LiteralPath $dll) {
+        $testReferences += '    <Reference Include="' + $asm + '"><HintPath>' + $dll + '</HintPath></Reference>' + "`n"
+    }
+}
 
 $projects = @()
 $null = New-GateProject -OutPath $gateProj -AssemblyName 'CompileGate' -Files $runtimeFiles
 $projects += $gateProj
 
 if ($editorFiles.Count -gt 0) {
-    $null = New-GateProject -OutPath $gateEditorProj -AssemblyName 'CompileGateEditor' -Files $editorFiles -ExtraProjectRef $gateProj
+    $null = New-GateProject -OutPath $gateEditorProj -AssemblyName 'CompileGateEditor' -Files $editorFiles -ExtraProjectRef $gateProj -ExtraReferences $testReferences
     $projects += $gateEditorProj
 }
 

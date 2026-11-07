@@ -163,10 +163,37 @@ dotnet build Assembly-CSharp.csproj
       `-Mode verify -Base <上一个已验收提交>` → `VERIFY PASS`。
 - [ ] 7. `pwsh Tools/compile-gate.ps1` → `GATE OK`（0 error、警告不超基线、无新增越层 / 驱动违规）。
       裸 `dotnet build Assembly-CSharp.csproj` 只能算等价下限：它不重扫文件表，新文件可能被漏编。
+- [ ] 8. 测试按 §9 写在 `Assets/Tests/Runtime/Editor/`、**中文 + `Test`** 命名；写完后**没有自己跑测试、没有动编辑器进程**。
 
 ---
 
-## 9. 工程速查
+## 9. 测试规范 (Test Discipline)
+
+- **只走 Unity 的测试模式**：用 Unity Test Framework（NUnit）写 EditMode 测试，由人在编辑器的 Test Runner
+  （`Window ▸ General ▸ Test Runner ▸ EditMode`）里运行。
+  **严禁**自带 runner：不许 `dotnet test`、不许写 `Main`、不许装 xUnit / MSTest，也不许把测试塞进
+  `Assets/Scripts` 冒充运行时代码。
+- **路径**：`Assets/Tests/Runtime/Editor/`（现有唯一测试 `外部速度Test.cs` 就在这）。
+- **命名**：文件名 = 类名 = **中文 + `Test`**，例如 `地块效果Test.cs`、`外部速度Test.cs`。
+  不写英文前缀、不用英文 `*Tests` 复数形式。
+  - 命名空间统一 `Refraction.Tests`，类用 `public sealed class`。
+  - `[Test]` 方法名也用中文，`场景_期望` 用下划线断开（`后坐力_只进外部速度_不改常规速度`）。
+  - 断言末尾带一句中文说明（`Assert.AreEqual(8f, _body.x, Eps, "刚体速度 = 常规 0 + 外部 8")`）——
+    这是未来看红灯的人唯一的线索，省了它等于交一份看不懂的失败。
+- **写完就停手，等用户跑**：
+  - 交付时只说清「哪个文件、覆盖什么、期望什么」，然后**等用户在 Unity 里运行**并回报结果。
+  - **严禁**结束 / 重启 / 关闭 Unity（团结引擎）进程：不许 `taskkill`、`Stop-Process`、`kill`、关窗口，
+    也不许为了「让它刷新」去动 `Library/` 或人为触发 domain reload。
+  - 测试文件落到磁盘后编辑器自己会导入编译；**不要**替它生成 `.meta`（§3）。
+    若用例没出现在 Test Runner 里，**报告现象**，不要自己去改工程设置或补 asmdef。
+- **红灯处置**：先判断是实现错了还是测试写错了。前者的修复只在 `Assets/Scripts`；
+  **严禁**为了让灯变绿去放宽断言、改用 `[Ignore]`、跳过用例或改基线数字。
+- **门禁不覆盖测试**：`Tools/compile-gate.ps1` 只扫 `Assets/Scripts`，`comment-lint.ps1` 同样只管
+  `Assets/Scripts/**`。测试能否编译、注释是否合规，全靠编辑器编译 + 自查——门禁绿了不等于测试没问题。
+
+---
+
+## 10. 工程速查
 
 | 项 | 位置 |
 |---|---|
@@ -176,6 +203,7 @@ dotnet build Assembly-CSharp.csproj
 | 全部手感参数 | `Assets/Resources/PlayerConfig.asset` |
 | 输入绑定 | `Assets/Scripts/Presentation/Input/InputSys.inputactions` |
 | 输入生成物（禁改） | `Assets/Scripts/Generated/InputSys.cs` |
+| 测试位置 | `Assets/Tests/Runtime/Editor/`（中文 + `Test.cs`） |
 | 状态机说明 | `Docs/说明/玩家状态机.md` |
 | 注释规范 | `Docs/工程/注释规范.md` |
 | 门禁脚本（注释 / 编译） | `Tools/comment-lint.ps1`、`Tools/compile-gate.ps1`（说明见 `Tools/README.md`） |
