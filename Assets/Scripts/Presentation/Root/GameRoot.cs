@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Refraction.Foundation;
+using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
@@ -15,10 +16,6 @@ namespace Refraction.Presentation
     /// <summary>场景根：全场唯一常驻对象，持有输入源与关卡推进器，切场景后把世界侧整体换成新场景的</summary>
     public class GameRoot : Singleton<GameRoot>
     {
-        [Tooltip("当前玩家。首关用这里的引用，之后由玩家自己注册时替换。")]
-        [SerializeField]
-        private PlayerController playerController;
-
         private readonly List<ISceneRoot> _sceneRoots = new();
         private readonly List<ISceneRoot> _pendingAttach = new();
 
@@ -83,15 +80,12 @@ namespace Refraction.Presentation
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
-            playerController = null;
             _doorReader = null;
         }
 
         /// <summary>首关装配：用 Inspector 里连好的引用。玩家的接入走场景根注册表，这里不碰。</summary>
         private void Assemble()
         {
-            Require.Assigned(playerController, nameof(GameRoot), nameof(playerController));
-
             _inputProvider = new();
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
@@ -106,8 +100,6 @@ namespace Refraction.Presentation
 
             InsertByOrder(_sceneRoots, root);
             InsertByOrder(_pendingAttach, root);
-
-            if (root is PlayerController player) playerController = player;
         }
 
         public void UnregisterSceneRoot(ISceneRoot root)
@@ -116,8 +108,6 @@ namespace Refraction.Presentation
 
             _sceneRoots.Remove(root);
             _pendingAttach.Remove(root);
-
-            if (root is PlayerController player && playerController == player) playerController = null;
         }
 
         /// <summary>取走本关的进门口数据、进门时的移动状态与朝向，一次性。没有落点返回 false，调用方保持场景摆放</summary>
@@ -258,22 +248,30 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Tick();
-
-            // 玩家还没注册（或在换场景的缝隙里）时跳过：Update 比 FixedUpdate 更容易撞上这一段
-            if (playerController == null) return;
-
-            playerController.Tick();
+            TickSceneRootsRender(Time.deltaTime);
         }
 
         private void FixedUpdate()
         {
             // 先装配再驱动：场景根的第一帧就要能跑
             AttachPending();
+            TickSceneRootsPhysics(Time.fixedDeltaTime);
+        }
 
-            // 切换场景那一帧旧玩家可能已经销毁，引用会短暂是“伪 null”
-            if (playerController == null) return;
+        private void TickSceneRootsRender(float deltaTime)
+        {
+            for (int i = 0; i < _sceneRoots.Count; i++)
+            {
+                if (_sceneRoots[i] is IRenderTicked ticked) ticked.RenderTick(deltaTime);
+            }
+        }
 
-            playerController.FixedTick();
+        private void TickSceneRootsPhysics(float deltaTime)
+        {
+            for (int i = 0; i < _sceneRoots.Count; i++)
+            {
+                if (_sceneRoots[i] is IPhysicsTicked ticked) ticked.FixedTick(deltaTime);
+            }
         }
     }
 }

@@ -26,14 +26,14 @@ namespace Refraction.Logic.Move
             _writeVelocity = writeVelocity;
         }
 
-        public PlayerConfig Config { get; private set; }
+        public CharacterConfig Config { get; private set; }
 
         public float Now => _now;
 
         public float DeltaTime => _dt;
 
         /// <remarks>只有 enableGravity 与 fallGravity 在此快照，其余字段每帧读 SO</remarks>
-        public void Configure(PlayerConfig config)
+        public void Configure(CharacterConfig config)
         {
             Config = config;
             _enableGravity = config.enableGravity;
