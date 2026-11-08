@@ -6,6 +6,57 @@ namespace Refraction.Data
     [CreateAssetMenu(fileName = "PlayerConfig", menuName = "Refraction/Settings/Player")]
     public sealed class PlayerConfig : CharacterConfig
     {
+
+        [Tooltip("上升段按住跳跃键时使用的重力加速度。\n起跳那一帧就写入，之后每帧按是否处于顶点区间改用 apexGravity 或回到本值。")]
+        public float riseGravity = 40f;
+
+        [Tooltip("顶点悬停区间阈值：上升段按住跳跃键、且 0 < vy < 该值时，重力改用 apexGravity。\n该值越小，顶点加速的区间越窄。")]
+        public float apexThreshold = 0.5f;
+
+        [Tooltip("顶点悬停区间的重力加速度\n小于 riseGravity 才会变飘（悬停感），大于则更快越过顶点。")]
+        public float apexGravity = 20;
+
+        [Tooltip("上升期松开跳跃键时，把当前竖直速度乘以该系数（每段上升只生效一次）。")]
+        [Range(0f, 1f)]
+        public float jumpCutMultiplier = 0.5f;
+
+        [Tooltip("上升期松开跳跃键后使用的重力加速度，配合 jumpCutMultiplier 让短按跳得更低。")]
+        public float jumpCutGravity = 90f;
+
+        [Header("跳跃")]
+        [Tooltip("起跳瞬间直接写入的竖直速度（不是加速度）。\n跳跃高度 ≈ 该值² / (2 × 上升重力)；松键的 Jump Cut 会把这个速度截断。")]
+        [Min(0f)]
+        public float jumpSpeed = 9f;
+
+        [Tooltip("土狼时间（秒）：离地后仍允许起跳的宽限时长。\n每次落地重新给一次机会，用过一次要再次落地才能再用。")]
+        [Min(0f)]
+        public float coyoteTime = 0.12f;
+
+        [Tooltip("空中跳跃次数：一次离地期间最多还能在空中跳几次，1 表示二段跳，0 表示空中不给跳。\n每次重新落地才会恢复；土狼跳（离地宽限）算地面跳，不消耗这里的次数。")]
+        [Min(0)]
+        public int maxAirJumps = 1;
+
+        [Tooltip("空中跳初速度（不是加速度）。AirJumpState 起跳那一帧直接写入该值，会覆盖当前竖直速度。\n同样受松键 Jump Cut 与顶点悬停影响。")]
+        [Min(0f)]
+        public float airJumpSpeed = 12f;
+
+        [Header("冲刺")]
+        [Tooltip("冲刺期间的水平速度：进入冲刺时直接覆盖当前速度（方向 × 该值），不是叠加冲量。\n冲刺会把竖直速度一并清零，上升/下落途中冲刺同样有效。")]
+        [Min(0f)]
+        public float dashSpeed;
+
+        [Tooltip("冲刺持续时间（秒）。从触发那一帧开始计时，超过该时长即结束。")]
+        [Min(0f)]
+        public float dashDuration;
+
+        [Tooltip("冲刺冷却（秒）。从触发冲刺的那一刻起算，而不是从冲刺结束起算。")]
+        [Min(0f)]
+        public float dashCooldown;
+
+        [Tooltip("两次落地之间可用的空中冲刺次数：0 表示离地后不给冲，1 表示一次空中冲刺。\n踩地冲刺不占用这里的次数，每次都还是要过 dashCooldown 冷却；重新落地即回满。")]
+        [Min(0)]
+        public int maxAirDashes = 1;
+
         [Header("输入缓冲")]
         [Tooltip("冲刺输入缓冲窗口（秒）。\n冷却结束的那一帧，只有落在这个窗口内按下的冲刺才会触发；冷却期间按下的不会一直留到冷却结束后补触发（除非窗口大于剩余冷却）。\n建议 0.1 ~ 0.15。设成 0 表示不缓冲，必须精确按在可用的那一帧。")]
         [Min(0f)]

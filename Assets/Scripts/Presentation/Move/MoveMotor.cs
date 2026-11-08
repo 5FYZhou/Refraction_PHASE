@@ -91,9 +91,13 @@ namespace Refraction.Presentation
 
             int facing = FacingSign;
             bool touchingWall = SampleWall(facing);
+            bool ledgeAhead = SampleLedge(facing);
 
-            return new WorldInfo(grounded, touchingWall, facing, _rb.velocity, facing, _rb.position);
+            return new WorldInfo(grounded, touchingWall, facing, _rb.velocity, facing, _rb.position, ledgeAhead);
         }
+
+        /// <summary>探朝向那一侧的悬崖，默认没有：只有不想走下平台的角色才实现</summary>
+        protected virtual bool SampleLedge(int side) => false;
 
         /// <summary>探地面并返回是否踩地；贴回地面必须在这里做，逻辑层一旦读到踩地就不再施加重力，人会长悬在半空</summary>
         protected abstract bool SampleGround();

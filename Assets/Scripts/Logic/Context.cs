@@ -40,7 +40,9 @@ namespace Refraction.Logic
         public readonly int Face;
         public readonly Vector2 Pos;
 
-        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face, Vector2 pos)
+        public readonly bool LedgeAhead;
+
+        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face, Vector2 pos, bool ledgeAhead = false)
         {
             Grounded = grounded;
             TouchingWall = touchingWall;
@@ -48,6 +50,7 @@ namespace Refraction.Logic
             FrameStartVelocity = velocity;
             Face = face;
             Pos = pos;
+            LedgeAhead = ledgeAhead;
         }
     }
 

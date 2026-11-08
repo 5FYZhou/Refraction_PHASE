@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17a2d7fa8bc4e04dacea76d44751dfb, type: 3}
+  m_Name: EnemyConfig
+  m_EditorClassIdentifier: 
+  moveSpeed: 4.5
+  moveAcceleration: 60
+  moveDeceleration: 80
+  turnAcceleration: 120
+  externalDeceleration: 40
+  enableGravity: 1
+  maxFallSpeed: 20
+  maxRiseSpeed: 20
+  fallGravity: 70
+  patrolRadius: 4
+  patrolSpeed: 2.5
+  loseTargetTime: 1.5
+  chaseStopDistance: 2.5
+  attackCooldown: 1.8
+  attackWindupTime: 0.45
+  attackDashDuration: 0.22
+  attackDashSpeed: 16
+  attackRecoverTime: 0.45
