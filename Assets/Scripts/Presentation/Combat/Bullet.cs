@@ -34,5 +34,10 @@ namespace Refraction.Presentation.Combat
         {
             if (other != null && other.CompareTag(BoundTag)) Destroy(gameObject);
         }
+
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            if (other != null &&  other.gameObject.layer == 6) Destroy(gameObject);
+        }
     }
 }
