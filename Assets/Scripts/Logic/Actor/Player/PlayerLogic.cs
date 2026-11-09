@@ -57,6 +57,10 @@ namespace Refraction.Logic.Actor
 
         public AttackStateTag AttackTag => _attackGroup.Current;
 
+        public ConditionStateTag ConditionTag => Conditions.Current;
+
+        public Vector2 HurtVelocity => Conditions.HurtVelocity;
+
         public Vector2 Position => Vector2.zero;
 
         protected override void OnFixedTick(in LogicContext ctx)

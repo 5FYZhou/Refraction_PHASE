@@ -40,6 +40,9 @@ namespace Refraction.Logic.Actor
 
         public bool IsHurt => Current == ConditionStateTag.Hurt;
 
+        /// 受伤期接管速度（方向 × 速率），非受伤态为零
+        public Vector2 HurtVelocity => _hurt.ForcedVelocity;
+
         public bool IsAlive => _curHealth > 0;
 
         public int CurHealth => _curHealth;

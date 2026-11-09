@@ -23,7 +23,7 @@ namespace Refraction.Presentation.UI
         [SerializeField]
         private float refreshInterval = 0.05f;
 
-        private readonly StringBuilder _builder = new(160);
+        private readonly StringBuilder _builder = new(256);
 
         private TMP_Text _text;
         private float _nextRefresh;
@@ -83,8 +83,10 @@ namespace Refraction.Presentation.UI
             _builder.Clear();
             AppendVelocity("帧首速度", snapshot.FrameStartVelocity);
             AppendVelocity("账本速度", snapshot.LedgerVelocity);
+            AppendVelocity("受击速度", snapshot.HurtVelocity);
 
             _builder.Append("触地 ").Append(snapshot.Grounded ? "是" : "否")
+                    .Append("\n状态 ").Append(snapshot.Condition.ToString())
                     .Append("\n移动 ").Append(snapshot.Move.ToString())
                     .Append("\n姿态 ").Append(snapshot.Posture.ToString())
                     .Append("\n攻击 ").Append(snapshot.Attack.ToString())

@@ -58,6 +58,10 @@ namespace Refraction.Logic.Actor
             return _speed <= 0f;
         }
 
-        public override void Exit() { }
+        public override void Exit() 
+        {
+            _direction = Vector2.zero;
+            _speed = 0f;
+        }
     }
 }
