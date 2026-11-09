@@ -224,6 +224,9 @@ namespace Refraction.Presentation
                 {
                     Debug.LogException(ex);
                 }
+
+                // 玩家装配完立刻广播一次血量：界面这一帧就有初值，不必等第一次受击
+                if (batch[i] is PlayerController player) player.Announce();
             }
         }
 

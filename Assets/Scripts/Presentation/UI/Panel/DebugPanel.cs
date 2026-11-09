@@ -27,6 +27,8 @@ namespace Refraction.Presentation.UI
 
         private TMP_Text _text;
         private float _nextRefresh;
+        private int _curHealth;
+        private int _maxHealth;
 
         protected override void Awake()
         {
@@ -54,11 +56,19 @@ namespace Refraction.Presentation.UI
         private void OnEnable()
         {
             EventBus<PlayerDebugSnapshot>.Subscribe(OnSnapshot);
+            EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
         }
 
         private void OnDisable()
         {
             EventBus<PlayerDebugSnapshot>.Unsubscribe(OnSnapshot);
+            EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
+        }
+
+        private void OnHealthChanged(PlayerHealthChanged evt)
+        {
+            _curHealth = evt.cur;
+            _maxHealth = evt.max;
         }
 
         private void OnSnapshot(PlayerDebugSnapshot snapshot)
@@ -77,7 +87,8 @@ namespace Refraction.Presentation.UI
             _builder.Append("触地 ").Append(snapshot.Grounded ? "是" : "否")
                     .Append("\n移动 ").Append(snapshot.Move.ToString())
                     .Append("\n姿态 ").Append(snapshot.Posture.ToString())
-                    .Append("\n攻击 ").Append(snapshot.Attack.ToString());
+                    .Append("\n攻击 ").Append(snapshot.Attack.ToString())
+                    .Append("\n血量：").Append(_curHealth).Append('/').Append(_maxHealth);
 
             _text.SetText(_builder);
         }

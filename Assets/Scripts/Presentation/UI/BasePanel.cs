@@ -151,8 +151,12 @@ namespace Refraction.Presentation.UI
         {
             if (txtStyle == TxtStyle.Default) return;
 
-            TMP_FontAsset font = root.UIMgr.GetFont(txtStyle);
             TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+
+            // 没有文本就别加载字资产
+            if (texts.Length == 0) return;
+
+            TMP_FontAsset font = root.UIMgr.GetFont(txtStyle);
 
             for (int i = 0; i < texts.Length; i++)
             {

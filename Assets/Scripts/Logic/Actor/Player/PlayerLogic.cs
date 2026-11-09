@@ -1,5 +1,6 @@
 ﻿using Refraction.Data;
 using Refraction.Logic.Combat;
+using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Logic.Move;
@@ -38,11 +39,17 @@ namespace Refraction.Logic.Actor
         /// <summary>还没踩过地（出生就在空中）时为 false</summary>
         public bool HasGroundedPos => _hasGroundedPos;
 
-        /// <summary>最近一次踩地点，即"可以站住的地方"</summary>
+        /// 最近一次踩地点
         public Vector2 LastGroundedPos => _lastGroundedPos;
 
-        /// <summary>逻辑层每帧算好，PlayerController 拿去应用</summary>
+        /// PlayerController 每帧拿去应用
         public Vector2 CurViewScale { get => _curScale; }
+
+        /// 广播当前血量：装配时给初值，掉血与复活后再发
+        public void Announce()
+        {
+            EventBus<PlayerHealthChanged>.Publish(new(CurHealth, MaxHealth));
+        }
 
         public MovementStateTag CurrentTag => _moveGroup.CurrentTag;
 
@@ -112,12 +119,21 @@ namespace Refraction.Logic.Actor
             _hasGroundedPos = true;
         }
 
-        public void Revive() => Conditions.Revive();
+        public void Revive()
+        {
+            Conditions.Revive();
+            Announce();
+        }
 
         public override void TakeDamage(in Damage damage)
         {
             if (damage.Source == DamageSource.Bullet) return;
+
+            int before = CurHealth;
             Conditions.TryApply(in damage);
+
+            // 无敌窗吞掉的那一下血量没动，不该让界面重画
+            if (CurHealth != before) Announce();
         }
     }
 }

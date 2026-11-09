@@ -24,6 +24,19 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public readonly struct PlayerHealthChanged
+    {
+        public readonly int cur;
+
+        public readonly int max;
+
+        public PlayerHealthChanged(int cur, int max)
+        {
+            this.cur = cur;
+            this.max = max;
+        }
+    }
+
     public readonly struct RequestPlayerPosChange
     {
         public readonly DoorEntry Entry;

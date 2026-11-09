@@ -116,8 +116,10 @@ namespace Refraction.Presentation.Actor
         public MovementStateTag CurrentMovementTag =>
             _attached && _logic != null ? _logic.CurrentTag : MovementStateTag.None;
 
-        /// <summary>-1 朝左，1 朝右；跨场景后新玩家还没有朝向。</summary>
+        /// -1 朝左，1 朝右；跨场景后新玩家还没有朝向
         public int CurrentFace => _attached && moveMotor != null ? moveMotor.FacingSign : 1;
+
+        public void Announce() => _logic?.Announce();
 
         private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {

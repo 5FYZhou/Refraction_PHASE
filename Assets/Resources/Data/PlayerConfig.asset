@@ -17,7 +17,7 @@ MonoBehaviour:
   moveDeceleration: 65
   turnAcceleration: 225
   externalDeceleration: 40
-  maxHealth: 3
+  maxHealth: 5
   invulnerableTime: 0.4
   KnockbackSpeed: 20
   KnockbackDecay: 80
