@@ -125,9 +125,15 @@ namespace Refraction.Logic.Actor
             Announce();
         }
 
-        public override void TakeDamage(in Damage damage)
+        public override void TakeDamage(in Damage d)
         {
-            if (damage.Source == DamageSource.Bullet) return;
+            if (d.Source == DamageSource.Bullet) return;
+
+            Damage damage = d;
+            if(d.Source == DamageSource.Contact)
+            {
+                damage = new(d.Amount, d.Source, new Vector2(-_motor.FaceSign, 0), d.KnockbackSpeed);
+            }
 
             int before = CurHealth;
             Conditions.TryApply(in damage);

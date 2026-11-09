@@ -50,8 +50,8 @@ namespace Refraction.Data
         [Min(0f)]
         public float contactDamage = 1f;
 
-        [Tooltip("接触伤害的击退格数：0 表示不击退。\n实际初速度由玩家自己的 KnockbackDecay 折算。")]
+        [Tooltip("接触伤害的击退初速度（单位/秒）：0 表示不击退。\n滑多远还要乘上玩家自己的 KnockbackDecay（位移 = 本值² / (2 × 阻尼)）。")]
         [Min(0f)]
-        public float contactKnockback = 1.5f;
+        public float contactKnockback = 10f;
     }
 }

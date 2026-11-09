@@ -5,7 +5,7 @@ using Refraction.Logic.Move;
 namespace Refraction.Logic.Actor
 {
     /// <summary>角色逻辑基类：固定帧序 + 条件组，玩家与敌人共用</summary>
-    public abstract class ActorLogic : IFixedTickable, ITickable, IAttackable, IAlivable
+    public abstract class ActorLogic : IFixedTickable, ITickable, IHurtable
     {
         private readonly IMoveMotor _motor;
 

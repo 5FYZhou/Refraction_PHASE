@@ -96,22 +96,12 @@ namespace Refraction.Logic.Actor
 
             _hasPending = false;
 
-            _hurt.Configure(KnockbackVelocity(in _pending));
+            _hurt.Configure(_pending.Direction * _pending.KnockbackSpeed);
             ChangeState(ConditionStateTag.Hurt, in ctx);
         }
 
-        /// <summary>格 → 初速度：匀减速滑行距离 s = v²/(2a)，反解 v 才能让实际位移正好等于给的格数</summary>
-        private Vector2 KnockbackVelocity(in Damage damage)
-        {
-            float speed = _config.KnockbackSpeed > 0f
-                ? _config.KnockbackSpeed
-                : Mathf.Sqrt(2f * Mathf.Max(_config.KnockbackDecay, 0.01f) * damage.KnockbackCells);
-
-            return damage.Direction * speed;
-        }
-
         /// <summary>受伤期间整条接管速度（含竖直），其它状态这帧写什么都盖掉；没在受伤就不提交，等于没有门禁</summary>
-        /// <remarks>纯横向击退不接管竖直：否则空中挨打会当场停在半空，缓存的竖直速度是这一帧唯一的"下落"来源</remarks>
+        /// <remarks>纯横向击退不接管竖直：缓存的竖直速度是这一帧唯一的"下落"来源</remarks>
         private MoveGates BuildGates(in LogicContext ctx)
         {
             if (!IsHurt) return MoveGates.None;

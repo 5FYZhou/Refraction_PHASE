@@ -20,7 +20,6 @@ namespace Refraction.Logic.Actor
     {
         private float _lastGroundedTime = float.NegativeInfinity;
 
-        /// <summary>本帧算不算还站在地上</summary>
         public bool Grounded { get; private set; }
 
         public void Feed(bool grounded, float now, float grace)
@@ -81,7 +80,7 @@ namespace Refraction.Logic.Actor
 
         public bool CanDash => !IsCrouching || _config.crouchAllowDash;
 
-        /// <summary>表现层该用的 View 缩放绝对值；与碰撞体高度共用同一份进度，各算一条曲线会看到人矮了图还高</summary>
+        /// <summary>表现层该用的 View 缩放绝对值；与碰撞体高度共用同一份进度</summary>
         public Vector2 ViewScale
         {
             get
@@ -102,7 +101,6 @@ namespace Refraction.Logic.Actor
 
         private float CrouchHeight => _motor.BodyHeight * _config.crouchHeightRatio;
 
-        /// <summary>兜底一律回站立，只有前摇有两个去处，由它自己的进度决定</summary>
         protected override PostureStateTag Fallback(in LogicContext ctx)
         {
             if (machine.CurrentState?.Tag == PostureStateTag.CrouchingTransition)
@@ -111,7 +109,7 @@ namespace Refraction.Logic.Actor
             return PostureStateTag.Stand;
         }
 
-        /// <summary>推进姿态。必须在移动组之前调用，否则同帧读到的禁令会晚一帧。</summary>
+        /// <summary>必须在移动组之前调用，否则同帧读到的禁令会晚一帧。</summary>
         public void Tick(in LogicContext ctx)
         {
             // 先喂踩地宽限：同帧内前摇与 Crouch 的结束判定要看到同一结论
@@ -164,7 +162,6 @@ namespace Refraction.Logic.Actor
             return ctx.InputSnapshot.CrouchHeld && ctx.WorldInfo.Grounded;
         }
 
-        /// <summary>能否起身：松开下蹲键只是想起身，还得头顶有空间才站得直</summary>
         protected virtual bool CanStandUp(in LogicContext ctx)
         {
             return _motor.CanStandUp(StandHeight, CrouchHeight);

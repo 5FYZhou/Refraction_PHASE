@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>敌人组合根：把探测结果与世界采样喂给 EnemyLogic，巡逻/追踪/攻击的判定全在逻辑层</summary>
-    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IAttack, IAttackable
+    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked
     {
         public int Order => SceneOrder.World;
 
@@ -59,9 +59,9 @@ namespace Refraction.Presentation.Actor
             _logic = new EnemyLogic(moveMotor, config, OpenAI);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
-            if (hurtBox != null) hurtBox.SetIAttackable(this);
+            if (hurtBox != null) hurtBox.SetIAttackable(_logic);
             var attackBox = transform.GetComponentInChildren<AttackBox>();
-            if (attackBox != null) attackBox.SetAttack(this);
+            if (attackBox != null) attackBox.SetAttack(_logic);
 
             _attached = true;
         }
@@ -132,30 +132,5 @@ namespace Refraction.Presentation.Actor
             forwarder.Init(this);
         }
 
-
-        /// <summary>接触伤害：方向取当前朝向，挨打的人往敌人面朝的那边退</summary>
-        public Damage ProduceDamage()
-        {
-            if (config == null) return default;
-
-            int face = moveMotor != null ? moveMotor.FacingSign : 1;
-            return new Damage(
-                transform.position,
-                config.contactDamage,
-                DamageSource.Contact,
-                new Vector2(face, 0f),
-                config.contactKnockback);
-        }
-
-        public void TakeDamage(in Damage damage)
-        {
-            // 装配完成前就被打（场景刚加载、攻击盒还没接上）时忽略
-            if (!_attached || _logic == null) return;
-
-            // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
-            if (damage.Source == DamageSource.Contact) return;
-
-            _logic.TakeDamage(in damage);
-        }
     }
 }

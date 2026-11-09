@@ -34,6 +34,8 @@ namespace Refraction.Logic.Move
 
         float FeetOffsetY { get; }
 
+        int FaceSign { get; }
+
         void BeginStep(float now, float deltaTime);
         void Commit();
         void FaceTowards(Vector2 dir);

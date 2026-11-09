@@ -58,7 +58,7 @@ namespace Refraction.Presentation
         }
 
         /// <summary>角色朝向符号：-1 朝左，1 朝右。朝向还没定过时退回到缩放方向。</summary>
-        public int FacingSign
+        public int FaceSign
         {
             get
             {
@@ -92,7 +92,7 @@ namespace Refraction.Presentation
         {
             bool grounded = SampleGround();
 
-            int facing = FacingSign;
+            int facing = FaceSign;
             bool touchingWall = SampleWall(facing);
             bool ledgeAhead = SampleLedge(facing);
 

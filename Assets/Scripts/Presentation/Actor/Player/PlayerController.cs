@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher, IAttackable
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher
     {
         public int Order => SceneOrder.Player;
 
@@ -102,7 +102,7 @@ namespace Refraction.Presentation.Actor
             _logic = new(moveMotor, config, _buffer, this);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
-            if (hurtBox != null) hurtBox.SetIAttackable(this);
+            if (hurtBox != null) hurtBox.SetIAttackable(_logic);
 
             _attached = true;
 
@@ -117,7 +117,7 @@ namespace Refraction.Presentation.Actor
             _attached && _logic != null ? _logic.CurrentTag : MovementStateTag.None;
 
         /// -1 朝左，1 朝右；跨场景后新玩家还没有朝向
-        public int CurrentFace => _attached && moveMotor != null ? moveMotor.FacingSign : 1;
+        public int CurrentFace => _attached && moveMotor != null ? moveMotor.FaceSign : 1;
 
         public void Announce() => _logic?.Announce();
 
@@ -279,11 +279,5 @@ namespace Refraction.Presentation.Actor
         }
         #endregion
 
-        public void TakeDamage(in Damage damage)
-        {
-            if (!_attached || _logic == null) return;
-
-            _logic.TakeDamage(in damage);
-        }
     }
 }

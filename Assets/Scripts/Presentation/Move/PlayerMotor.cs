@@ -202,7 +202,7 @@ namespace Refraction.Presentation
             if (bodyCollider == null) return true;
 
             float radius = headProbe.radius;
-            int mirror = FacingSign;
+            int mirror = FaceSign;
 
             Vector2 origin = new(
                 HeadWorldX() + headProbe.offset.x * mirror,
@@ -503,7 +503,7 @@ namespace Refraction.Presentation
                 Gizmos.DrawSphere(_groundHit.point, 0.03f);
             }
 
-            int side = playing ? _wallSide : FacingSign;
+            int side = playing ? _wallSide : FaceSign;
             Vector2 wOrigin = (Vector2)transform.position
                               + new Vector2(wallProbe.origin.x * side, wallProbe.origin.y);
             Vector2 wDir = new(side, 0f);
@@ -534,7 +534,7 @@ namespace Refraction.Presentation
             {
                 float headY = playing ? feetY + _baseBodyHeight : bodyCollider.bounds.max.y;
                 Vector2 head = new(
-                    transform.position.x + headProbe.offset.x * FacingSign,
+                    transform.position.x + headProbe.offset.x * FaceSign,
                     headY + headProbe.offset.y + headProbe.radius);
 
                 Gizmos.color = new Color(0.65f, 0.4f, 1f, 0.95f);

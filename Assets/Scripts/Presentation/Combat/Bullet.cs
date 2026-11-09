@@ -19,7 +19,7 @@ namespace Refraction.Presentation.Combat
         public void Init(in BulletSpawn spawn, Transform owner)
         {
             _owner = owner;
-            _damage = new Damage(spawn.Origin, spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.Knockback);
+            _damage = new Damage(spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.KnockbackSpeed);
 
             Rigidbody2D rb = GetComponent<Rigidbody2D>();
             if (rb == null) rb = gameObject.AddComponent<Rigidbody2D>();

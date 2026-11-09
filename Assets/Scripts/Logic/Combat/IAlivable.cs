@@ -10,7 +10,7 @@ namespace Refraction.Logic.Combat
         bool IsAlive { get; }
     }
 
-    public interface IAttackable
+    public interface IHurtable : IAlivable
     {
         void TakeDamage(in Damage damage);
     }
