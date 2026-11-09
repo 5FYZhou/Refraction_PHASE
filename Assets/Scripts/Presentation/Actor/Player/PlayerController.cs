@@ -12,14 +12,14 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IBulletLauncher
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher
     {
         public int Order => SceneOrder.Player;
 
         [SerializeField]
         private float _spawnY = -10f;
 
-        [Tooltip("玩家参数资产。应与 MoveMotor 上引用的是同一份配置。")]
+        [Tooltip("玩家参数资产。应与 PlayerMotor 上引用的是同一份配置。")]
         [SerializeField]
         private PlayerConfig config;
 
@@ -137,12 +137,12 @@ namespace Refraction.Presentation.Actor
             bullet.Init(in spawn);
         }
 
-        public void FixedTick()
+        public void FixedTick(float deltaTime)
         {
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
-            // 世界信息由 MoveMotor 的物理探测给出，本层只负责组装 Context
+            // 世界信息由 PlayerMotor 的物理探测给出，本层只负责组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
             LogicContext context = new(snapshot, worldInfo, gameTime);
@@ -164,9 +164,8 @@ namespace Refraction.Presentation.Actor
             }
         }
 
-        public void Tick()
+        public void RenderTick(float deltaTime)
         {
-            // Attach 失败（缺输入源/缺配置）时 _logic 还没建出来，别在 Update 里空引用
             if (!_attached) return;
 
             _logic.Tick(new());
@@ -212,7 +211,7 @@ namespace Refraction.Presentation.Actor
             view.localPosition = pos;
         }
 
-        /// <summary>层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）；MoveMotor 找的也是这两个名字，两边必须一致</summary>
+        /// <summary>层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）；PlayerMotor 找的也是这两个名字，两边必须一致</summary>
         private const string ViewChildName = "View";
         private const string BottomChildName = "Bottom";
 

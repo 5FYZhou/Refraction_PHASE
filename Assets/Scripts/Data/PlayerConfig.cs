@@ -2,25 +2,26 @@
 
 namespace Refraction.Data
 {
-    /// <summary>
-    /// 玩家角色的全部可调参数。逻辑层只读取、不修改，改这里即可调手感。
-    /// </summary>
+    /// <summary>玩家专属参数：输入缓冲、下蹲、白攻击；移动等通用值在基类</summary>
     [CreateAssetMenu(fileName = "PlayerConfig", menuName = "Refraction/Settings/Player")]
-    public sealed class PlayerConfig : ScriptableObject
+    public sealed class PlayerConfig : CharacterConfig
     {
-        [Header("移动")]
-        [Tooltip("水平移动的目标速度。地面行走（Move）和空中横移（Jump / Fall）都用这个值。")]
-        [Min(0f)]
-        public float moveSpeed = 10f;
 
-        [Tooltip("同向加速时的水平加速度（单位/秒²）：起步与继续同向时用它逼近 moveSpeed。\n<=0 表示零惯性：横向速度当帧直接写成目标值（松键也瞬停）。")]
-        public float moveAcceleration = 50f;
+        [Tooltip("上升段按住跳跃键时使用的重力加速度。\n起跳那一帧就写入，之后每帧按是否处于顶点区间改用 apexGravity 或回到本值。")]
+        public float riseGravity = 40f;
 
-        [Tooltip("目标速度为 0 时的水平减速度（单位/秒²）：松键滑停与 Idle 待机刹车都用它。\n越大停得越快，不影响反向转身。")]
-        public float moveDeceleration = 60f;
+        [Tooltip("顶点悬停区间阈值：上升段按住跳跃键、且 0 < vy < 该值时，重力改用 apexGravity。\n该值越小，顶点加速的区间越窄。")]
+        public float apexThreshold = 0.5f;
 
-        [Tooltip("反向输入时的水平加速度（单位/秒²）：目标速度与当前速度方向相反时用它。\n速度越过 0 之后自动改回 moveAcceleration。")]
-        public float turnAcceleration = 80f;
+        [Tooltip("顶点悬停区间的重力加速度\n小于 riseGravity 才会变飘（悬停感），大于则更快越过顶点。")]
+        public float apexGravity = 20;
+
+        [Tooltip("上升期松开跳跃键时，把当前竖直速度乘以该系数（每段上升只生效一次）。")]
+        [Range(0f, 1f)]
+        public float jumpCutMultiplier = 0.5f;
+
+        [Tooltip("上升期松开跳跃键后使用的重力加速度，配合 jumpCutMultiplier 让短按跳得更低。")]
+        public float jumpCutGravity = 90f;
 
         [Header("跳跃")]
         [Tooltip("起跳瞬间直接写入的竖直速度（不是加速度）。\n跳跃高度 ≈ 该值² / (2 × 上升重力)；松键的 Jump Cut 会把这个速度截断。")]
@@ -65,35 +66,6 @@ namespace Refraction.Data
         [Min(0f)]
         public float inputBufferTime;
 
-        [Header("重力")]
-        [Tooltip("是否由本逻辑接管竖直方向的重力。\n关闭时完全不施加逻辑重力，改由 Rigidbody2D 的 Gravity Scale 决定，同时冲刺也无法再临时关闭重力。\n开启时请把刚体 Gravity Scale 设为 0，否则两套重力会叠加。")]
-        public bool enableGravity = false;
-
-        [Tooltip("下落速度上限（绝对值，仅在启用重力时钳制 vy）。")]
-        public float maxFallSpeed = 20f;
-
-        [Tooltip("上升速度上限（仅在启用重力时钳制 vy）。")]
-        public float maxRiseSpeed = 20f;
-
-        [Tooltip("下落段与其余状态的重力加速度。\n跳跃结束时写入，也是初始重力值；Idle / Move / Fall 都不会再改它。")]
-        public float fallGravity = 70f;
-
-        [Tooltip("上升段按住跳跃键时使用的重力加速度。\n起跳那一帧就写入，之后每帧按是否处于顶点区间改用 apexGravity 或回到本值。")]
-        public float riseGravity = 40f;
-
-        [Tooltip("顶点悬停区间阈值：上升段按住跳跃键、且 0 < vy < 该值时，重力改用 apexGravity。\n该值越小，顶点加速的区间越窄。")]
-        public float apexThreshold = 0.5f;
-
-        [Tooltip("顶点悬停区间的重力加速度\n小于 riseGravity 才会变飘（悬停感），大于则更快越过顶点。")]
-        public float apexGravity = 20;
-
-        [Tooltip("上升期松开跳跃键时，把当前竖直速度乘以该系数（每段上升只生效一次）。")]
-        [Range(0f, 1f)]
-        public float jumpCutMultiplier = 0.5f; 
-        
-        [Tooltip("上升期松开跳跃键后使用的重力加速度，配合 jumpCutMultiplier 让短按跳得更低。")]
-        public float jumpCutGravity = 90f;
-
         [Header("姿态 · 下蹲")]
         [Tooltip("下蹲前摇时长（秒），也就是 CrouchingTransition 的时长：\n这段时间里身体高度与移速乘数一起从站姿值线性过渡到蹲姿值，跳跃/冲刺的限制要等过渡结束才生效。\n0 表示没有前摇，直接进蹲姿。")]
         [Min(0f)]
@@ -116,11 +88,6 @@ namespace Refraction.Data
         [Tooltip("下蹲的离地宽限（秒）：蹲姿/前摇要连续离地超过这个时长才结束。\n踩地判定偶尔会掉一两帧（接触刷新、碰撞体刚改过高度），没有宽限的话人会被踢回站姿、下一帧又蹲下，看起来是每两帧抽一次。\n设 0 表示离地一帧就结束。")]
         [Min(0f)]
         public float crouchGroundGrace = 0.08f;
-
-        [Header("外部速度")]
-        [Tooltip("外部速度修正的衰减率（单位/秒²）：后坐力、击退等叠加在常规移动速度上的分量，每帧朝 0 线性衰减。\n0 表示不衰减，角色会一直被这份速度推着走。")]
-        [Min(0f)]
-        public float externalDeceleration = 40f;
 
         [Header("攻击 · 白")]
         [Tooltip("白色子弹命中的伤害点数（点）。生成时写进 Bullet，怪物受伤逻辑接入后由它读取。\n0 表示不造成伤害。")]

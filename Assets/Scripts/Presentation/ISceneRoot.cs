@@ -24,4 +24,17 @@ namespace Refraction.Presentation
         /// <summary>GameRoot 调一次，必须幂等</summary>
         void Attach();
     }
+
+    /// <summary>渲染帧驱动</summary>
+    public interface IRenderTicked
+    {
+        /// <summary>暂停时 deltaTime 也为 0</summary>
+        void RenderTick(float deltaTime);
+    }
+
+    /// <summary>GameRoot.FixedUpdate 驱动；暂停时 Unity 不跑</summary>
+    public interface IPhysicsTicked
+    {
+        void FixedTick(float deltaTime);
+    }
 }
