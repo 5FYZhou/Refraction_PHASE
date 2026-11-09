@@ -36,17 +36,17 @@ MonoBehaviour:
   jumpCutMultiplier: 0.4
   jumpCutGravity: 75
   crouchPrepareTime: 0.1
-  crouchHeightRatio: 0.65
-  crouchMoveSpeedScale: 0.5
+  crouchHeightRatio: 0.5
+  crouchMoveSpeedScale: 0.65
   crouchAllowJump: 0
   crouchAllowDash: 0
+  crouchGroundGrace: 0.08
   externalDeceleration: 40
-  bulletDamage: 1
-  attackCooldown: 0.35
+  bulletDamage: 20
+  attackCooldown: 0.4
   bulletSpeed: 18
-  recoilSpeedX: 8
+  recoilSpeedX: 2.5
   recoilSpeedUp: 8
-  recoilSpeedDown: 8
+  recoilSpeedDown: 20
   attackPrepareTime: 0.08
   attackRecoverTime: 0.12
-  crouchGroundGrace: 0.08
