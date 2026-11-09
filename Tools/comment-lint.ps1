@@ -507,8 +507,21 @@ foreach ($f in $files) {
     }
 }
 
-# 预算表里的孤儿条目（文件被删/改名）
-$orphans = @($budget.Map.Keys | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_)) })
+# 预算表里的孤儿条目（文件被删/改名）。三张表都要查：
+#   files 决定判据，tagAllow 决定豁免，budgetRaises 只是留档——
+#   搬迁后只改 files 的键、把 budgetRaises 的老条目留着，等于让"移动目录"继续充当上调理由。
+$orphans = @()
+foreach ($k in $budget.Map.Keys) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Root $k))) { $orphans += "files: $k" }
+}
+foreach ($k in $budget.TagMap.Keys) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Root $k))) { $orphans += "tagAllow: $k" }
+}
+if ($budget.Raw -and $budget.Raw.budgetRaises) {
+    foreach ($p in $budget.Raw.budgetRaises.PSObject.Properties) {
+        if (-not (Test-Path -LiteralPath (Join-Path $Root $p.Name))) { $orphans += "budgetRaises: $($p.Name)" }
+    }
+}
 
 if ($Mode -eq 'report') {
     $rows | Sort-Object Over -Descending | Select-Object -First $Top File, C, Budget, Tol, Over, State, Density, CodeLn, BadTags, TagAllow |

@@ -4,7 +4,8 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>角色逻辑基类：固定帧序 + 条件组，玩家与敌人共用</summary>
+    /// <summary>角色逻辑基类：玩家与敌人共用一套固定帧序与条件组</summary>
+    /// <remarks>帧序 BeginStep → 条件组 → OnFixedTick → 重力 → Commit → ApplyGates；子类只在 OnFixedTick 里提交速度，写刚体由 Commit 一次完成</remarks>
     public abstract class ActorLogic : IFixedTickable, ITickable, IHurtable
     {
         private readonly IMoveMotor _motor;
@@ -25,7 +26,8 @@ namespace Refraction.Logic.Actor
 
         public bool IsHurt => Conditions.IsHurt;
 
-        /// <summary>受击唯一入口：扣血与无敌窗当帧生效，击退在下一个固定帧起步</summary>
+        /// <summary>受击入口：扣血与无敌窗当帧生效，击退排到下一个固定帧</summary>
+        /// <remarks>子类覆盖后必须落到 Conditions.TryApply，绕过去血量再也不会变</remarks>
         public virtual void TakeDamage(in Damage damage) => Conditions.TryApply(in damage);
 
         public void FixedTick(LogicContext ctx)
@@ -36,7 +38,7 @@ namespace Refraction.Logic.Actor
             _motor.ApplyGravity(ctx);
             _motor.Commit();
 
-            // 门禁写绝对速度，必须压在 Commit 后面，否则会被本帧状态与重力盖回去
+            // 门禁写绝对速度，必须压在 Commit 之后：放前面会被本帧状态与重力盖掉
             _motor.ApplyGates();
         }
 

@@ -121,7 +121,6 @@ namespace Refraction.Logic.Actor
             return false;
         }
 
-        /// <summary>这一帧的跳跃该落到哪：踩地或土狼窗口内是地面跳，离地且还有次数是空中跳，都判不中返回 EmptyTag</summary>
         private MovementStateTag DecideJump(in LogicContext ctx)
         {
             float now = ctx.GameTime.now;

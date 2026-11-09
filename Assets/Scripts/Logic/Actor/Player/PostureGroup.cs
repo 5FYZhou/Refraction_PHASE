@@ -4,18 +4,16 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>姿态对移动的禁令，移动侧每帧读一次；移速不在这里，下蹲减速走 MoveLedger 的速度乘数</summary>
+    /// <summary>姿态对移动的禁令；下蹲减速不在这里，走 MoveLedger 的速度乘数</summary>
     public interface IPostureGate
     {
-        /// <summary>当前姿态是否允许跳跃（地面跳、土狼跳、空中跳一并受管）。</summary>
+        /// <summary>地面跳、土狼跳、空中跳一并受管</summary>
         bool CanJump { get; }
 
-        /// <summary>当前姿态是否允许冲刺。</summary>
         bool CanDash { get; }
     }
 
     /// <summary>踩地宽限：连续离地超过 grace 才算真离地，否则接触刷新掉一帧就让姿态每两帧抽一次</summary>
-    /// <remarks>每帧先 Feed 再读 Grounded，同帧所有判定看同一个结论</remarks>
     public sealed class GroundGrace
     {
         private float _lastGroundedTime = float.NegativeInfinity;
@@ -29,8 +27,8 @@ namespace Refraction.Logic.Actor
         }
     }
 
-    /// <summary>姿态状态组：Stand → CrouchingTransition（前摇）→ Crouch，起身回 Stand；只管禁令与身高倍率，不碰移动与物理</summary>
-    /// <remarks>移动侧通过 IPostureGate 读禁令，身体尺寸交给 IMoveMotor，View 缩放交给 PlayerController</remarks>
+    /// <summary>姿态组：Stand → CrouchingTransition（前摇）→ Crouch，起身回 Stand；只管禁令与身高，不碰移动与物理</summary>
+    /// <remarks>禁令走 IPostureGate，身高走 IMoveMotor，View 缩放走 PlayerController</remarks>
     public class PostureGroup : StateGroup<PostureStateTag, LogicContext>, IPostureGate
     {
         protected override PostureStateTag EmptyTag => PostureStateTag.None;
@@ -40,7 +38,7 @@ namespace Refraction.Logic.Actor
         private readonly CrouchingTransitionState _transitionState;
         private readonly GroundGrace _ground = new();
 
-        /// <summary>被打断后要松手才能重新蹲：否则按住 S 的玩家下一帧就被自动拖回前摇，打断等于没发生。</summary>
+        /// <summary>被打断后必须松手才能重新蹲，否则按住 S 的下一帧又被拖回前摇，打断等于没发生</summary>
         private bool _needReleaseToCrouch;
 
         public PostureGroup(PlayerConfig config, IMoveMotor motor)
@@ -54,7 +52,7 @@ namespace Refraction.Logic.Actor
             RegisterState(new CrouchState(motor, config, _ground));
         }
 
-        /// <summary>当前姿态，首帧还没进过状态机时为 PostureStateTag.None，按站姿算</summary>
+        /// <summary>首帧未进状态机时为 None，按站姿算</summary>
         public PostureStateTag Current => machine.CurrentState?.Tag ?? PostureStateTag.None;
 
         /// <summary>限制跟着身体走：前摇期间不限制跳/冲，进度已满那一帧按蹲姿算</summary>
@@ -64,7 +62,7 @@ namespace Refraction.Logic.Actor
 
         public bool IsCrouchingTransition => Current == PostureStateTag.CrouchingTransition;
 
-        /// <summary>下蹲进度：0 = 站立，1 = 完全蹲下</summary>
+        /// <summary>0 = 站立，1 = 蹲满</summary>
         public float CrouchProgress
         {
             get
@@ -167,13 +165,13 @@ namespace Refraction.Logic.Actor
             return _motor.CanStandUp(StandHeight, CrouchHeight);
         }
 
-        /// <summary>打断下蹲前摇：立刻回站立，移速乘数与身体/View 缩放瞬间恢复，不播回弹过渡；不在前摇里调用无副作用</summary>
-        /// <remarks>打断后要松开下蹲键才能重新蹲（_needReleaseToCrouch）；头顶空间不在这里检查，"瞬间恢复"就是这个接口的语义</remarks>
+        /// <summary>打断前摇回站立：乘数与身体 / View 缩放立刻恢复，不播回弹过渡</summary>
+        /// <remarks>不在前摇里调用无副作用；打断后要松手才能重新蹲（_needReleaseToCrouch）；头顶空间不在这里检查</remarks>
         public bool InterruptToStand(in LogicContext ctx)
         {
             if (Current != PostureStateTag.CrouchingTransition) return false;
 
-            // Exit 里会把身体推回站高；移速乘数再补一次，免得本帧移动组还没跑、上一帧的过渡值又被用一帧
+            // Exit 已把身体推回站高；乘数再补一次，否则本帧移动组还读上一帧的过渡值
             ChangeState(PostureStateTag.Stand, ctx);
             _motor.SetSpeedScaleX(1f);
 
