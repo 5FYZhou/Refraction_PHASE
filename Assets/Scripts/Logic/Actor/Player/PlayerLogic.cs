@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    public sealed class PlayerLogic : ActorLogic
+    public sealed class PlayerLogic : ActorLogic, IAttackable
     {
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
@@ -24,6 +24,9 @@ namespace Refraction.Logic.Actor
         private MovementStateTag _pendingEntryTag;
         private int _pendingEntryFace;
         private bool _hasPendingEntry;
+
+        private int _maxHealth;
+        private int _curHealth;
 
         public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher) : base(motor)
         {
@@ -49,6 +52,8 @@ namespace Refraction.Logic.Actor
         public PostureStateTag PostureTag => _postureGroup.Current;
 
         public AttackStateTag AttackTag => _attackGroup.Current;
+
+        public Vector2 Position => Vector2.zero;
 
         protected override void OnFixedTick(in LogicContext ctx)
         {
@@ -108,6 +113,11 @@ namespace Refraction.Logic.Actor
         {
             _lastGroundedPos = pos;
             _hasGroundedPos = true;
+        }
+
+        public void TakeDamage(in Damage damage)
+        {
+            Debug.Log("player damage");
         }
     }
 }

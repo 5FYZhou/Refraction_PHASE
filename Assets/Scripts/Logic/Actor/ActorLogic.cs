@@ -23,6 +23,8 @@ namespace Refraction.Logic.Actor
 
             _motor.ApplyGravity(ctx);
             _motor.Commit();
+
+            _motor.ApplyGates();
         }
 
         public void Tick(LogicContext ctx)

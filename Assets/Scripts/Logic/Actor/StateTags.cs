@@ -4,6 +4,13 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
+    public enum ConditionStateTag
+    {
+        None = 0,
+        Normal,
+        Hurt
+    }
+
     public enum MovementStateTag
     {
         None = 0,

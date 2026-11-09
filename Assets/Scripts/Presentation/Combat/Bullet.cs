@@ -1,10 +1,11 @@
 ﻿using Refraction.Logic.Combat;
+using Refraction.Presentation.Actor;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
     /// <summary>白色子弹：由组合根生成并初始化，靠刚体速度直线飞行，离开 Bound 触发器时销毁自己</summary>
-    public sealed class Bullet : MonoBehaviour
+    public sealed class Bullet : MonoBehaviour, IAttack
     {
         private const string BoundTag = "Bound";
 
@@ -28,6 +29,9 @@ namespace Refraction.Presentation.Combat
             float angle = Mathf.Atan2(spawn.Direction.y, spawn.Direction.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
             transform.position = new Vector3(spawn.Origin.x, spawn.Origin.y, transform.position.z);
+
+            var attackBox = GetComponent<AttackBox>();
+            if (attackBox != null) attackBox.SetAttack(this);
         }
 
         private void OnTriggerExit2D(Collider2D other)
@@ -38,6 +42,11 @@ namespace Refraction.Presentation.Combat
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other != null &&  other.gameObject.layer == 6) Destroy(gameObject);
+        }
+
+        public Damage ProduceDamage()
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

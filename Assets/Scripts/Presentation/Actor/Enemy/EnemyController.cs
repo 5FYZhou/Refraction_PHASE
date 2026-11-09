@@ -2,12 +2,13 @@
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
+using Refraction.Logic.Combat;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
     /// <summary>敌人组合根：把探测结果与世界采样喂给 EnemyLogic，巡逻/追踪/攻击的判定全在逻辑层</summary>
-    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked
+    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IAttack, IAttackable
     {
         public int Order => SceneOrder.World;
 
@@ -41,11 +42,9 @@ namespace Refraction.Presentation.Actor
 
         private void OnDestroy()
         {
-            // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
-
-        /// <summary>场景根装配：GameRoot 在注册后的下一个驱动帧调用，必须幂等</summary>
+        
         public void Attach()
         {
             if (_attached) return;
@@ -54,6 +53,12 @@ namespace Refraction.Presentation.Actor
             Require.Assigned(config, nameof(EnemyController), nameof(config));
 
             _logic = new EnemyLogic(moveMotor, config);
+
+            var hurtBox = transform.GetComponentInChildren<HurtBox>();
+            if (hurtBox != null) hurtBox.SetIAttackable(this);
+            var attackBox = transform.GetComponentInChildren<AttackBox>();
+            if (attackBox != null) attackBox.SetAttack(this);
+
             _attached = true;
         }
 
@@ -118,6 +123,17 @@ namespace Refraction.Presentation.Actor
             if (forwarder == null) forwarder = detect.gameObject.AddComponent<EnemyDetectZone>();
 
             forwarder.Init(this);
+        }
+
+
+        public Damage ProduceDamage()
+        {
+            return default;
+        }
+
+        public void TakeDamage(in Damage damage)
+        {
+            Debug.Log("EnemyDamage");
         }
     }
 }

@@ -88,6 +88,11 @@ namespace Refraction.Logic.Move
             _external.MarkApplied(final);
         }
 
+        public void ApplyGates(in MoveGates gates)
+        {
+            if(gates.HasForcedVelocity) _writeVelocity(gates.ForcedVelocity);
+        }
+
         public void AddImpulse(Vector2 deltaVelocity) => _delta += deltaVelocity;
 
         public void AddForce(Vector2 acceleration) => _accel += acceleration;

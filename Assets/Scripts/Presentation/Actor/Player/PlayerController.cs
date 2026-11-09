@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher, IAttackable
     {
         public int Order => SceneOrder.Player;
 
@@ -100,6 +100,10 @@ namespace Refraction.Presentation.Actor
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
             _logic = new(moveMotor, config, _buffer, this);
+
+            var hurtBox = transform.GetComponentInChildren<HurtBox>();
+            if (hurtBox != null) hurtBox.SetIAttackable(this);
+
             _attached = true;
 
             // 从门里进来就落到那扇门；首关没有落点，保持场景里摆的位置
@@ -261,6 +265,11 @@ namespace Refraction.Presentation.Actor
             _warnedNoView = true;
             Debug.LogWarning($"[PlayerController] 层级里找不到 {ViewChildName} 子物体：下蹲不会反映到画面上" +
                              "（碰撞体与移速仍会正常生效）。");
+        }
+
+        public void TakeDamage(in Damage damage)
+        {
+            _logic.TakeDamage(damage);
         }
     }
 }

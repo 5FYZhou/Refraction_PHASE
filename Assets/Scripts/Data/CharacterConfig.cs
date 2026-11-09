@@ -24,6 +24,12 @@ namespace Refraction.Data
         [Min(0f)]
         public float externalDeceleration = 40f;
 
+        [Header("受击")]
+        public float KnockbackSpeed;
+        [Tooltip("受击滑停减速度（单位/秒²）")]
+        [Min(0f)]
+        public float KnockbackDecay = 30f;
+
         [Header("重力")]
         [Tooltip("是否由本逻辑接管竖直方向的重力。\n关闭时完全不施加逻辑重力，改由 Rigidbody2D 的 Gravity Scale 决定，同时冲刺也无法再临时关闭重力。\n开启时请把刚体 Gravity Scale 设为 0，否则两套重力会叠加。")]
         public bool enableGravity = false;
