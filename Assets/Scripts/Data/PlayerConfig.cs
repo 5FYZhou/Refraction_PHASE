@@ -118,6 +118,10 @@ namespace Refraction.Data
         [Min(0f)]
         public float attackPrepareTime = 0.08f;
 
+        [Tooltip("子弹命中后的击退格数：0 表示不击退。\n实际初速度由命中目标自己的 KnockbackDecay 折算，同一份击退在软目标上滑得更远。")]
+        [Min(0f)]
+        public float bulletKnockback = 1.5f;
+
         [Tooltip("攻击后摇时长（秒）：开火后到攻击组回到 None 的等待，期间不响应新的攻击输入。\n0 表示没有后摇，开火后回到 None 即可再攻击（仍受 attackCooldown 限制）。")]
         [Min(0f)]
         public float attackRecoverTime = 0.12f;

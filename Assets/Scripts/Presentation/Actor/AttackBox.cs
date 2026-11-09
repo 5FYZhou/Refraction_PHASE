@@ -1,10 +1,9 @@
 ﻿using Refraction.Logic.Combat;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
+    /// <summary>攻击盒：碰到对方的受击盒就结算一次伤害，数值由挂上来的 IAttack 给</summary>
     public sealed class AttackBox : MonoBehaviour
     {
         public IAttack Attack { get; private set; }
@@ -13,20 +12,21 @@ namespace Refraction.Presentation.Actor
 
         private void Awake()
         {
-            var c = GetComponent<Collider2D>();
-            c.isTrigger = true;
+            Collider2D c = GetComponent<Collider2D>();
+            if (c != null) c.isTrigger = true;
         }
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            if(other != null)
-            {
-                var hurtBox = other.GetComponent<HurtBox>();
-                if(hurtBox != null)
-                {
-                    hurtBox.Attackable.TakeDamage(Attack.ProduceDamage());
-                }
-            }
+            if (Attack == null || other == null) return;
+
+            // 攻击盒多半就罩在自己身体外面，不排自己会当场自伤
+            if (other.transform.root == transform.root) return;
+
+            var target = other.GetComponent<HurtBox>();
+            if (target == null) return;
+
+            target.Attackable.TakeDamage(Attack.ProduceDamage());
         }
     }
 }

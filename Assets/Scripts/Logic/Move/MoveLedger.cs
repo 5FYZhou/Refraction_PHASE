@@ -90,7 +90,10 @@ namespace Refraction.Logic.Move
 
         public void ApplyGates(in MoveGates gates)
         {
-            if(gates.HasForcedVelocity) _writeVelocity(gates.ForcedVelocity);
+            if (!gates.HasForcedVelocity) return;
+
+            _writeVelocity(gates.ForcedVelocity);
+            _external.Clear();   // 不清账，下帧 Strip 会重复减
         }
 
         public void AddImpulse(Vector2 deltaVelocity) => _delta += deltaVelocity;

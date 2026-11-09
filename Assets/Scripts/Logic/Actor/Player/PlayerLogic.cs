@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    public sealed class PlayerLogic : ActorLogic, IAttackable
+    public sealed class PlayerLogic : ActorLogic
     {
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
@@ -25,10 +25,7 @@ namespace Refraction.Logic.Actor
         private int _pendingEntryFace;
         private bool _hasPendingEntry;
 
-        private int _maxHealth;
-        private int _curHealth;
-
-        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher) : base(motor)
+        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher) : base(motor, config)
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
@@ -115,9 +112,12 @@ namespace Refraction.Logic.Actor
             _hasGroundedPos = true;
         }
 
-        public void TakeDamage(in Damage damage)
+        public void Revive() => Conditions.Revive();
+
+        public override void TakeDamage(in Damage damage)
         {
-            Debug.Log("player damage");
+            if (damage.Source == DamageSource.Bullet) return;
+            Conditions.TryApply(in damage);
         }
     }
 }

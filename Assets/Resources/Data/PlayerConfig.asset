@@ -16,6 +16,20 @@ MonoBehaviour:
   moveAcceleration: 52
   moveDeceleration: 65
   turnAcceleration: 225
+  externalDeceleration: 40
+  maxHealth: 3
+  invulnerableTime: 0.4
+  KnockbackSpeed: 20
+  KnockbackDecay: 80
+  enableGravity: 1
+  maxFallSpeed: 26
+  maxRiseSpeed: 34
+  fallGravity: 52
+  riseGravity: 18
+  apexThreshold: 0.11
+  apexGravity: 14
+  jumpCutMultiplier: 0.4
+  jumpCutGravity: 75
   jumpSpeed: 13.8
   coyoteTime: 0.12
   maxAirJumps: 0
@@ -26,21 +40,12 @@ MonoBehaviour:
   maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
-  enableGravity: 1
-  maxFallSpeed: 26
-  maxRiseSpeed: 34
-  fallGravity: 52
-  riseGravity: 18
-  apexThreshold: 0.11
-  apexGravity: 14
-  jumpCutMultiplier: 0.4
-  jumpCutGravity: 75
   crouchPrepareTime: 0.1
   crouchHeightRatio: 0.65
   crouchMoveSpeedScale: 0.5
   crouchAllowJump: 0
   crouchAllowDash: 0
-  externalDeceleration: 40
+  crouchGroundGrace: 0.08
   bulletDamage: 1
   attackCooldown: 0.35
   bulletSpeed: 18
@@ -48,5 +53,5 @@ MonoBehaviour:
   recoilSpeedUp: 8
   recoilSpeedDown: 8
   attackPrepareTime: 0.08
+  bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  crouchGroundGrace: 0.08

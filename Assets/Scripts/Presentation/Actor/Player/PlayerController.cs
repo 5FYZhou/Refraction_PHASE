@@ -138,7 +138,7 @@ namespace Refraction.Presentation.Actor
             GameObject go = Instantiate(bulletPre);
             Bullet bullet = go.GetComponent<Bullet>();
             if (bullet == null) bullet = go.AddComponent<Bullet>();
-            bullet.Init(in spawn);
+            bullet.Init(in spawn, transform);
         }
 
         public void FixedTick(float deltaTime)
@@ -160,6 +160,14 @@ namespace Refraction.Presentation.Actor
                 _logic.CurrentTag,
                 _logic.PostureTag,
                 _logic.AttackTag));
+
+            // 掉血到 0 暂时按满血回位处理（没有独立死亡流程），与掉出世界同一套兜底
+            if (!_logic.IsAlive)
+            {
+                _logic.Revive();
+                if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+                return;
+            }
 
             // 掉出世界：回到逻辑层记下的最后一次落脚点
             if (context.WorldInfo.Pos.y < _spawnY && !_logic.RespawnToLastGrounded())
@@ -196,6 +204,7 @@ namespace Refraction.Presentation.Actor
             SpawnAtEntry(in evt.Entry, evt.EnterTag, evt.EnterFace);
         }
 
+        #region View
         /// <summary>应用逻辑层给的 View 缩放：枢轴在身体中心，只改 scale 脚会离地（蹲下抬起 0.65），所以同时下移 (1 − scale.y) × 脚底到枢轴的距离</summary>
         public void SetViewScale(Vector2 scale)
         {
@@ -266,10 +275,13 @@ namespace Refraction.Presentation.Actor
             Debug.LogWarning($"[PlayerController] 层级里找不到 {ViewChildName} 子物体：下蹲不会反映到画面上" +
                              "（碰撞体与移速仍会正常生效）。");
         }
+        #endregion
 
         public void TakeDamage(in Damage damage)
         {
-            _logic.TakeDamage(damage);
+            if (!_attached || _logic == null) return;
+
+            _logic.TakeDamage(in damage);
         }
     }
 }

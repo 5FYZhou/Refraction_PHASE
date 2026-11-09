@@ -20,6 +20,9 @@ namespace Refraction.Presentation
 
         private Vector2 _face;
 
+        private MoveGates _gates;
+        private bool _hasGates;
+
         protected CharacterConfig Config => config;
 
         /// <summary>已初始化为 Dynamic 且 gravityScale = 0 的刚体：重力由账本统一施加，物理重力再叠一层跳跃高度就失控</summary>
@@ -161,6 +164,21 @@ namespace Refraction.Presentation
         private void SetFace(Vector2 face)
         {
             Face = face;
+        }
+
+        public void CommitGates(in MoveGates gates)
+        {
+            _gates = gates;
+            _hasGates = true;
+        }
+
+        /// <summary>帧末最后一步：门禁写的是绝对速度，排在 Commit 之后才不会被子类状态与重力覆盖</summary>
+        public void ApplyGates()
+        {
+            if (!_hasGates) return;
+
+            _hasGates = false;
+            _ledger.ApplyGates(in _gates);
         }
 
         public void SpawnAt(Vector2 position, Vector2 velocity)

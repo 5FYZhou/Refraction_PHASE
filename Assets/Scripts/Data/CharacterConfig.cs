@@ -24,9 +24,21 @@ namespace Refraction.Data
         [Min(0f)]
         public float externalDeceleration = 40f;
 
-        [Header("受击")]
+        [Header("生命")]
+        [Tooltip("最大生命值（点）。伤害按 Damage.Amount 四舍五入扣点，扣到 0 即 IsAlive = false。")]
+        [Min(1)]
+        public int maxHealth = 3;
+
+        [Tooltip("受击无敌时长（秒）：这段时间里再挨打既不扣血也不击退。\n贴身接触伤害每帧都可能触发，没有它玩家会被一发打成筛子。0 表示不设无敌窗。")]
+        [Min(0f)]
+        public float invulnerableTime = 0.4f;
+
+        [Header("受击 · 击退")]
+        [Tooltip("击退初速度（单位/秒）。0 表示按 Damage 给的格数与 KnockbackDecay 折算（v0 = √(2 × 阻尼 × 格)），这样滑出去的位移正好等于给的格数。")]
+        [Min(0f)]
         public float KnockbackSpeed;
-        [Tooltip("受击滑停减速度（单位/秒²）")]
+
+        [Tooltip("受击滑停减速度（单位/秒²）：击退速度每秒衰减这么多，衰减到 0 就退出受伤态。\n它同时决定同一次攻击滑多远：越大停得越快。")]
         [Min(0f)]
         public float KnockbackDecay = 30f;
 

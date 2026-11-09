@@ -160,10 +160,10 @@ BoxCollider2D:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 375
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2
@@ -328,7 +328,7 @@ GameObject:
   - component: {fileID: 3403489111516503591}
   - component: {fileID: 5831170919695990068}
   - component: {fileID: 3801742007026034044}
-  m_Layer: 8
+  m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: AttackCollider
   m_TagString: Untagged
@@ -367,7 +367,7 @@ CircleCollider2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2

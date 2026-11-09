@@ -44,5 +44,14 @@ namespace Refraction.Data
         [Tooltip("后摇时长（秒）：冲刺结束后原地停顿，期间不再发起新攻击。")]
         [Min(0f)]
         public float attackRecoverTime = 0.45f;
+
+        [Header("伤害")]
+        [Tooltip("贴身接触造成的伤害点数：身体攻击盒碰到玩家就结算，频率由玩家自己的 invulnerableTime 限制。")]
+        [Min(0f)]
+        public float contactDamage = 1f;
+
+        [Tooltip("接触伤害的击退格数：0 表示不击退。\n实际初速度由玩家自己的 KnockbackDecay 折算。")]
+        [Min(0f)]
+        public float contactKnockback = 1.5f;
     }
 }

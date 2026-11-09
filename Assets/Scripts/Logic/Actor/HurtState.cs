@@ -20,9 +20,15 @@ namespace Refraction.Logic.Actor
         }
 
         /// <summary>喂入一次性冲量（速度向量/秒），参数唯一写入口</summary>
+        /// <remarks>零冲量也要写：不复位就沿用上一次的击退速度，受伤态会莫名滑一段</remarks>
         public void Configure(Vector2 impulse)
         {
-            if (impulse.sqrMagnitude <= 0f) return;
+            if (impulse.sqrMagnitude <= 0f)
+            {
+                _direction = Vector2.up;
+                _speed = 0f;
+                return;
+            }
 
             _direction = impulse.normalized;
             _speed = impulse.magnitude;

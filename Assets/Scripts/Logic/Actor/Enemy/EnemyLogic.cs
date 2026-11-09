@@ -17,7 +17,7 @@ namespace Refraction.Logic.Actor
         private Vector2 _lastTargetPos;
         private float _lostTime;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config) : base(motor)
+        public EnemyLogic(IMoveMotor motor, EnemyConfig config) : base(motor, config)
         {
             _config = config;
             _moveGroup = new EnemyMoveGroup(this, motor, config);

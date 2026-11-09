@@ -2,20 +2,22 @@
 
 namespace Refraction.Logic.Combat
 {
-    /// <summary>开火参数：Origin 是玩家中心的世界坐标，Direction 是单位向量，Speed 单位为每秒，Damage 为伤害点数</summary>
+    /// <summary>开火参数：Origin 是玩家中心的世界坐标，Direction 是单位向量，Speed 单位为每秒，Damage 为伤害点数，Knockback 为击退格数</summary>
     public readonly struct BulletSpawn
     {
         public readonly Vector2 Origin;
         public readonly Vector2 Direction;
         public readonly float Speed;
         public readonly float Damage;
+        public readonly float Knockback;
 
-        public BulletSpawn(Vector2 origin, Vector2 direction, float speed, float damage)
+        public BulletSpawn(Vector2 origin, Vector2 direction, float speed, float damage, float knockback = 0f)
         {
             Origin = origin;
             Direction = direction;
             Speed = speed;
             Damage = damage;
+            Knockback = knockback;
         }
     }
 

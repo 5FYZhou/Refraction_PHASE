@@ -71,6 +71,9 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
             _logic.FixedTick(context, Sense());
+
+            // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
+            if (!_logic.IsAlive) Destroy(gameObject);
         }
 
         /// <summary>目标被销毁（换场景、死亡）后引用会变成伪 null，这里一律收成"看不见"，逻辑层不必再判空</summary>
@@ -126,14 +129,29 @@ namespace Refraction.Presentation.Actor
         }
 
 
+        /// <summary>接触伤害：方向取当前朝向，挨打的人往敌人面朝的那边退</summary>
         public Damage ProduceDamage()
         {
-            return default;
+            if (config == null) return default;
+
+            int face = moveMotor != null ? moveMotor.FacingSign : 1;
+            return new Damage(
+                transform.position,
+                config.contactDamage,
+                DamageSource.Contact,
+                new Vector2(face, 0f),
+                config.contactKnockback);
         }
 
         public void TakeDamage(in Damage damage)
         {
-            Debug.Log("EnemyDamage");
+            // 装配完成前就被打（场景刚加载、攻击盒还没接上）时忽略
+            if (!_attached || _logic == null) return;
+
+            // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
+            if (damage.Source == DamageSource.Contact) return;
+
+            _logic.TakeDamage(in damage);
         }
     }
 }
