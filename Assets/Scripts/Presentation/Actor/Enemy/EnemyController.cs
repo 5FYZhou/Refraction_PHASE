@@ -20,6 +20,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private EnemyMotor moveMotor;
 
+        [Tooltip("是否启用 AI。关掉即站桩靶子：巡逻/追踪/攻击都不推进、原地不动，受击表现照常，但伤害值恒为 0（打不死）。")]
+        [SerializeField]
+        private bool OpenAI = true;
+
         private const string DetectChildName = "DetectCollider";
 
         private GameRoot _root;
@@ -52,7 +56,7 @@ namespace Refraction.Presentation.Actor
             Require.Assigned(moveMotor, nameof(EnemyController), nameof(moveMotor));
             Require.Assigned(config, nameof(EnemyController), nameof(config));
 
-            _logic = new EnemyLogic(moveMotor, config);
+            _logic = new EnemyLogic(moveMotor, config, OpenAI);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(this);

@@ -1,5 +1,6 @@
 ﻿using Refraction.Data;
 using Refraction.Foundation;
+using Refraction.Logic.Combat;
 using Refraction.Logic.Move;
 using UnityEngine;
 
@@ -12,14 +13,18 @@ namespace Refraction.Logic.Actor
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
         private readonly Cooldown _attackCooldown = new();
+        private readonly bool _aiEnabled;
+        private readonly IMoveMotor _motor;
 
         private EnemyTargetInfo _target;
         private Vector2 _lastTargetPos;
         private float _lostTime;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config) : base(motor, config)
+        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled) : base(motor, config)
         {
             _config = config;
+            _aiEnabled = aiEnabled;
+            _motor = motor;
             _moveGroup = new EnemyMoveGroup(this, motor, config);
         }
 
@@ -46,9 +51,28 @@ namespace Refraction.Logic.Actor
 
         protected override void OnFixedTick(in LogicContext ctx)
         {
+            if (!_aiEnabled)
+            {
+                // 站桩：三态不推进，但横向速度必须刹住——刚体没有线性阻尼，被撞一下会一直滑
+                _motor.BrakeTowardsX();
+                return;
+            }
+
             UpdateTarget(in ctx);
 
             _moveGroup.Tick(in ctx);
+        }
+
+        /// <summary>站桩时受击表现照常（受伤态与击退都走基类），只把伤害值抹成 0，血掉不下去</summary>
+        public override void TakeDamage(in Damage damage)
+        {
+            if (_aiEnabled)
+            {
+                base.TakeDamage(in damage);
+                return;
+            }
+
+            base.TakeDamage(new Damage(damage.Point, 0f, damage.Source, damage.Direction, damage.KnockbackCells));
         }
 
         protected override void OnTick(in LogicContext ctx) { }
