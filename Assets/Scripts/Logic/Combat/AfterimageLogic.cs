@@ -49,6 +49,16 @@ namespace Refraction.Logic.Combat
         /// <summary>这枚残影还在不在场上：子弹每走一段都要先问一次</summary>
         public bool IsAlive(int index) => IndexOf(index) >= 0;
 
+        /// <summary>按序号取落点：表现层要沿某一对残影画线、算判定，需要它们的坐标</summary>
+        public bool TryGetPos(int index, out Vector2 pos)
+        {
+            int i = IndexOf(index);
+
+            pos = i >= 0 ? _ledger[i].Pos : default;
+
+            return i >= 0;
+        }
+
         /// <summary>从入口残影开始按生成顺序规划整条传输路径，断链处就是路径末尾</summary>
         /// <remarks>相邻两枚的间距用感应范围判，和折跃连线同一个口径；绕回入口那一格不算，路径最多覆盖场上所有残影</remarks>
         public int BuildTransfer(int entryIndex, List<TransferNode> path)

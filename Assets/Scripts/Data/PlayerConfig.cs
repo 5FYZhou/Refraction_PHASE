@@ -147,7 +147,7 @@ namespace Refraction.Data
         [Min(0f)]
         public float afterimageDuration = 8f;
 
-        [Tooltip("折跃连线的伤害（点）：0 表示只连线、不伤人。")]
+        [Tooltip("折跃连线的伤害（点）：子弹穿过这条连线时，对线上的目标结算一次；0 表示不伤人。")]
         [Min(0f)]
         public float afterimageLinkDamage = 1f;
 
@@ -158,10 +158,6 @@ namespace Refraction.Data
         [Tooltip("残影的感应范围（米）：只有生成顺序相邻、且间距在这个范围内的一对残影才连线。\n防止在超远的两处落影，拉出一条横穿地图的长线；0 表示不限距离。")]
         [Min(0f)]
         public float afterimageLinkSenseRadius = 6f;
-
-        [Tooltip("同一目标被折跃连线反复结算的间隔（秒）：站进线里之后每隔这么久吃一次伤害。\n0 表示一直粘着就每个物理帧都掉血。")]
-        [Min(0f)]
-        public float afterimageLinkDamageInterval = 0.5f;
 
         [Tooltip("残影落地时的透明度（起始值，不是恒定值）：之后随时间淡到表现层写死的终止透明度。")]
         [Range(0f, 1f)]

@@ -13,11 +13,15 @@ namespace Refraction.Presentation.Combat
 
         public AfterimageLogic Logic { get; private set; }
 
+        /// <summary>管这批残影的那张表现层：子弹靠它点亮正在穿的那条连线</summary>
+        public AfterimageField Field { get; private set; }
+
         public Transform PlayerRoot { get; private set; }
 
-        public void Bind(AfterimageLogic logic, int index, int facing, Transform playerRoot)
+        public void Bind(AfterimageLogic logic, AfterimageField field, int index, int facing, Transform playerRoot)
         {
             Logic = logic;
+            Field = field;
             Index = index;
             Facing = facing;
             PlayerRoot = playerRoot;

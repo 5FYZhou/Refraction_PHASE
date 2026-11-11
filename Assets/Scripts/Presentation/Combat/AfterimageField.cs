@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>残影与折跃连线的表现：按逻辑层账本摆残影，用 1×1 方块图拉伸成连线并结算线上伤害</summary>
+    /// <summary>残影与折跃连线的表现：按逻辑层账本摆残影，用 1×1 方块图拉伸成连线；子弹穿过某条线时该线变实并沿线结算一次伤害</summary>
     /// <remarks>挂在 CombatRoot 自己身上，玩家死了残影也不会跟着消失；只读 AfterimageLogic 给的结果，不自己判断该不该生成或连线</remarks>
     public sealed class AfterimageField : MonoBehaviour
     {
@@ -44,8 +44,11 @@ namespace Refraction.Presentation.Combat
         private readonly List<SpriteRenderer> _lines = new();
         private readonly Collider2D[] _hits = new Collider2D[16];
 
-        // 同一目标在间隔内只吃一次：几段连线共用一张表，键是受击盒，值是上次结算时刻
-        private readonly Dictionary<HurtBox, float> _lastHitTime = new();
+        // 正在被子弹穿过的连线：键是「起点序号 << 32 | 终点序号」，值是同一段上并行几颗子弹
+        private readonly Dictionary<long, int> _hot = new();
+
+        // 一次过线结算里同一个受击盒只吃一次：线上可能压着同一个目标的多个碰撞体
+        private readonly HashSet<HurtBox> _hitBoxes = new();
 
         private Pool<Slot> _slots;
         private AfterimageLogic _afterimages;
@@ -216,7 +219,7 @@ namespace Refraction.Presentation.Combat
             slot.Body.localRotation = _view.localRotation;
             slot.Body.localScale = _view.localScale;
 
-            slot.Anchor.Bind(_afterimages, snap.Index, snap.Facing, _playerRoot);
+            slot.Anchor.Bind(_afterimages, this, snap.Index, snap.Facing, _playerRoot);
 
             if (slot.Renderer == null) return;
 
@@ -259,7 +262,8 @@ namespace Refraction.Presentation.Combat
             int capacity = _afterimages.LinkCapacity;
             int used = 0;
 
-            bool damage = _config.afterimageLinkDamage > 0f;
+            AfterimageLedger ledger = _afterimages.Ledger;
+            int count = ledger.Count;
 
             for (int i = 0; i < capacity; i++)
             {
@@ -278,10 +282,13 @@ namespace Refraction.Presentation.Combat
                 tr.rotation = Quaternion.Euler(0f, 0f, angle);
                 tr.localScale = new Vector3(length, _config.afterimageLinkThickness, 1f);
 
-                line.color = _config.afterimageLinkColor;
-                if (!line.gameObject.activeSelf) line.gameObject.SetActive(true);
+                int next = (i + 1) % count;
 
-                if (damage) DamageAlong(from, to, length, angle, _config.afterimageLinkThickness);
+                line.color = _hot.ContainsKey(LinkKey(ledger[i].Index, ledger[next].Index))
+                    ? Opaque(_config.afterimageLinkColor)
+                    : _config.afterimageLinkColor;
+
+                if (!line.gameObject.activeSelf) line.gameObject.SetActive(true);
             }
 
             for (int i = used; i < _lines.Count; i++)
@@ -289,8 +296,31 @@ namespace Refraction.Presentation.Combat
                 if (_lines[i].gameObject.activeSelf) _lines[i].gameObject.SetActive(false);
             }
 
-            // 没有连线时清表：残留的目标键会一直卡着已销毁的对象
-            if (used == 0 && _lastHitTime.Count > 0) _lastHitTime.Clear();
+            // 没有连线时清表：残留的热度会让后来同号的连线一直顶着不透明
+            if (used == 0 && _hot.Count > 0) _hot.Clear();
+        }
+
+        /// <summary>子弹开始穿这一段连线：这条线变实并沿线结算一次伤害</summary>
+        /// <remarks>同一段可能有几颗子弹同时在路上，热度按次数叠加，谁先到谁结算自己的那一次</remarks>
+        public void BeginTraverse(int from, int to)
+        {
+            long key = LinkKey(from, to);
+
+            _hot.TryGetValue(key, out int count);
+            _hot[key] = count + 1;
+
+            HitAlong(from, to);
+        }
+
+        /// <summary>子弹走完这一段（或中途放弃）：没人再走了就恢复常态透明度</summary>
+        public void EndTraverse(int from, int to)
+        {
+            long key = LinkKey(from, to);
+
+            if (!_hot.TryGetValue(key, out int count)) return;
+
+            if (count <= 1) _hot.Remove(key);
+            else _hot[key] = count - 1;
         }
 
         private SpriteRenderer EnsureLine(int i)
@@ -319,16 +349,26 @@ namespace Refraction.Presentation.Combat
             return sr;
         }
 
-        /// <summary>连线判定 = 一根绕中点旋转的方块：长度取两残影间距，宽度就是粗细，和画面上拉伸的方块图完全重合</summary>
-        private void DamageAlong(Vector2 from, Vector2 to, float length, float angle, float thickness)
+        /// <summary>沿线结算一次：判定方块绕中点旋转，长度取两端间距、宽度就是线粗，和画面上拉伸的方块完全重合</summary>
+        /// <remarks>同一目标身上的多个碰撞体在这一刀里只算一次；玩家自己与残影不参与</remarks>
+        private void HitAlong(int fromIndex, int toIndex)
         {
+            if (_config.afterimageLinkDamage <= 0f) return;
+            if (!_afterimages.TryGetPos(fromIndex, out Vector2 from)) return;
+            if (!_afterimages.TryGetPos(toIndex, out Vector2 to)) return;
+
+            Vector2 delta = to - from;
+            float length = delta.magnitude;
+
+            if (length <= 1e-4f) return;
+
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            Vector2 size = new(length, _config.afterimageLinkThickness);
             Vector2 center = (from + to) * 0.5f;
-            Vector2 size = new(length, thickness);
+
+            _hitBoxes.Clear();
 
             int count = Physics2D.OverlapBoxNonAlloc(center, size, angle, _hits, Physics2D.DefaultRaycastLayers);
-
-            float interval = _config.afterimageLinkDamageInterval;
-            float now = Time.fixedTime;
 
             for (int i = 0; i < count; i++)
             {
@@ -338,12 +378,18 @@ namespace Refraction.Presentation.Combat
 
                 HurtBox box = hit.GetComponent<HurtBox>();
                 if (box == null || box.Attackable == null) continue;
+                if (!_hitBoxes.Add(box)) continue;
 
-                if (interval > 0f && _lastHitTime.TryGetValue(box, out float last) && now - last < interval) continue;
-
-                _lastHitTime[box] = now;
                 box.Attackable.TakeDamage(new Damage(_config.afterimageLinkDamage, DamageSource.AfterimageLink));
             }
+        }
+
+        private static long LinkKey(int from, int to) => ((long)from << 32) | (uint)to;
+
+        private static Color Opaque(Color color)
+        {
+            color.a = 1f;
+            return color;
         }
 
         /// <summary>1×1 白图按 1 像素 = 1 米生成、中心枢轴：拉 localScale 就是一条粗细可调的实心方块，不必依赖美术给方形图</summary>

@@ -29,13 +29,16 @@ namespace Refraction.Presentation.Combat
         private Rigidbody2D _rb;
         private Collider2D[] _colliders;
         private AfterimageLogic _logic;
+        private AfterimageField _field;
         private State _state;
         private float _speed;
         private float _transferSpeed;
         private Vector2 _enterDir = Vector2.right;
         private int _step;
         private int _node;
-        private int _exitIndex = -1;
+        private bool _transported;
+        private int _hotFrom = -1;
+        private int _hotTo = -1;
 
         /// <summary>生成后由组合根调用一次；预制体没刚体时补一个</summary>
         public void Init(in BulletSpawn spawn, Transform owner)
@@ -44,6 +47,7 @@ namespace Refraction.Presentation.Combat
             _damage = new Damage(spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.KnockbackSpeed);
             _speed = spawn.Speed;
             _transferSpeed = spawn.TransferSpeed;
+            _transported = false;
 
             _rb = GetComponent<Rigidbody2D>();
             if (_rb == null) _rb = gameObject.AddComponent<Rigidbody2D>();
@@ -103,7 +107,12 @@ namespace Refraction.Presentation.Combat
 
             _rb.position = next;
 
-            if ((next - target.Pos).sqrMagnitude <= ArriveEps) _node = _step++;
+            if ((next - target.Pos).sqrMagnitude > ArriveEps) return;
+
+            EndSegment();
+            _node = _step++;
+
+            if (_step < _plan.Count) BeginSegment(_plan[_node], _plan[_step]);
         }
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -139,16 +148,7 @@ namespace Refraction.Presentation.Combat
 
         private void OnTriggerExit2D(Collider2D other)
         {
-            if (other == null) return;
-
-            if (other.CompareTag(BoundTag))
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            AfterimageAnchor anchor = other.GetComponentInParent<AfterimageAnchor>();
-            if (anchor != null && anchor.Logic == _logic && anchor.Index == _exitIndex) _exitIndex = -1;
+            if (other != null && other.CompareTag(BoundTag)) Destroy(gameObject);
         }
 
         // 进入残影：当场规划整条路径并锁住，每段出发前再验活
@@ -158,12 +158,13 @@ namespace Refraction.Presentation.Combat
             if (anchor.Logic == null) return;
             if (_owner != anchor.PlayerRoot) return;
 
-            // 刚出射的这一枚不要原地重进
-            if (anchor.Logic == _logic && anchor.Index == _exitIndex) return;
+            // 走完一次链就作废：出射后飞回残影再接管会无限循环
+            if (_transported) return;
 
-            if (anchor.Logic.BuildTransfer(anchor.Index, _plan) == 0) return;
+            if (anchor.Logic.BuildTransfer(anchor.Index, _plan) < 2) return;
 
             _logic = anchor.Logic;
+            _field = anchor.Field;
             _state = State.Transporting;
             _node = 0;
             _step = 1;
@@ -177,11 +178,33 @@ namespace Refraction.Presentation.Combat
             transform.position = new Vector3(_plan[0].Pos.x, _plan[0].Pos.y, transform.position.z);
 
             for (int i = 0; i < _colliders.Length; i++) _colliders[i].enabled = false;
+
+            BeginSegment(_plan[0], _plan[1]);
+        }
+
+        private void BeginSegment(in TransferNode from, in TransferNode to)
+        {
+            _hotFrom = from.Index;
+            _hotTo = to.Index;
+
+            if (_field != null) _field.BeginTraverse(_hotFrom, _hotTo);
+        }
+
+        private void EndSegment()
+        {
+            if (_hotFrom < 0) return;
+
+            if (_field != null) _field.EndTraverse(_hotFrom, _hotTo);
+
+            _hotFrom = -1;
+            _hotTo = -1;
         }
 
         // 出射：水平按残影朝向，垂直沿用进入方向
         private void LeaveTransport()
         {
+            EndSegment();
+
             TransferNode node = _plan[_node];
 
             Vector2 dir = new(node.Facing < 0 ? -1f : 1f, _enterDir.y);
@@ -197,7 +220,7 @@ namespace Refraction.Presentation.Combat
             for (int i = 0; i < _colliders.Length; i++) _colliders[i].enabled = true;
 
             _state = State.Flying;
-            _exitIndex = node.Index;
+            _transported = true;
             _step = 0;
             _node = 0;
 
@@ -206,6 +229,8 @@ namespace Refraction.Presentation.Combat
 
         private void OnDestroy()
         {
+            EndSegment();
+
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
 
