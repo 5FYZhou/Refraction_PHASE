@@ -38,7 +38,7 @@ namespace Refraction.Presentation.Actor
         private InputProvider _inputProvider;
         private InputBuffer _buffer;
         private PlayerLogic _logic;
-        private PlayerAfterimageField _afterimages;
+        private IAfterimageSpawner _afterimageSpawner;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -107,11 +107,7 @@ namespace Refraction.Presentation.Actor
                 );
             _logic = new(moveMotor, config, _buffer, this);
 
-            if (view != null)
-            {
-                _afterimages = gameObject.AddComponent<PlayerAfterimageField>();
-                _afterimages.Init(_logic, config, view);
-            }
+            if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
@@ -132,6 +128,16 @@ namespace Refraction.Presentation.Actor
         public int CurrentFace => _attached && moveMotor != null ? moveMotor.FaceSign : 1;
 
         public void Announce() => _logic?.Announce();
+
+        public void BindAfterimageSpawner(IAfterimageSpawner spawner)
+        {
+            _afterimageSpawner = spawner;
+            _logic?.BindAfterimageSpawner(spawner);
+        }
+
+        public Transform View => view;
+
+        public PlayerConfig Config => config;
 
         private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {
@@ -166,8 +172,6 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
             _logic.FixedTick(context);
-
-            _afterimages?.Sync();
 
             EventBus<PlayerDebugSnapshot>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,

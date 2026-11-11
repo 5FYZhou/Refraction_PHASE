@@ -1,15 +1,15 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Refraction.Data;
 using Refraction.Foundation;
-using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
+using Refraction.Presentation.Actor;
 using UnityEngine;
 
-namespace Refraction.Presentation.Actor
+namespace Refraction.Presentation.Combat
 {
     /// <summary>残影与折跃连线的表现：按逻辑层账本克隆 View 摆残影，用 1×1 方块图拉伸成连线并结算线上伤害</summary>
-    /// <remarks>本组件由 PlayerController 在 Attach 时补挂，不挂预制体；残影是静态快照，位置只来自 AfterimageLedger</remarks>
-    public sealed class PlayerAfterimageField : MonoBehaviour
+    /// <remarks>挂在 CombatRoot 自己身上，玩家死了残影也不会跟着消失；只读 AfterimageLogic 给的结果，不自己判断该不该生成或连线</remarks>
+    public sealed class AfterimageField : MonoBehaviour
     {
         private sealed class Slot
         {
@@ -40,24 +40,27 @@ namespace Refraction.Presentation.Actor
         private readonly Dictionary<HurtBox, float> _lastHitTime = new();
 
         private Pool<Slot> _slots;
-        private PlayerLogic _logic;
+        private AfterimageLogic _afterimages;
         private PlayerConfig _config;
         private Transform _view;
+        private Transform _playerRoot;
         private SpriteRenderer _viewRenderer;
         private Transform _container;
         private float _z;
 
-        /// <summary>由 PlayerController 装配；view 必须非空，残影就是它的副本</summary>
-        public void Init(PlayerLogic logic, PlayerConfig config, Transform view)
+        /// <summary>由 CombatRoot 装配；view 是克隆模板，playerRoot 是账本里 Pos 所属的那个枢轴</summary>
+        public void Init(AfterimageLogic afterimages, PlayerConfig config, Transform view, Transform playerRoot)
         {
-            _logic = logic;
+            _afterimages = afterimages;
             _config = config;
             _view = view;
+            _playerRoot = playerRoot;
             _viewRenderer = view.GetComponent<SpriteRenderer>();
             _z = view.position.z;
 
             GameObject container = new(ContainerName);
             _container = container.transform;
+            _container.SetParent(transform, false);
 
             // 残影体交给通用池：容量跟残影上限走，预创建一批，落影时不再现场 Instantiate
             int capacity = Mathf.Max(1, config.maxAfterimages);
@@ -76,9 +79,9 @@ namespace Refraction.Presentation.Actor
         /// <summary>每个物理帧同步一次：残影不移动，放在固定帧刷新不会抖，判定也刚好落在物理查询该在的时机</summary>
         public void Sync()
         {
-            if (_logic == null || _config == null || _view == null) return;
+            if (_afterimages == null || _config == null || _view == null) return;
 
-            AfterimageLedger ledger = _logic.Afterimages;
+            AfterimageLedger ledger = _afterimages.Ledger;
             int count = ledger.Count;
             float now = Time.fixedTime;
 
@@ -124,7 +127,7 @@ namespace Refraction.Presentation.Actor
                 ApplyFade(slot, in snap, now);
             }
 
-            SyncLinks(ledger);
+            SyncLinks();
         }
 
         private void OnDestroy()
@@ -166,12 +169,20 @@ namespace Refraction.Presentation.Actor
         {
             slot.Index = snap.Index;
 
-            // 蹲下时 View 整体下移，残影得加上当时的偏移，否则会悬在落影点上方
-            Vector3 offset = _view.position - transform.position;
+            // 蹲下时 View 整体下移，残影得加上当时的偏移；参照系是玩家枢轴，不是本组件的挂载点
+            Vector3 offset = _view.position - _playerRoot.position;
 
             slot.Tr.position = new Vector3(snap.Pos.x + offset.x, snap.Pos.y + offset.y, _z);
             slot.Tr.rotation = _view.rotation;
-            slot.Tr.localScale = _view.lossyScale;
+
+            // 槽挂在容器下、容器跟着 CombatRoot 的缩放走：世界缩放要除掉这一层，否则残影会被放大两次
+            Vector3 world = _view.lossyScale;
+            Vector3 host = _container.lossyScale;
+
+            slot.Tr.localScale = new(
+                host.x != 0f ? world.x / host.x : world.x,
+                host.y != 0f ? world.y / host.y : world.y,
+                1f);
 
             if (slot.Renderer == null) return;
 
@@ -210,16 +221,16 @@ namespace Refraction.Presentation.Actor
             slot.Renderer.color = new Color(slot.Tint.r, slot.Tint.g, slot.Tint.b, alpha);
         }
 
-        private void SyncLinks(AfterimageLedger ledger)
+        private void SyncLinks()
         {
-            int capacity = ledger.LinkCapacity;
+            int capacity = _afterimages.LinkCapacity;
             int used = 0;
 
             bool damage = _config.afterimageLinkDamage > 0f;
 
             for (int i = 0; i < capacity; i++)
             {
-                if (!ledger.TryGetLink(i, _config.afterimageLinkSenseRadius, out Vector2 from, out Vector2 to)) continue;
+                if (!_afterimages.TryGetLink(i, out Vector2 from, out Vector2 to)) continue;
 
                 Vector2 delta = to - from;
                 float length = delta.magnitude;
@@ -290,7 +301,7 @@ namespace Refraction.Presentation.Actor
             {
                 Collider2D hit = _hits[i];
                 if (hit == null) continue;
-                if (hit.transform.root == transform.root) continue;
+                if (hit.transform.IsChildOf(_playerRoot)) continue;
 
                 HurtBox box = hit.GetComponent<HurtBox>();
                 if (box == null || box.Attackable == null) continue;

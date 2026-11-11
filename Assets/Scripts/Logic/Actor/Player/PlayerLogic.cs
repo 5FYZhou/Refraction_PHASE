@@ -1,4 +1,5 @@
 ﻿using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
@@ -13,10 +14,16 @@ namespace Refraction.Logic.Actor
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
         private AttackGroup _attackGroup;
-        private ChargeController _charge;
         private TransitMotor _transit;
         private IMoveMotor _motor;
         private InputBuffer _buffer;
+        private PlayerConfig _config;
+
+        private IAfterimageSpawner _afterimages;
+        private readonly Cooldown _chargeCooldown = new();
+        private ChargePhase _chargePhase;
+        private float _chargeEnterTime;
+        private float _chargeNow;
 
         private Vector2 _lastGroundedPos;
         private bool _hasGroundedPos;
@@ -32,10 +39,10 @@ namespace Refraction.Logic.Actor
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
             _attackGroup = new(config, motor, launcher, _postureGroup);
-            _charge = new(config);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
+            _config = config;
         }
 
         /// <summary>还没踩过地（出生就在空中）时为 false</summary>
@@ -59,13 +66,21 @@ namespace Refraction.Logic.Actor
 
         public AttackStateTag AttackTag => _attackGroup.Current;
 
-        public ChargePhase ChargeStage => _charge.Phase;
+        public ChargePhase ChargeStage => _chargePhase;
 
-        public float ChargeProgress => _charge.Progress;
+        /// <summary>0 没在充能，1 前摇走满</summary>
+        public float ChargeProgress
+        {
+            get
+            {
+                if (_chargePhase == ChargePhase.Charged) return 1f;
+                if (_chargePhase != ChargePhase.Charging || _config.chargePrepareTime <= 0f) return 0f;
 
-        public bool IsCharged => _charge.IsCharged;
+                return Mathf.Clamp01((_chargeNow - _chargeEnterTime) / _config.chargePrepareTime);
+            }
+        }
 
-        public AfterimageLedger Afterimages => _charge.Afterimages;
+        public bool IsCharged => _chargePhase == ChargePhase.Charged;
 
         public ConditionStateTag ConditionTag => Conditions.Current;
 
@@ -100,9 +115,48 @@ namespace Refraction.Logic.Actor
 
             _attackGroup.Tick(in tick);
 
-            _charge.Tick(in tick, dashStarted);
+            TickCharge(in tick, dashStarted);
 
             _transit.AfterTick(in tick);
+        }
+
+        private void TickCharge(in LogicContext ctx, bool dashStarted)
+        {
+            float now = ctx.GameTime.now;
+            _chargeNow = now;
+
+            if (dashStarted && _afterimages != null && _afterimages.TrySpawn(ctx.WorldInfo.Pos, now))
+            {
+                _chargeCooldown.MarkUsed(now, _config.chargeCooldown);
+                _chargePhase = ChargePhase.None;
+                return;
+            }
+
+            if (_chargePhase == ChargePhase.Charged) return;
+
+            if (_chargePhase == ChargePhase.Charging)
+            {
+                if (now - _chargeEnterTime >= _config.chargePrepareTime) GoCharged();
+                return;
+            }
+
+            if (!ctx.InputSnapshot.ChargePressed) return;
+            if (!_chargeCooldown.CanUse(now)) return;
+
+            if (_config.chargePrepareTime <= 0f)
+            {
+                GoCharged();
+                return;
+            }
+
+            _chargeEnterTime = now;
+            _chargePhase = ChargePhase.Charging;
+        }
+
+        private void GoCharged()
+        {
+            _chargePhase = ChargePhase.Charged;
+            _afterimages?.Arm();
         }
 
         protected override void OnTick(in LogicContext ctx)
@@ -113,7 +167,17 @@ namespace Refraction.Logic.Actor
         public void SpawnTo(Vector2 pos)
         {
             _motor.SpawnAt(pos, Vector2.zero);
-            _charge.ClearAfterimages();
+            _afterimages?.Clear();
+
+            _chargePhase = ChargePhase.None;
+            _chargeEnterTime = 0f;
+        }
+
+        public void BindAfterimageSpawner(IAfterimageSpawner spawner)
+        {
+            _afterimages = spawner;
+
+            if (_chargePhase == ChargePhase.Charged) spawner?.Arm();
         }
 
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
