@@ -43,6 +43,7 @@ MonoBehaviour:
   crouchPrepareTime: 0.1
   crouchHeightRatio: 0.65
   crouchMoveSpeedScale: 0.5
+  crouchRecoilScale: 0.7
   crouchAllowJump: 0
   crouchAllowDash: 0
   crouchGroundGrace: 0.08

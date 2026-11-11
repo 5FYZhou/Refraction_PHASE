@@ -79,6 +79,10 @@ namespace Refraction.Data
         [Range(0f, 1f)]
         public float crouchMoveSpeedScale = 0.5f;
 
+        [Tooltip("下蹲时的后坐力倍率：乘在 recoilSpeedX / recoilSpeedUp / recoilSpeedDown 算出的后坐力上。\n随下蹲前摇进度从 1 线性过渡到该值，与身高、移速共用同一条曲线；0.5 表示蹲满后坐力减半，1 表示下蹲不影响后坐力。")]
+        [Range(0f, 1f)]
+        public float crouchRecoilScale = 0.7f;
+
         [Tooltip("下蹲期间是否允许跳跃。默认禁止，后续按设计调整。")]
         public bool crouchAllowJump = false;
 

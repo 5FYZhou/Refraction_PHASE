@@ -23,14 +23,14 @@ namespace Refraction.Logic.Combat
             return new Vector2(x, 0f);
         }
 
-        /// <summary>后坐力：沿弹道反向，水平 / 斜上 / 斜下各读一份配置</summary>
-        public static Vector2 RecoilSpeed(Vector2 direction, PlayerConfig config)
+        /// <summary>后坐力：沿弹道反向读对应配置，再乘蹲姿倍率</summary>
+        public static Vector2 RecoilSpeed(Vector2 direction, PlayerConfig config, float crouchProgress)
         {
             float speed = direction.y > 0f ? config.recoilSpeedUp
                 : direction.y < 0f ? config.recoilSpeedDown
                 : config.recoilSpeedX;
 
-            return -direction * speed;
+            return -direction * (speed * Mathf.Lerp(1f, config.crouchRecoilScale, Mathf.Clamp01(crouchProgress)));
         }
     }
 }

@@ -15,12 +15,14 @@ namespace Refraction.Logic.Actor
         private readonly PlayerConfig _config;
         private readonly IStateMove _motor;
         private readonly IBulletLauncher _launcher;
+        private readonly PostureGroup _posture;
 
-        public WhiteAttackState(PlayerConfig config, IStateMove motor, IBulletLauncher launcher)
+        public WhiteAttackState(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture)
         {
             _config = config;
             _motor = motor;
             _launcher = launcher;
+            _posture = posture;
         }
 
         public override void Enter(in LogicContext ctx)
@@ -29,7 +31,7 @@ namespace Refraction.Logic.Actor
 
             _launcher.Launch(new BulletSpawn(
                 ctx.WorldInfo.Pos, direction, _config.bulletSpeed, _config.bulletDamage, _config.bulletKnockback));
-            _motor.AddExternalVelocity(AttackAim.RecoilSpeed(direction, _config));
+            _motor.AddExternalVelocity(AttackAim.RecoilSpeed(direction, _config, _posture.CrouchProgress));
         }
 
         public override void Tick(in LogicContext ctx) { }

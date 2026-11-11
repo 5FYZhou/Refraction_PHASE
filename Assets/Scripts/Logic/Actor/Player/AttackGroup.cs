@@ -14,13 +14,13 @@ namespace Refraction.Logic.Actor
         private readonly PlayerConfig _config;
         private readonly Cooldown _cooldown = new();
 
-        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher)
+        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture)
         {
             _config = config;
 
             RegisterState(new NoneAttackState());
             RegisterState(new WhiteAttackPrepareState(config));
-            RegisterState(new WhiteAttackState(config, motor, launcher));
+            RegisterState(new WhiteAttackState(config, motor, launcher, posture));
             RegisterState(new WhiteAttackRecoverState(config));
         }
 

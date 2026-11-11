@@ -30,7 +30,7 @@ namespace Refraction.Logic.Actor
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
-            _attackGroup = new(config, motor, launcher);
+            _attackGroup = new(config, motor, launcher, _postureGroup);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
