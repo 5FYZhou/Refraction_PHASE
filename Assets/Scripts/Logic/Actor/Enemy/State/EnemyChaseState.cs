@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>追踪：朝玩家的水平方向走，进到 chaseStopDistance 内就刹车等冷却，别把玩家一路顶走</summary>
+    /// <summary>追踪：一直朝玩家走，贴到 chaseStopDistance 才刹车，别把玩家一路顶走</summary>
     public sealed class EnemyChaseState : BaseState<EnemyStateTag, LogicContext>
     {
         public override EnemyStateTag Tag => EnemyStateTag.Chase;

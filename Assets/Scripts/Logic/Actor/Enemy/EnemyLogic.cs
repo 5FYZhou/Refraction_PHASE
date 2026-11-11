@@ -1,18 +1,16 @@
 ﻿using Refraction.Data;
-using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Move;
 using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>敌人逻辑：持有索敌结果、丢目标计时与攻击冷却，状态推进交给 EnemyMoveGroup</summary>
+    /// <summary>敌人逻辑：持有索敌结果与丢目标计时，状态推进交给 EnemyMoveGroup</summary>
     /// <remarks>索敌结果由表现层每物理帧注入</remarks>
     public sealed class EnemyLogic : ActorLogic, IAttack
     {
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
-        private readonly Cooldown _attackCooldown = new();
         private readonly bool _aiEnabled;
         private readonly IMoveMotor _motor;
 
@@ -36,15 +34,11 @@ namespace Refraction.Logic.Actor
         /// <summary>最后一次看到玩家的位置：看不见之后仍有效，追踪靠它继续往那边走</summary>
         public Vector2 TargetPos => _lastTargetPos;
 
-        /// <summary>丢目标还没超时：三态共用同一个计时，谁也别自己再维护一份</summary>
+        /// <summary>丢目标还没超时：两态共用同一个计时，谁也别自己再维护一份</summary>
         public bool Alert => _target.Visible || _lostTime < _config.loseTargetTime;
 
         /// <summary>本帧的巡逻范围：无界表示没有 PatrolCollider 或已经跑出去了，整平台随便走</summary>
         public EnemyPatrolArea PatrolArea => _patrolArea;
-
-        public bool CanAttack(float now) => _attackCooldown.CanUse(now);
-
-        public void MarkAttacked(float now) => _attackCooldown.MarkUsed(now, _config.attackCooldown);
 
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyPatrolArea patrolArea)
@@ -58,7 +52,7 @@ namespace Refraction.Logic.Actor
         {
             if (!_aiEnabled)
             {
-                // 站桩：三态不推进，但横向速度必须刹住——刚体没有线性阻尼，被撞一下会一直滑
+                // 站桩：两态不推进，但横向速度必须刹住——刚体没有线性阻尼，被撞一下会一直滑
                 _motor.BrakeTowardsX();
                 return;
             }

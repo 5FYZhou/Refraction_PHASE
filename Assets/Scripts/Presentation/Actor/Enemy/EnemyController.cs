@@ -12,7 +12,7 @@ namespace Refraction.Presentation.Actor
     {
         public int Order => SceneOrder.World;
 
-        [Tooltip("敌人参数资产。巡逻半径、索敌时长与三段攻击的数值都在这里，运行时只读不改。")]
+        [Tooltip("敌人参数资产。巡逻、索敌与接触伤害的数值都在这里，运行时只读不改。")]
         [SerializeField]
         private EnemyConfig config;
 
@@ -20,7 +20,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private EnemyMotor moveMotor;
 
-        [Tooltip("是否启用 AI。关掉即站桩靶子：巡逻/追踪/攻击都不推进、原地不动，受击表现照常，但伤害值恒为 0（打不死）。")]
+        [Tooltip("是否启用 AI。关掉即站桩靶子：巡逻/追踪都不推进、原地不动，受击表现照常，但伤害值恒为 0（打不死）。")]
         [SerializeField]
         private bool OpenAI = true;
 
