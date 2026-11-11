@@ -133,14 +133,8 @@ namespace Refraction.Logic.Actor
         {
             if (d.Source == DamageSource.Bullet) return;
 
-            Damage damage = d;
-            if(d.Source == DamageSource.Contact)
-            {
-                damage = new(d.Amount, d.Source, new Vector2(-_motor.FaceSign, 0), d.KnockbackSpeed);
-            }
-
             int before = CurHealth;
-            Conditions.TryApply(in damage);
+            Conditions.TryApply(in d);
 
             // 无敌窗吞掉的那一下血量没动，不该让界面重画
             if (CurHealth != before) Announce();

@@ -88,10 +88,12 @@ namespace Refraction.Logic.Actor
         {
             if (_config == null) return default;
 
+            Vector2 dir = _aiEnabled ? Vector2.zero : new Vector2(_motor.FaceSign, 0f);
+
             return new Damage(
                 _config.contactDamage,
                 DamageSource.Contact,
-                Vector2.zero,
+                dir,
                 _config.contactKnockback);
         }
 
