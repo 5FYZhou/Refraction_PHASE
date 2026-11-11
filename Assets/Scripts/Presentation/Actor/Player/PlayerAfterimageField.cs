@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
 using UnityEngine;
@@ -31,7 +32,6 @@ namespace Refraction.Presentation.Actor
         private const float BlinkHz = 6f;
 
         private readonly Dictionary<int, Slot> _live = new();
-        private readonly List<Slot> _pool = new();
         private readonly List<int> _stale = new();
         private readonly List<SpriteRenderer> _lines = new();
         private readonly Collider2D[] _hits = new Collider2D[16];
@@ -39,6 +39,7 @@ namespace Refraction.Presentation.Actor
         // 同一目标在间隔内只吃一次：几段连线共用一张表，键是受击盒，值是上次结算时刻
         private readonly Dictionary<HurtBox, float> _lastHitTime = new();
 
+        private Pool<Slot> _slots;
         private PlayerLogic _logic;
         private PlayerConfig _config;
         private Transform _view;
@@ -57,6 +58,19 @@ namespace Refraction.Presentation.Actor
 
             GameObject container = new(ContainerName);
             _container = container.transform;
+
+            // 残影体交给通用池：容量跟残影上限走，预创建一批，落影时不再现场 Instantiate
+            int capacity = Mathf.Max(1, config.maxAfterimages);
+
+            _slots = new Pool<Slot>(
+                CreateSlot,
+                onGet: slot => slot.Go.SetActive(true),
+                onRelease: slot => slot.Go.SetActive(false),
+                name: "Afterimage",
+                maxSize: capacity,
+                onDestroy: slot => { if (slot.Go != null) Destroy(slot.Go); });
+
+            _slots.Prewarm(capacity);
         }
 
         /// <summary>每个物理帧同步一次：残影不移动，放在固定帧刷新不会抖，判定也刚好落在物理查询该在的时机</summary>
@@ -91,8 +105,7 @@ namespace Refraction.Presentation.Actor
             {
                 Slot dead = _live[_stale[i]];
                 _live.Remove(_stale[i]);
-                dead.Go.SetActive(false);
-                _pool.Add(dead);
+                _slots.Release(dead);
             }
 
             for (int i = 0; i < count; i++)
@@ -101,10 +114,11 @@ namespace Refraction.Presentation.Actor
 
                 if (!_live.TryGetValue(snap.Index, out Slot slot))
                 {
-                    slot = TakeSlot();
+                    slot = _slots.Get();
+                    if (slot == null) continue;
+
                     _live.Add(snap.Index, slot);
                     Capture(slot, in snap);
-                    slot.Go.SetActive(true);
                 }
 
                 ApplyFade(slot, in snap, now);
@@ -115,18 +129,9 @@ namespace Refraction.Presentation.Actor
 
         private void OnDestroy()
         {
+            _slots?.Dispose();
+
             if (_container != null) Destroy(_container.gameObject);
-        }
-
-        private Slot TakeSlot()
-        {
-            if (_pool.Count == 0) return CreateSlot();
-
-            int last = _pool.Count - 1;
-            Slot slot = _pool[last];
-            _pool.RemoveAt(last);
-
-            return slot;
         }
 
         private Slot CreateSlot()
