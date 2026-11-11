@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>残影与折跃连线的表现：按逻辑层账本克隆 View 摆残影，用 1×1 方块图拉伸成连线并结算线上伤害</summary>
+    /// <summary>残影与折跃连线的表现：按逻辑层账本摆残影，用 1×1 方块图拉伸成连线并结算线上伤害</summary>
     /// <remarks>挂在 CombatRoot 自己身上，玩家死了残影也不会跟着消失；只读 AfterimageLogic 给的结果，不自己判断该不该生成或连线</remarks>
     public sealed class AfterimageField : MonoBehaviour
     {
@@ -15,7 +15,14 @@ namespace Refraction.Presentation.Combat
         {
             public GameObject Go;
             public Transform Tr;
+
+            /// <summary>残影里的 View 副本：每个槽位只建一次，落影时改它的局部姿态</summary>
+            public Transform Body;
+
             public SpriteRenderer Renderer;
+
+            /// <summary>子弹靠它认出这是第几枚残影</summary>
+            public AfterimageAnchor Anchor;
 
             /// <summary>落影那一帧抄下来的 RGB，透明度每帧另算，不覆盖它</summary>
             public Color Tint = Color.white;
@@ -25,6 +32,7 @@ namespace Refraction.Presentation.Combat
         }
 
         private const string ContainerName = "Afterimages";
+        private const string ViewName = "View";
 
         // 淡出与闪烁先写死：末态透明度、闪烁窗口、闪烁频率
         private const float FadeEndAlpha = 0.12f;
@@ -46,17 +54,25 @@ namespace Refraction.Presentation.Combat
         private Transform _playerRoot;
         private SpriteRenderer _viewRenderer;
         private Transform _container;
+        private GameObject _prefab;
         private float _z;
 
-        /// <summary>由 CombatRoot 装配；view 是克隆模板，playerRoot 是账本里 Pos 所属的那个枢轴</summary>
-        public void Init(AfterimageLogic afterimages, PlayerConfig config, Transform view, Transform playerRoot)
+        /// <summary>由 CombatRoot 装配；view 是残影里那张皮，playerRoot 是账本里 Pos 所属的枢轴，prefab 是带 Collider 的残影外壳</summary>
+        public void Init(AfterimageLogic afterimages, PlayerConfig config, Transform view, Transform playerRoot, GameObject prefab)
         {
             _afterimages = afterimages;
             _config = config;
             _view = view;
             _playerRoot = playerRoot;
+            _prefab = prefab;
             _viewRenderer = view.GetComponent<SpriteRenderer>();
             _z = view.position.z;
+
+            if (_prefab == null)
+            {
+                Debug.LogError("[AfterimageField] 没有残影预制体，残影与子弹传输都不会工作。");
+                return;
+            }
 
             GameObject container = new(ContainerName);
             _container = container.transform;
@@ -79,7 +95,7 @@ namespace Refraction.Presentation.Combat
         /// <summary>每个物理帧同步一次：残影不移动，放在固定帧刷新不会抖，判定也刚好落在物理查询该在的时机</summary>
         public void Sync()
         {
-            if (_afterimages == null || _config == null || _view == null) return;
+            if (_afterimages == null || _config == null || _view == null || _slots == null) return;
 
             AfterimageLedger ledger = _afterimages.Ledger;
             int count = ledger.Count;
@@ -137,31 +153,47 @@ namespace Refraction.Presentation.Combat
             if (_container != null) Destroy(_container.gameObject);
         }
 
+        /// <summary>外壳用残影预制体（自带吸引子弹的 Collider），里面塞一份玩家 View 的副本当皮</summary>
         private Slot CreateSlot()
         {
-            GameObject go = Instantiate(_view.gameObject, _container);
+            GameObject go = Instantiate(_prefab, _container);
             go.name = "Afterimage";
 
-            // 克隆只留画：行为与碰撞体一律关掉，残影不会自己动，也不会被当成第二个身体
+            Collider2D[] shell = go.GetComponentsInChildren<Collider2D>(true);
+
             Behaviour[] behaviours = go.GetComponentsInChildren<Behaviour>(true);
             for (int i = 0; i < behaviours.Length; i++) behaviours[i].enabled = false;
 
-            Collider2D[] colliders = go.GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < shell.Length; i++) shell[i].enabled = true;
+
+            GameObject body = Instantiate(_view.gameObject, go.transform);
+            body.name = ViewName;
+
+            behaviours = body.GetComponentsInChildren<Behaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++) behaviours[i].enabled = false;
+
+            Collider2D[] colliders = body.GetComponentsInChildren<Collider2D>(true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
-            SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
-            if (renderer != null)
+            SpriteRenderer renderer = body.GetComponent<SpriteRenderer>();
+            if (renderer != null && _viewRenderer != null)
             {
-                if (_viewRenderer != null)
-                {
-                    renderer.sortingLayerID = _viewRenderer.sortingLayerID;
-                    renderer.sortingOrder = _viewRenderer.sortingOrder - 1;
-                }
+                renderer.sortingLayerID = _viewRenderer.sortingLayerID;
+                renderer.sortingOrder = _viewRenderer.sortingOrder - 1;
             }
+
+            AfterimageAnchor anchor = go.AddComponent<AfterimageAnchor>();
 
             go.SetActive(false);
 
-            return new Slot { Go = go, Tr = go.transform, Renderer = renderer };
+            return new Slot
+            {
+                Go = go,
+                Tr = go.transform,
+                Body = body.transform,
+                Renderer = renderer,
+                Anchor = anchor
+            };
         }
 
         /// <summary>落影那一帧把 View 定妆：位置、朝向、缩放、贴图与染色只抄这一次，之后本体怎么动都不再回头改</summary>
@@ -169,20 +201,22 @@ namespace Refraction.Presentation.Combat
         {
             slot.Index = snap.Index;
 
-            // 蹲下时 View 整体下移，残影得加上当时的偏移；参照系是玩家枢轴，不是本组件的挂载点
-            Vector3 offset = _view.position - _playerRoot.position;
-
-            slot.Tr.position = new Vector3(snap.Pos.x + offset.x, snap.Pos.y + offset.y, _z);
-            slot.Tr.rotation = _view.rotation;
-
-            // 槽挂在容器下、容器跟着 CombatRoot 的缩放走：世界缩放要除掉这一层，否则残影会被放大两次
-            Vector3 world = _view.lossyScale;
+            // 根节点落在账本给的世界坐标上；朝向翻转在根节点的负缩放里，View 副本只管自己的姿态
+            Vector3 world = _playerRoot.lossyScale;
             Vector3 host = _container.lossyScale;
 
+            slot.Tr.position = new Vector3(snap.Pos.x, snap.Pos.y, _z);
+            slot.Tr.rotation = _playerRoot.rotation;
             slot.Tr.localScale = new(
                 host.x != 0f ? world.x / host.x : world.x,
                 host.y != 0f ? world.y / host.y : world.y,
                 1f);
+
+            slot.Body.localPosition = _view.localPosition;
+            slot.Body.localRotation = _view.localRotation;
+            slot.Body.localScale = _view.localScale;
+
+            slot.Anchor.Bind(_afterimages, snap.Index, snap.Facing, _playerRoot);
 
             if (slot.Renderer == null) return;
 
@@ -191,7 +225,6 @@ namespace Refraction.Presentation.Combat
             if (_viewRenderer != null)
             {
                 slot.Renderer.sprite = _viewRenderer.sprite;
-                slot.Renderer.flipX = _viewRenderer.flipX;
                 tint = _viewRenderer.color;
             }
 

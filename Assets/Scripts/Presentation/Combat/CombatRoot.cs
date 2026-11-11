@@ -10,8 +10,13 @@ namespace Refraction.Presentation.Combat
     {
         public int Order => SceneOrder.World;
 
+        private const string AfterimagePath = "Prefabs/AfterImage";
+
         [SerializeField]
         private PlayerController playerController;
+
+        [SerializeField]
+        private GameObject afterimagePrefab;
 
         private AfterimageLogic _afterimages;
         private AfterimageField _field;
@@ -44,8 +49,12 @@ namespace Refraction.Presentation.Combat
             GameObject host = new(nameof(AfterimageField));
             host.transform.SetParent(transform, false);
 
+            GameObject prefab = afterimagePrefab != null
+                ? afterimagePrefab
+                : Resources.Load<GameObject>(AfterimagePath);
+
             _field = host.AddComponent<AfterimageField>();
-            _field.Init(_afterimages, config, playerController.View, playerController.transform);
+            _field.Init(_afterimages, config, playerController.View, playerController.transform, prefab);
         }
 
         public void FixedTick(float deltaTime)

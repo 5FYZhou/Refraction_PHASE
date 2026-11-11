@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Refraction.Data;
 using UnityEngine;
 
@@ -32,17 +33,47 @@ namespace Refraction.Logic.Combat
         }
 
         /// <summary>落一枚残影：只有蓄满且没被这次冲刺消费过才落，落完就清掉待释放</summary>
-        public bool TrySpawn(Vector2 pos, float now)
+        public bool TrySpawn(Vector2 pos, float now, int facing)
         {
             if (!_armed) return false;
             if (_config.maxAfterimages < 1) return false;
 
             while (_ledger.Count >= _config.maxAfterimages) _ledger.RemoveFirst();
 
-            _ledger.Add(new Afterimage(pos, now, _config.afterimageDuration, _nextIndex++));
+            _ledger.Add(new Afterimage(pos, now, _config.afterimageDuration, _nextIndex++, facing));
             _armed = false;
 
             return true;
+        }
+
+        /// <summary>这枚残影还在不在场上：子弹每走一段都要先问一次</summary>
+        public bool IsAlive(int index) => IndexOf(index) >= 0;
+
+        /// <summary>从入口残影开始按生成顺序规划整条传输路径，断链处就是路径末尾</summary>
+        /// <remarks>相邻两枚的间距用感应范围判，和折跃连线同一个口径；绕回入口那一格不算，路径最多覆盖场上所有残影</remarks>
+        public int BuildTransfer(int entryIndex, List<TransferNode> path)
+        {
+            path.Clear();
+
+            int start = IndexOf(entryIndex);
+            if (start < 0) return 0;
+
+            path.Add(NodeAt(start));
+
+            int cur = start;
+            float sense = _config.afterimageLinkSenseRadius;
+
+            for (int guard = 0; guard < _ledger.Count; guard++)
+            {
+                int next = (cur + 1) % _ledger.Count;
+                if (next == start) break;
+                if (!WithinSense(cur, next, sense)) break;
+
+                path.Add(NodeAt(next));
+                cur = next;
+            }
+
+            return path.Count;
         }
 
         /// <summary>取第 i 段连线；超出感应范围返回 false</summary>
@@ -68,6 +99,31 @@ namespace Refraction.Logic.Combat
         {
             _ledger.Clear();
             _armed = false;
+        }
+
+        private int IndexOf(int index)
+        {
+            for (int i = 0; i < _ledger.Count; i++)
+            {
+                if (_ledger[i].Index == index) return i;
+            }
+
+            return -1;
+        }
+
+        private TransferNode NodeAt(int i)
+        {
+            Afterimage snap = _ledger[i];
+            return new TransferNode(snap.Index, snap.Pos, snap.Facing);
+        }
+
+        private bool WithinSense(int a, int b, float sense)
+        {
+            float sqr = (_ledger[b].Pos - _ledger[a].Pos).sqrMagnitude;
+
+            if (sqr <= 1e-6f) return false;
+
+            return sense <= 0f || sqr <= sense * sense;
         }
     }
 }

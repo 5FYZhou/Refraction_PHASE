@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Combat
 {
-    /// <summary>一枚残影：位置、落地时刻与生成序号</summary>
+    /// <summary>一枚残影：位置、落地时刻与序号</summary>
     public readonly struct Afterimage
     {
         public readonly Vector2 Pos;
@@ -16,18 +16,22 @@ namespace Refraction.Logic.Combat
         /// <summary>单调递增，Clear 不归零，表现层靠它认出换新</summary>
         public readonly int Index;
 
-        public Afterimage(Vector2 pos, float spawnTime, float duration, int index)
+        /// <summary>落影时的朝向：-1 朝左，1 朝右</summary>
+        public readonly int Facing;
+
+        public Afterimage(Vector2 pos, float spawnTime, float duration, int index, int facing)
         {
             Pos = pos;
             SpawnTime = spawnTime;
             Duration = duration;
             Index = index;
+            Facing = facing;
         }
 
         public bool IsExpired(float now) => Duration > 0f && now - SpawnTime >= Duration;
     }
 
-    /// <summary>残影账本：只按生成顺序存已落下的残影，上限、过期与连线段都由 AfterimageLogic 判</summary>
+    /// <summary>残影账本：只按生成顺序存已落下的残影</summary>
     public sealed class AfterimageLedger
     {
         private readonly List<Afterimage> _items = new(8);

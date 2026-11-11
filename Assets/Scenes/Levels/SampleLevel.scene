@@ -1851,6 +1851,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerController: {fileID: 2100959420}
+  afterimagePrefab: {fileID: 4492115629568869392, guid: d5918cd7a3fd13740a89e823af491b90, type: 3}
 --- !u!1 &1657284872
 GameObject:
   m_ObjectHideFlags: 0

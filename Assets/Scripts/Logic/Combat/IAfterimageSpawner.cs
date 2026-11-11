@@ -9,7 +9,7 @@ namespace Refraction.Logic.Combat
         void Arm();
 
         /// <summary>冲刺起手时请求落影；返回 true 表示真的落了，调用方据此起冷却</summary>
-        bool TrySpawn(Vector2 pos, float now);
+        bool TrySpawn(Vector2 pos, float now, int facing);
 
         /// <summary>清空残影与待释放状态，重生与跨场景用</summary>
         void Clear();

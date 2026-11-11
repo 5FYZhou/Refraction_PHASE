@@ -169,5 +169,9 @@ namespace Refraction.Data
 
         [Tooltip("折跃连线的颜色。")]
         public Color afterimageLinkColor = new(0.55f, 0.9f, 1f, 0.9f);
+
+        [Tooltip("子弹在残影之间传输时的移动速度（单位/秒）：从当前残影中心直线走向下一枚的速度。\n0 表示瞬间抵达下一枚，看不到中间过程。")]
+        [Min(0f)]
+        public float bulletTransferSpeed = 26f;
     }
 }

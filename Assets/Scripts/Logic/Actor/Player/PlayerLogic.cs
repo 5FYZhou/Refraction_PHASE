@@ -125,7 +125,7 @@ namespace Refraction.Logic.Actor
             float now = ctx.GameTime.now;
             _chargeNow = now;
 
-            if (dashStarted && _afterimages != null && _afterimages.TrySpawn(ctx.WorldInfo.Pos, now))
+            if (dashStarted && _afterimages != null && _afterimages.TrySpawn(ctx.WorldInfo.Pos, now, ctx.WorldInfo.Face))
             {
                 _chargeCooldown.MarkUsed(now, _config.chargeCooldown);
                 _chargePhase = ChargePhase.None;

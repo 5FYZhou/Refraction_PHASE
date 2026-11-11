@@ -30,7 +30,8 @@ namespace Refraction.Logic.Actor
             Vector2 direction = AttackAim.Direction(ctx.WorldInfo.Face, ctx.InputSnapshot.Move.y);
 
             _launcher.Launch(new BulletSpawn(
-                ctx.WorldInfo.Pos, direction, _config.bulletSpeed, _config.bulletDamage, _config.bulletKnockback));
+                ctx.WorldInfo.Pos, direction, _config.bulletSpeed, _config.bulletDamage, _config.bulletKnockback,
+                _config.bulletTransferSpeed));
             _motor.AddExternalVelocity(AttackAim.RecoilSpeed(direction, _config, _posture.CrouchProgress));
         }
 

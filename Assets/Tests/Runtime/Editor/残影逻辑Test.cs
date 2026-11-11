@@ -32,7 +32,7 @@ namespace Refraction.Tests
         [Test]
         public void 没蓄满_冲刺不落影()
         {
-            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 0f), "没蓄满时残影系统不该生成");
+            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 0f, 1), "没蓄满时残影系统不该生成");
             Assert.AreEqual(0, _afterimages.Ledger.Count, "账本保持为空");
         }
 
@@ -41,8 +41,8 @@ namespace Refraction.Tests
         {
             _afterimages.Arm();
 
-            Assert.IsTrue(_afterimages.TrySpawn(new Vector2(3f, 0f), 1f), "蓄满后冲刺应当落影");
-            Assert.IsFalse(_afterimages.TrySpawn(new Vector2(4f, 0f), 2f), "同一份蓄力只换一枚残影");
+            Assert.IsTrue(_afterimages.TrySpawn(new Vector2(3f, 0f), 1f, 1), "蓄满后冲刺应当落影");
+            Assert.IsFalse(_afterimages.TrySpawn(new Vector2(4f, 0f), 2f, 1), "同一份蓄力只换一枚残影");
 
             Assert.AreEqual(1, _afterimages.Ledger.Count, "第二次请求不该再加一枚");
             Assert.AreEqual(3f, _afterimages.Ledger[0].Pos.x, Eps, "落点取请求时给的位置");
@@ -57,7 +57,7 @@ namespace Refraction.Tests
             for (int i = 0; i < 3; i++)
             {
                 _afterimages.Arm();
-                _afterimages.TrySpawn(new Vector2(i, 0f), i);
+                _afterimages.TrySpawn(new Vector2(i, 0f), i, 1);
             }
 
             Assert.AreEqual(2, _afterimages.Ledger.Count, "上限为 2 时不该涨到 3");
@@ -72,7 +72,7 @@ namespace Refraction.Tests
             _config.maxAfterimages = 0;
             _afterimages.Arm();
 
-            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 0f), "上限为 0 时残影无处可放");
+            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 0f, 1), "上限为 0 时残影无处可放");
             Assert.AreEqual(0, _afterimages.Ledger.Count);
         }
 
@@ -83,10 +83,10 @@ namespace Refraction.Tests
             _config.afterimageDuration = 1f;
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(0f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(0f, 0f), 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(1f, 0f), 0.5f);
+            _afterimages.TrySpawn(new Vector2(1f, 0f), 0.5f, 1);
 
             _afterimages.Tick(1.2f);
             Assert.AreEqual(1, _afterimages.Ledger.Count, "第一枚满 1 秒已过期，第二枚还没到点");
@@ -100,7 +100,7 @@ namespace Refraction.Tests
         {
             _config.afterimageDuration = 0f;
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
 
             _afterimages.Tick(999f);
 
@@ -113,15 +113,15 @@ namespace Refraction.Tests
             Assert.AreEqual(0, _afterimages.LinkCapacity, "空账本没有连线");
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
             Assert.AreEqual(0, _afterimages.LinkCapacity, "只有一枚连不起来");
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(1f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(1f, 0f), 0f, 1);
             Assert.AreEqual(1, _afterimages.LinkCapacity, "两枚只有一条，首尾是同一对");
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(2f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(2f, 0f), 0f, 1);
             Assert.AreEqual(3, _afterimages.LinkCapacity, "三枚两两相邻，末枚接回首枚");
         }
 
@@ -129,13 +129,13 @@ namespace Refraction.Tests
         public void 连线_末段接回第一枚()
         {
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(0f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(0f, 0f), 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(3f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(3f, 0f), 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(0f, 4f), 0f);
+            _afterimages.TrySpawn(new Vector2(0f, 4f), 0f, 1);
 
             Assert.IsTrue(_afterimages.TryGetLink(2, out Vector2 from, out Vector2 to), "第三段应成立");
             Assert.AreEqual(0f, from.x, Eps);
@@ -148,10 +148,10 @@ namespace Refraction.Tests
         public void 超出感应范围_不连()
         {
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(10f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(10f, 0f), 0f, 1);
 
             Assert.IsFalse(_afterimages.TryGetLink(0, out _, out _), "跨图的两个残影不该拉出超长连线");
 
@@ -165,10 +165,10 @@ namespace Refraction.Tests
             _config.afterimageLinkSenseRadius = 0f;
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(500f, 0f), 0f);
+            _afterimages.TrySpawn(new Vector2(500f, 0f), 0f, 1);
 
             Assert.IsTrue(_afterimages.TryGetLink(0, out _, out _), "0 表示不限距离");
         }
@@ -177,10 +177,10 @@ namespace Refraction.Tests
         public void 两端重合_不连()
         {
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(2f, 2f), 0f);
+            _afterimages.TrySpawn(new Vector2(2f, 2f), 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(new Vector2(2f, 2f), 0f);
+            _afterimages.TrySpawn(new Vector2(2f, 2f), 0f, 1);
 
             Assert.IsFalse(_afterimages.TryGetLink(0, out _, out _), "长度为 0 的线段画不出也没法判定");
         }
@@ -189,10 +189,10 @@ namespace Refraction.Tests
         public void 越界段号_不连()
         {
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.right, 0f);
+            _afterimages.TrySpawn(Vector2.right, 0f, 1);
 
             Assert.IsFalse(_afterimages.TryGetLink(-1, out _, out _), "负段号直接不成立");
             Assert.IsFalse(_afterimages.TryGetLink(_afterimages.LinkCapacity, out _, out _), "段号到上界之外不成立");
@@ -202,17 +202,17 @@ namespace Refraction.Tests
         public void 清空_连线与待释放一起复位()
         {
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.zero, 0f);
+            _afterimages.TrySpawn(Vector2.zero, 0f, 1);
 
             _afterimages.Arm();
-            _afterimages.TrySpawn(Vector2.right, 0f);
+            _afterimages.TrySpawn(Vector2.right, 0f, 1);
 
             _afterimages.Arm();
             _afterimages.Clear();
 
             Assert.AreEqual(0, _afterimages.Ledger.Count, "重生后不该留着上一处的残影");
             Assert.AreEqual(0, _afterimages.LinkCapacity, "连线一起没了");
-            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 5f), "清空也要把待释放状态清掉，不能拿旧的蓄力落影");
+            Assert.IsFalse(_afterimages.TrySpawn(Vector2.zero, 5f, 1), "清空也要把待释放状态清掉，不能拿旧的蓄力落影");
         }
     }
 }

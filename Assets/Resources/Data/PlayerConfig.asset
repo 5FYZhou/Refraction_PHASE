@@ -56,12 +56,13 @@ MonoBehaviour:
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
   chargePrepareTime: 0.5
-  chargeCooldown: 1.5
+  chargeCooldown: 0.5
   maxAfterimages: 2
-  afterimageDuration: 8
+  afterimageDuration: 30
   afterimageLinkDamage: 1
   afterimageLinkThickness: 0.25
   afterimageLinkSenseRadius: 6
   afterimageLinkDamageInterval: 0.5
   afterimageAlpha: 0.35
   afterimageLinkColor: {r: 0.55, g: 0.9, b: 1, a: 0.9}
+  bulletTransferSpeed: 26
