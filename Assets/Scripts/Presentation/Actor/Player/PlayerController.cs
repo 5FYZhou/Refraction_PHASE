@@ -38,6 +38,7 @@ namespace Refraction.Presentation.Actor
         private InputProvider _inputProvider;
         private InputBuffer _buffer;
         private PlayerLogic _logic;
+        private PlayerAfterimageField _afterimages;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -50,29 +51,34 @@ namespace Refraction.Presentation.Actor
         private Vector2 _curViewScale;
         private bool _warnedNoView;
 
+        private SpriteRenderer _viewRenderer;
+        private Color _viewBaseColor = Color.white;
+        private Sprite _viewBaseSprite;
+        private float _lastChargeProgress = -1f;
+        private bool _lastCharged;
+
+        private static readonly Color ChargeYellow = new(1f, 0.92f, 0.3f, 1f);
+        private static readonly Color ChargeOrange = new(1f, 0.5f, 0.08f, 1f);
+
         private void Awake()
         {
             // 必须放 Awake：GameRoot 可能在 Start 前就调 Attach/Tick，那帧 view 还没解析，会先报一次“找不到 View”
             CacheView();
         }
-
         private void Start()
         {
             _root = GameRoot.Instance;
             _root.RegisterSceneRoot(this);
         }
-
         private void OnDestroy()
         {
             // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
-
         private void OnEnable()
         {
             EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
         }
-
         private void OnDisable()
         {
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
@@ -100,6 +106,12 @@ namespace Refraction.Presentation.Actor
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
             _logic = new(moveMotor, config, _buffer, this);
+
+            if (view != null)
+            {
+                _afterimages = gameObject.AddComponent<PlayerAfterimageField>();
+                _afterimages.Init(_logic, config, view);
+            }
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
@@ -155,6 +167,8 @@ namespace Refraction.Presentation.Actor
 
             _logic.FixedTick(context);
 
+            _afterimages?.Sync();
+
             EventBus<PlayerDebugSnapshot>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,
                 moveMotor.LedgerVelocity,
@@ -190,7 +204,38 @@ namespace Refraction.Presentation.Actor
                 _curViewScale = _logic.CurViewScale;
                 SetViewScale(_curViewScale);
             }
+
+            ApplyChargeVisual(_logic.ChargeProgress, _logic.IsCharged);
         }
+
+        private void ApplyChargeVisual(float progress, bool charged)
+        {
+            if (Mathf.Approximately(progress, _lastChargeProgress) && charged == _lastCharged) return;
+
+            _lastChargeProgress = progress;
+            _lastCharged = charged;
+
+            if (_viewRenderer == null) return;
+
+            if (charged)
+            {
+                _viewRenderer.color = ChargeOrange;
+                _viewRenderer.sprite =  _viewBaseSprite;
+                return;
+            }
+
+            if (progress <= 0f)
+            {
+                _viewRenderer.color = _viewBaseColor;
+                _viewRenderer.sprite = _viewBaseSprite;
+                return;
+            }
+
+            _viewRenderer.color = Color.Lerp(_viewBaseColor, ChargeYellow, progress);
+            _viewRenderer.sprite = ChargeSprite;
+        }
+
+        private Sprite ChargeSprite => _viewBaseSprite;
 
         private void WarnNoGroundedPoint()
         {
@@ -247,6 +292,13 @@ namespace Refraction.Presentation.Actor
 
             _viewBasePos = view.localPosition;
             _viewBaseScale = view.localScale;
+
+            _viewRenderer = view.GetComponent<SpriteRenderer>();
+            if (_viewRenderer != null)
+            {
+                _viewBaseColor = _viewRenderer.color;
+                _viewBaseSprite = _viewRenderer.sprite;
+            }
 
             // y 压成 0 就再也换不回来了，宁可不做缩放
             if (Mathf.Abs(_viewBaseScale.y) < 1e-4f)

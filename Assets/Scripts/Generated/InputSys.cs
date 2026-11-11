@@ -138,6 +138,15 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Charge"",
+                    ""type"": ""Button"",
+                    ""id"": ""3f5a1d20-9c44-4b0e-8a6f-2d5c7b1e9a41"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -402,6 +411,17 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Crouch"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7c1e4b93-2f60-4d8a-9b57-6e0c3a2d1f88"",
+                    ""path"": ""<Keyboard>/o"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Charge"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1301,6 +1321,7 @@ namespace Refraction.Generated
             m_Player_Dash = m_Player.FindAction("Dash", throwIfNotFound: true);
             m_Player_Attack = m_Player.FindAction("Attack", throwIfNotFound: true);
             m_Player_Crouch = m_Player.FindAction("Crouch", throwIfNotFound: true);
+            m_Player_Charge = m_Player.FindAction("Charge", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Cancel = m_UI.FindAction("Cancel", throwIfNotFound: true);
@@ -1402,6 +1423,7 @@ namespace Refraction.Generated
         private readonly InputAction m_Player_Dash;
         private readonly InputAction m_Player_Attack;
         private readonly InputAction m_Player_Crouch;
+        private readonly InputAction m_Player_Charge;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1433,6 +1455,10 @@ namespace Refraction.Generated
             /// Provides access to the underlying input action "Player/Crouch".
             /// </summary>
             public InputAction @Crouch => m_Wrapper.m_Player_Crouch;
+            /// <summary>
+            /// Provides access to the underlying input action "Player/Charge".
+            /// </summary>
+            public InputAction @Charge => m_Wrapper.m_Player_Charge;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1474,6 +1500,9 @@ namespace Refraction.Generated
                 @Crouch.started += instance.OnCrouch;
                 @Crouch.performed += instance.OnCrouch;
                 @Crouch.canceled += instance.OnCrouch;
+                @Charge.started += instance.OnCharge;
+                @Charge.performed += instance.OnCharge;
+                @Charge.canceled += instance.OnCharge;
             }
 
             /// <summary>
@@ -1500,6 +1529,9 @@ namespace Refraction.Generated
                 @Crouch.started -= instance.OnCrouch;
                 @Crouch.performed -= instance.OnCrouch;
                 @Crouch.canceled -= instance.OnCrouch;
+                @Charge.started -= instance.OnCharge;
+                @Charge.performed -= instance.OnCharge;
+                @Charge.canceled -= instance.OnCharge;
             }
 
             /// <summary>
@@ -1803,6 +1835,13 @@ namespace Refraction.Generated
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnCrouch(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Charge" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnCharge(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

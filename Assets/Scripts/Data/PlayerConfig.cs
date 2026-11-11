@@ -129,5 +129,45 @@ namespace Refraction.Data
         [Tooltip("攻击后摇时长（秒）：开火后到攻击组回到 None 的等待，期间不响应新的攻击输入。\n0 表示没有后摇，开火后回到 None 即可再攻击（仍受 attackCooldown 限制）。")]
         [Min(0f)]
         public float attackRecoverTime = 0.12f;
+
+        [Header("充能 · 残影")]
+        [Tooltip("充能前摇时长（秒）：按一下充能键开始蓄力，走满进入蓄满态（玩家变橙）。\n0 表示按下当帧就蓄满。")]
+        [Min(0f)]
+        public float chargePrepareTime = 0.5f;
+
+        [Tooltip("充能冷却（秒）：从冲刺落影那一刻起算，不是从按键起算。\n冷却期间按充能键不响应；0 表示落影后立刻能再蓄。")]
+        [Min(0f)]
+        public float chargeCooldown = 1.5f;
+
+        [Tooltip("场上残影的最大个数：超过上限时新残影会顶掉最早留下的那一枚，而不是拒绝放置。")]
+        [Min(1)]
+        public int maxAfterimages = 4;
+
+        [Tooltip("残影持续时间（秒）：从落地那一刻起算，到点自动消失；0 表示不会自然消失，只等被数量上限顶掉。")]
+        [Min(0f)]
+        public float afterimageDuration = 8f;
+
+        [Tooltip("折跃连线的伤害（点）：0 表示只连线、不伤人。")]
+        [Min(0f)]
+        public float afterimageLinkDamage = 1f;
+
+        [Tooltip("折跃连线的判定粗细（米）：连线的判定方块宽度与画面上线的粗细共用这一个值。")]
+        [Min(0.01f)]
+        public float afterimageLinkThickness = 0.25f;
+
+        [Tooltip("残影的感应范围（米）：只有生成顺序相邻、且间距在这个范围内的一对残影才连线。\n防止在超远的两处落影，拉出一条横穿地图的长线；0 表示不限距离。")]
+        [Min(0f)]
+        public float afterimageLinkSenseRadius = 6f;
+
+        [Tooltip("同一目标被折跃连线反复结算的间隔（秒）：站进线里之后每隔这么久吃一次伤害。\n0 表示一直粘着就每个物理帧都掉血。")]
+        [Min(0f)]
+        public float afterimageLinkDamageInterval = 0.5f;
+
+        [Tooltip("残影落地时的透明度（起始值，不是恒定值）：之后随时间淡到表现层写死的终止透明度。")]
+        [Range(0f, 1f)]
+        public float afterimageAlpha = 0.35f;
+
+        [Tooltip("折跃连线的颜色。")]
+        public Color afterimageLinkColor = new(0.55f, 0.9f, 1f, 0.9f);
     }
 }

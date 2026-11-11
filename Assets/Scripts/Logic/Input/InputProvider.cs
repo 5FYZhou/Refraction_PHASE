@@ -1,6 +1,7 @@
 ﻿using Refraction.Generated;
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Refraction.Logic.Input
 {
@@ -14,6 +15,7 @@ namespace Refraction.Logic.Input
         private bool _jumpHeld;
         private bool _crouchHeld;
         private bool _attack;
+        private bool _charge;
 
         public InputProvider() { }
 
@@ -36,6 +38,7 @@ namespace Refraction.Logic.Input
             _jump |= _input.Player.Jump.WasPressedThisFrame();
             _dash |= _input.Player.Dash.WasPressedThisFrame();
             _attack |= _input.Player.Attack.WasPressedThisFrame();
+            _charge |= _input.Player.Charge.WasPressedThisFrame();
 
             _jumpHeld = _input.Player.Jump.IsPressed();
             _crouchHeld = _input.Player.Crouch.IsPressed();
@@ -44,11 +47,12 @@ namespace Refraction.Logic.Input
         /// <summary>物理帧取走一次按下沿；取走即清零，不能留着，否则会被反复消费</summary>
         public InputSnapshot ConsumeSnapshot()
         {
-            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack);
+            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge);
 
             _jump = false;
             _dash = false;
             _attack = false;
+            _charge = false;
 
             return snapshot;
         }

@@ -10,6 +10,8 @@ namespace Refraction.Logic.Combat
 
         /// <summary>接触伤害，敌人贴身时触发</summary>
         Contact = 2,
+
+        AfterimageLink = 3,
     }
 
     public readonly struct Damage

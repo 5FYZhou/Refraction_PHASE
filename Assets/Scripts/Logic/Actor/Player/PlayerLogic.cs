@@ -13,6 +13,7 @@ namespace Refraction.Logic.Actor
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
         private AttackGroup _attackGroup;
+        private ChargeController _charge;
         private TransitMotor _transit;
         private IMoveMotor _motor;
         private InputBuffer _buffer;
@@ -31,6 +32,7 @@ namespace Refraction.Logic.Actor
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
             _attackGroup = new(config, motor, launcher, _postureGroup);
+            _charge = new(config);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
@@ -56,6 +58,14 @@ namespace Refraction.Logic.Actor
         public PostureStateTag PostureTag => _postureGroup.Current;
 
         public AttackStateTag AttackTag => _attackGroup.Current;
+
+        public ChargePhase ChargeStage => _charge.Phase;
+
+        public float ChargeProgress => _charge.Progress;
+
+        public bool IsCharged => _charge.IsCharged;
+
+        public AfterimageLedger Afterimages => _charge.Afterimages;
 
         public ConditionStateTag ConditionTag => Conditions.Current;
 
@@ -83,9 +93,14 @@ namespace Refraction.Logic.Actor
             // 姿态先于移动：反过来会晚一帧，按下蹲键的那帧还能跳
             _postureGroup.Tick(in tick);
 
+            MovementStateTag beforeMove = _moveGroup.CurrentTag;
             _moveGroup.Tick(in tick);
 
+            bool dashStarted = beforeMove != MovementStateTag.Dash && _moveGroup.CurrentTag == MovementStateTag.Dash;
+
             _attackGroup.Tick(in tick);
+
+            _charge.Tick(in tick, dashStarted);
 
             _transit.AfterTick(in tick);
         }
@@ -95,7 +110,11 @@ namespace Refraction.Logic.Actor
             _curScale = _postureGroup.ViewScale;
         }
 
-        public void SpawnTo(Vector2 pos) => _motor.SpawnAt(pos, Vector2.zero);
+        public void SpawnTo(Vector2 pos)
+        {
+            _motor.SpawnAt(pos, Vector2.zero);
+            _charge.ClearAfterimages();
+        }
 
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {
