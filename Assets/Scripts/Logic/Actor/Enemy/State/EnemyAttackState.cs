@@ -43,7 +43,14 @@ namespace Refraction.Logic.Actor
                     break;
 
                 case EnemyAttackPhase.Dash:
-                    // 每帧重写：贴地吸附与物理接触都会改写横向速度，只在起手写一次守不住整段冲刺
+                    // 方向可能正对悬崖：前方一空就收手
+                    if (ctx.WorldInfo.LedgeAhead)
+                    {
+                        BeginRecovery(in ctx);
+                        break;
+                    }
+
+                    // 每帧重写：贴地吸附与碰撞都会改写横向速度
                     _motor.SetVelocityX(_lockedDir.x * _config.attackDashSpeed);
                     if (elapsed >= _config.attackDashDuration) BeginRecovery(in ctx);
                     break;

@@ -15,7 +15,7 @@ namespace Refraction.Logic.Actor
         {
             _owner = owner;
 
-            RegisterState(new EnemyPatrolState(motor, config));
+            RegisterState(new EnemyPatrolState(owner, motor, config));
             RegisterState(new EnemyChaseState(owner, motor, config));
             RegisterState(new EnemyAttackState(owner, motor, config));
         }

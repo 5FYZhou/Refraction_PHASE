@@ -7,11 +7,7 @@ namespace Refraction.Data
     public sealed class EnemyConfig : CharacterConfig
     {
         [Header("巡逻")]
-        [Tooltip("巡逻半径（单位）：以巡逻起点 x 为中心，在 [x − 半径, x + 半径] 内来回走。\n0 表示原地转身，不挪窝。")]
-        [Min(0f)]
-        public float patrolRadius = 4f;
-
-        [Tooltip("巡逻速度（单位/秒），不乘 moveSpeed；追踪速度直接复用 moveSpeed。")]
+        [Tooltip("巡逻速度（单位/秒），不乘 moveSpeed；追踪速度直接复用 moveSpeed。\n来回走的范围由预制体上的 PatrolCollider 决定，没有它就走到墙或悬崖。")]
         [Min(0f)]
         public float patrolSpeed = 2.5f;
 

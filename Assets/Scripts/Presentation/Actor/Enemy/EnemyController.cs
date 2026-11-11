@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>敌人组合根：把探测结果与世界采样喂给 EnemyLogic，巡逻/追踪/攻击的判定全在逻辑层</summary>
+    /// <summary>敌人组合根：只做装配与转发</summary>
     public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked
     {
         public int Order => SceneOrder.World;
@@ -25,6 +25,7 @@ namespace Refraction.Presentation.Actor
         private bool OpenAI = true;
 
         private const string DetectChildName = "DetectCollider";
+        private const string PatrolChildName = "PatrolCollider";
 
         private GameRoot _root;
         private bool _attached;
@@ -33,9 +34,15 @@ namespace Refraction.Presentation.Actor
         private PlayerController _target;
         private Transform _targetTransform;
 
+        private Collider2D _patrolZone;
+        private bool _hasPatrolBounds;
+        private float _patrolMinX;
+        private float _patrolMaxX;
+
         private void Awake()
         {
             CacheDetectZone();
+            CachePatrolZone();
         }
 
         private void Start()
@@ -70,11 +77,11 @@ namespace Refraction.Presentation.Actor
         {
             if (!_attached) return;
 
-            // 世界信息由 EnemyMotor 的物理探测给出，本层只负责组装 Context
+            // 世界信息由 EnemyMotor 探测，本层只组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
-            _logic.FixedTick(context, Sense());
+            _logic.FixedTick(context, Sense(), SamplePatrolArea());
 
             // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
             if (!_logic.IsAlive) Destroy(gameObject);
@@ -109,7 +116,7 @@ namespace Refraction.Presentation.Actor
             _targetTransform = null;
         }
 
-        /// <summary>触发器消息只保证送到碰撞体所在的那个 GameObject，碰撞体在子物体上，就地补一个转发器</summary>
+        /// <summary>触发器消息只送到碰撞体所在的 GameObject，就地补一个转发器</summary>
         private void CacheDetectZone()
         {
             Transform detect = transform.Find(DetectChildName);
@@ -132,5 +139,36 @@ namespace Refraction.Presentation.Actor
             forwarder.Init(this);
         }
 
+        /// <summary>边界在装配时快照一次：子物体触发器跟着走，实时读等于当前位置</summary>
+        private void CachePatrolZone()
+        {
+            Transform zone = transform.Find(PatrolChildName);
+            if (zone == null) return;
+
+            _patrolZone = zone.GetComponent<Collider2D>();
+            if (_patrolZone == null)
+            {
+                Debug.LogWarning($"[EnemyController] {PatrolChildName} 上没有 Collider2D：巡逻范围按整平台处理。");
+                return;
+            }
+
+            Bounds bounds = _patrolZone.bounds;
+            _patrolMinX = bounds.min.x;
+            _patrolMaxX = bounds.max.x;
+            _hasPatrolBounds = _patrolMaxX - _patrolMinX > 0.01f;
+        }
+
+        private EnemyPatrolArea SamplePatrolArea()
+        {
+            if (_patrolZone == null || !_hasPatrolBounds) return default;
+
+            Vector3 self = transform.position;
+            Bounds bounds = _patrolZone.bounds;
+
+            bool inside = self.x >= bounds.min.x && self.x <= bounds.max.x
+                          && self.y >= bounds.min.y && self.y <= bounds.max.y;
+
+            return inside ? new EnemyPatrolArea(true, _patrolMinX, _patrolMaxX) : default;
+        }
     }
 }

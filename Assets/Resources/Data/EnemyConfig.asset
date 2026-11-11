@@ -21,7 +21,6 @@ MonoBehaviour:
   maxFallSpeed: 20
   maxRiseSpeed: 20
   fallGravity: 70
-  patrolRadius: 4
   patrolSpeed: 2.5
   loseTargetTime: 1.5
   chaseStopDistance: 2.5
