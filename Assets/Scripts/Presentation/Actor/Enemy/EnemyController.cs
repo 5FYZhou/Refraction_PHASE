@@ -73,6 +73,12 @@ namespace Refraction.Presentation.Actor
             _attached = true;
         }
 
+        public bool AIEnabled => OpenAI;
+
+        public bool HasTarget => _target != null;
+
+        public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
+
         public void FixedTick(float deltaTime)
         {
             if (!_attached) return;

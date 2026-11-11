@@ -1,5 +1,7 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using Refraction.Logic.Events;
+using Refraction.Presentation.Actor;
 using TMPro;
 using UnityEngine;
 
@@ -18,6 +20,8 @@ namespace Refraction.Presentation.UI
         /// <summary>子物体名，必须与预制体里那个 TMP 文本一致，改名后面板只是不刷新</summary>
         private const string TextNodeName = "TxtInfo";
 
+        private const string EnemyTextNodeName = "TxtEnemyInfo";
+
         [Tooltip("文本刷新间隔（秒）。逐帧重建字符串会持续产生垃圾，按这个间隔抽样一次")]
         [Min(0f)]
         [SerializeField]
@@ -25,7 +29,10 @@ namespace Refraction.Presentation.UI
 
         private readonly StringBuilder _builder = new(256);
 
+        private readonly StringBuilder _enemyBuilder = new(256);
+
         private TMP_Text _text;
+        private TMP_Text _enemyText;
         private float _nextRefresh;
         private int _curHealth;
         private int _maxHealth;
@@ -34,6 +41,7 @@ namespace Refraction.Presentation.UI
         {
             base.Awake();
             _text = GetComponent<TMP_Text>(TextNodeName);
+            _enemyText = GetComponent<TMP_Text>(EnemyTextNodeName);
         }
 
         /// <summary>保留预制体里写的占位文本：第一帧快照到达前也能看出面板活着</summary>
@@ -93,6 +101,35 @@ namespace Refraction.Presentation.UI
                     .Append("\n血量：").Append(_curHealth).Append('/').Append(_maxHealth);
 
             _text.SetText(_builder);
+
+            AppendEnemies();
+        }
+
+        private void AppendEnemies()
+        {
+            if (_enemyText == null || root == null) return;
+
+            _enemyBuilder.Clear();
+            _enemyBuilder.Append("敌人");
+
+            bool any = false;
+            IReadOnlyList<ISceneRoot> roots = root.SceneRoots;
+
+            for (int i = 0; i < roots.Count; i++)
+            {
+                EnemyController enemy = roots[i] as EnemyController;
+                if (enemy == null || !enemy.AIEnabled) continue;
+
+                any = true;
+
+                _enemyBuilder.Append("\n").Append(enemy.name)
+                             .Append("目标\n").Append(enemy.HasTarget ? "有" : "无")
+                             .Append("").Append(enemy.CurrentTag.ToString());
+            }
+
+            if (!any) _enemyBuilder.Append(" 无");
+
+            _enemyText.SetText(_enemyBuilder);
         }
 
         /// <summary>固定两位小数：速度是连续量，整数位跳动看不出一帧内的变化</summary>

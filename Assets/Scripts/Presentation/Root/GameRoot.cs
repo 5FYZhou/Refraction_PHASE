@@ -36,6 +36,8 @@ namespace Refraction.Presentation
         public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
         public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
 
+        public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
+
         protected override void Awake()
         {
             base.Awake();
