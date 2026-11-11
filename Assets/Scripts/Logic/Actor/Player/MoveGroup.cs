@@ -45,13 +45,6 @@ namespace Refraction.Logic.Actor
         /// <summary>当前移动状态，门按它决定过门后的运动</summary>
         public MovementStateTag CurrentTag =>
             machine.CurrentState == null ? MovementStateTag.None : machine.CurrentState.Tag;
-
-        public void StartDashFromTransit(Vector2 dir, in LogicContext ctx)
-        {
-            _dashState.Configure(dir);
-            _dashCooldown.MarkUsed(ctx.GameTime.now, _config.dashCooldown);
-            ChangeState(MovementStateTag.Dash, ctx);
-        }
          
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {

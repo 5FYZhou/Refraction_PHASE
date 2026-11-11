@@ -13,8 +13,7 @@ namespace Refraction.Logic.Actor
         {
             None,
             Run,
-            Launch,
-            Dash
+            Launch
         }
 
         /// <summary>到达判定容差（世界单位）</summary>
@@ -31,8 +30,6 @@ namespace Refraction.Logic.Actor
         private Vector2 _landing;
         private int _dirX;
         private float _beginTime;
-        private bool _pendingDash;
-        private Vector2 _dashDir = Vector2.zero;
 
         private float _launchVy;
         private float _flightTime;
@@ -54,7 +51,6 @@ namespace Refraction.Logic.Actor
         public void Begin(in DoorEntry entry, MovementStateTag enterTag, int enterFace, in LogicContext ctx)
         {
             _mode = Mode.None;
-            _pendingDash = false;
             _launchApplied = false;
             _xDone = false;
             _beginTime = ctx.GameTime.now;
@@ -76,15 +72,6 @@ namespace Refraction.Logic.Actor
         {
             if (_mode == Mode.None) return ctx;
 
-            // 冲刺重启必须在帧首做：DashState.Enter 写的是账本，晚于 Commit 会被下一次 BeginStep 清掉
-            if (_pendingDash)
-            {
-                _pendingDash = false;
-                _moveGroup.StartDashFromTransit(_dashDir, ctx);
-            }
-
-            if (_mode == Mode.Dash) return ctx;
-
             // 水平到了就收掉假输入，别一路推着玩家冲过落点
             InputSnapshot fake = new(new Vector2(_xDone ? 0f : _dirX, 0f), false, false, false, false, false, false);
             return new LogicContext(fake, ctx.WorldInfo, ctx.GameTime);
@@ -97,12 +84,6 @@ namespace Refraction.Logic.Actor
             {
                 case Mode.None:
                     return;
-
-                case Mode.Dash:
-                    // 冲刺按状态机自己走完，不再判落点；不加 return 会掉进 Run 分支，_dirX 为 0 时当帧就结束
-                    if (_moveGroup.CurrentTag != MovementStateTag.Dash) _mode = Mode.None;
-                    return;
-
                 case Mode.Run:
                 {
                     // 用预测位置判：帧首位置落后一帧，按当前水平速度会冲过落点
@@ -110,7 +91,6 @@ namespace Refraction.Logic.Actor
                     if ((_landing.x - nextX) * _dirX <= ArriveEpsilon) _mode = Mode.None;
                     return;
                 }
-
                 case Mode.Launch:
                 {
                     // 状态机在 Tick 里会按“跳跃键是否按住”砍竖直速度、按上升/顶点换重力，
