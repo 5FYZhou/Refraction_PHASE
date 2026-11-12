@@ -81,6 +81,7 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: c054cdf82763e1b47b8350caed29d612, type: 2}
   moveMotor: {fileID: 8012155498594749596}
   bulletPre: {fileID: 6832848243399639401, guid: 9495aa813a51cf4459163c6433126aba, type: 3}
+  spawnT: {fileID: 0}
 --- !u!114 &8012155498594749596
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,7 +174,7 @@ CapsuleCollider2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 384
+    m_Bits: 448
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2
