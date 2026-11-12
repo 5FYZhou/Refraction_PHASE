@@ -1513,6 +1513,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: 'Player '
       objectReference: {fileID: 0}
+    - target: {fileID: 4553412713207579908, guid: c971767fc8408e141af0d5a5646b1a58, type: 3}
+      propertyPath: spawnT
+      value: 
+      objectReference: {fileID: 1984433627}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2463,6 +2467,7 @@ GameObject:
   - component: {fileID: 1984433627}
   - component: {fileID: 1984433626}
   - component: {fileID: 1984433625}
+  - component: {fileID: 1984433628}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: Spwan
@@ -2579,6 +2584,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1984433628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984433624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7089d3e9da02224a839d453d8be17c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashSeconds: 0.4
 --- !u!1 &1989948937
 GameObject:
   m_ObjectHideFlags: 0
@@ -2686,13 +2704,13 @@ SceneRoots:
   m_Roots:
   - {fileID: 1710494815}
   - {fileID: 1917799061}
-  - {fileID: 1438995034}
-  - {fileID: 204479833}
   - {fileID: 983626008}
   - {fileID: 1158167665}
   - {fileID: 1624415265}
   - {fileID: 468153873}
+  - {fileID: 1438995034}
   - {fileID: 1984433627}
+  - {fileID: 204479833}
   - {fileID: 381318665}
   - {fileID: 1754589222}
   - {fileID: 1313775040}

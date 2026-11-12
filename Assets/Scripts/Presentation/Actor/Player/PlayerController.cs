@@ -7,6 +7,7 @@ using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Combat;
+using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
 using UnityEngine;
 
@@ -31,9 +32,9 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private GameObject bulletPre;
 
+        [Tooltip("存档点锚点：场景里的 Spawn 对象，玩家站在它的碰撞体范围内按 W 存档。留空表示本关没有存档点。")]
         [SerializeField]
         private Transform spawnT;
-
 
         private GameRoot _root;
         private bool _attached = false;
@@ -42,6 +43,7 @@ namespace Refraction.Presentation.Actor
         private InputBuffer _buffer;
         private PlayerLogic _logic;
         private IAfterimageSpawner _afterimageSpawner;
+        private Spawn _checkpoint;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -115,10 +117,20 @@ namespace Refraction.Presentation.Actor
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
 
+            _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
+            if (spawnT != null && _checkpoint == null)
+            {
+                Debug.LogWarning($"[PlayerController] 存档点 {spawnT.name} 上没挂 Spawn 脚本，按 W 不会存档。");
+            }
+
             _attached = true;
 
-            // 从门里进来就落到那扇门；首关没有落点，保持场景里摆的位置
-            if (_root.TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace))
+            // 跨关回档的落点优先于门；首关两者都没有，保持场景里摆的位置
+            if (_root.TryConsumeRespawnPoint(out Vector2 respawn))
+            {
+                _logic.SpawnTo(respawn);
+            }
+            else if (_root.TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace))
             {
                 SpawnAtEntry(in entry, enterTag, enterFace);
             }
@@ -186,19 +198,46 @@ namespace Refraction.Presentation.Actor
                 _logic.PostureTag,
                 _logic.AttackTag));
 
-            // 掉血到 0 暂时按满血回位处理（没有独立死亡流程），与掉出世界同一套兜底
+            // 掉血到 0：回存档点，连存档记录都没有才退回原地满血
             if (!_logic.IsAlive)
             {
-                _logic.Revive();
-                if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+                HandleDeath();
                 return;
             }
 
-            // 掉出世界：回到逻辑层记下的最后一次落脚点
-            if (context.WorldInfo.Pos.y < _spawnY && !_logic.RespawnToLastGrounded())
+            // 掉出世界：本关有存档点先回存档点
+            if (context.WorldInfo.Pos.y < _spawnY)
             {
-                WarnNoGroundedPoint();
+                if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint)) _logic.SpawnTo(checkpoint);
+                else if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
             }
+
+            if (context.InputSnapshot.SavePressed) TrySaveCheckpoint();
+        }
+
+        private void HandleDeath()
+        {
+            if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
+            {
+                _logic.Revive();
+                _logic.SpawnTo(checkpoint);
+                return;
+            }
+
+            if (_root.TryStartRespawnInCheckpointLevel()) return;
+
+            _logic.Revive();
+            if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+        }
+
+        private void TrySaveCheckpoint()
+        {
+            if (_checkpoint == null || !_checkpoint.HasPlayer) return;
+
+            Vector2 pivot = _checkpoint.Point;
+            pivot.y -= moveMotor.FeetOffsetY;
+
+            if (_root.SaveCheckpoint(pivot)) _checkpoint.Flash();
         }
 
         public void RenderTick(float deltaTime)

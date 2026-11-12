@@ -30,8 +30,15 @@ namespace Refraction.Presentation
         private int _entryFace;
         private bool _hasEntryPoint;
 
+        private readonly CheckpointBook _checkpoints = new();
+        private Vector2 _pendingRespawn;
+        private bool _hasPendingRespawn;
+        private bool _warnedNoLevel;
+
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
+
+        public int LevelId => _doorReader != null ? _doorReader.LevelId : 0;
 
         public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
         public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
@@ -82,6 +89,7 @@ namespace Refraction.Presentation
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
+            _hasPendingRespawn = false;
             _doorReader = null;
         }
 
@@ -122,6 +130,68 @@ namespace Refraction.Presentation
             if (!_hasEntryPoint) return false;
 
             _hasEntryPoint = false;
+            return true;
+        }
+
+        public bool SaveCheckpoint(Vector2 pivot)
+        {
+            if (_checkpoints.Save(LevelId, pivot)) return true;
+
+            if (!_warnedNoLevel)
+            {
+                _warnedNoLevel = true;
+                Debug.LogError($"[GameRoot] 场景 \"{SceneManager.GetActiveScene().name}\" 不是 Level_正整数，存档点在这里不生效。");
+            }
+
+            return false;
+        }
+
+        public bool TryGetLocalCheckpoint(out Vector2 pivot)
+        {
+            pivot = default;
+
+            if (!_checkpoints.TryGetRespawn(out Vector2 point, out int level)) return false;
+            if (level != LevelId) return false;
+
+            pivot = point;
+            return true;
+        }
+
+        public bool TryStartRespawnInCheckpointLevel()
+        {
+            if (!_checkpoints.TryGetRespawn(out Vector2 point, out int level)) return false;
+
+            string sceneName = SceneName.GetLevelName(level);
+
+            if (!Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                Debug.LogError($"[GameRoot] 存档关 \"{sceneName}\" 不在 Build Settings 里，无法回到存档点。");
+                return false;
+            }
+
+            _pendingRespawn = point;
+            _hasPendingRespawn = true;
+
+            try
+            {
+                SceneManager.LoadScene(sceneName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _hasPendingRespawn = false;
+                Debug.LogError($"[GameRoot] 加载存档关 \"{sceneName}\" 失败：{ex.Message}");
+                return false;
+            }
+        }
+
+        public bool TryConsumeRespawnPoint(out Vector2 pivot)
+        {
+            pivot = _pendingRespawn;
+
+            if (!_hasPendingRespawn) return false;
+
+            _hasPendingRespawn = false;
             return true;
         }
 

@@ -141,6 +141,8 @@ namespace Refraction.Presentation
         /// <summary>脚底到枢轴的高度差</summary>
         public override float FeetOffsetY => feetRef != null ? feetRef.position.y - transform.position.y : ColliderBottomOffset();
 
+        public override Collider2D BodyCollider => bodyCollider;
+
         protected override void Awake()
         {
             base.Awake();

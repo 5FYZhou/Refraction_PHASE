@@ -37,6 +37,8 @@ namespace Refraction.Presentation
         /// <summary>身体高度倍率（1=站立），脚底不动</summary>
         public abstract void SetBodyScale(float scale);
 
+        public virtual Collider2D BodyCollider => null;
+
         /// <summary>头顶空间是否够从蹲姿站起</summary>
         public abstract bool CanStandUp(float standHeight, float crouchHeight);
 
