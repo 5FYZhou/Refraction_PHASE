@@ -13,16 +13,20 @@ namespace Refraction.Logic.Actor
 
         private readonly PlayerConfig _config;
         private readonly Cooldown _cooldown = new();
+        private readonly WhiteAttackState _white;
 
         public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture)
         {
             _config = config;
+            _white = new WhiteAttackState(config, motor, launcher, posture);
 
             RegisterState(new NoneAttackState());
             RegisterState(new WhiteAttackPrepareState(config));
-            RegisterState(new WhiteAttackState(config, motor, launcher, posture));
+            RegisterState(_white);
             RegisterState(new WhiteAttackRecoverState(config));
         }
+
+        public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
 
         public AttackStateTag Current => machine.CurrentState?.Tag ?? AttackStateTag.None;
 

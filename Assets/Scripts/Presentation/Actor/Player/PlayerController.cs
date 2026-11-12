@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked
     {
         private const float BlinkHz = 5f;
         private const float BlinkMinAlpha = 0.3f;
@@ -31,9 +31,6 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private MoveMotor moveMotor;
 
-        [Tooltip("子弹预制体。")]
-        [SerializeField]
-        private GameObject bulletPre;
 
         [Tooltip("存档点锚点：场景里的 Spawn 对象，玩家站在它的碰撞体范围内按 W 存档。留空表示本关没有存档点。")]
         [SerializeField]
@@ -47,6 +44,7 @@ namespace Refraction.Presentation.Actor
         private PlayerLogic _logic;
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
+        private IBulletLauncher _launcher;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -107,14 +105,13 @@ namespace Refraction.Presentation.Actor
 
             Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
             Require.Assigned(config, nameof(PlayerController), nameof(config));
-            Require.Assigned(bulletPre, nameof(GameObject), nameof(bulletPre));
 
             _inputProvider = _root.Input;
             _buffer = new(
                 Mathf.Max(config.inputBufferTime, config.dashBufferTime),
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
-            _logic = new(moveMotor, config, _buffer, this);
+            _logic = new(moveMotor, config, _buffer, _launcher);
 
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
@@ -156,9 +153,17 @@ namespace Refraction.Presentation.Actor
             _logic?.BindAfterimageSpawner(spawner);
         }
 
+        public void BindBulletLauncher(IBulletLauncher launcher)
+        {
+            _launcher = launcher;
+            _logic?.BindBulletLauncher(launcher);
+        }
+
         public Transform View => view;
 
         public PlayerConfig Config => config;
+
+        public IHitLanded HitSink => _logic;
 
         private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {
@@ -166,20 +171,6 @@ namespace Refraction.Presentation.Actor
 
             _logic.SpawnTo(pivot);
             _logic.BeginTransit(in entry, enterTag, enterFace);
-        }
-
-        public void Launch(in BulletSpawn spawn)
-        {
-            if (bulletPre == null)
-            {
-                Debug.LogError("[PlayerController] 找不到子弹预制体，本次开火不生成子弹。");
-                return;
-            }
-
-            GameObject go = Instantiate(bulletPre);
-            Bullet bullet = go.GetComponent<Bullet>();
-            if (bullet == null) bullet = go.AddComponent<Bullet>();
-            bullet.Init(in spawn, transform, _logic);
         }
 
         public void FixedTick(float deltaTime)

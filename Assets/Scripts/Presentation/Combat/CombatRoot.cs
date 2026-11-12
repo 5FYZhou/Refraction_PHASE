@@ -12,6 +12,7 @@ namespace Refraction.Presentation.Combat
         public int Order => SceneOrder.World;
 
         private const string AfterimagePath = "Prefabs/AfterImage";
+        private const string BulletPath = "Prefabs/Bullet";
 
         [SerializeField]
         private PlayerController playerController;
@@ -19,8 +20,12 @@ namespace Refraction.Presentation.Combat
         [SerializeField]
         private GameObject afterimagePrefab;
 
+        [SerializeField]
+        private GameObject bulletPrefab;
+
         private AfterimageLogic _afterimages;
         private AfterimageField _field;
+        private BulletLogic _bullets;
         private LevelManager _levelMgr;
         private GameRoot _root;
 
@@ -52,6 +57,8 @@ namespace Refraction.Presentation.Combat
 
             _afterimages = new AfterimageLogic(config);
             playerController.BindAfterimageSpawner(_afterimages);
+
+            AttachBullets();
 
             if (playerController.View == null) return;
 
@@ -89,11 +96,33 @@ namespace Refraction.Presentation.Combat
 
         public void FixedTick(float deltaTime)
         {
-            if (_afterimages == null) return;
+            if (_afterimages != null)
+            {
+                _afterimages.Tick(Time.fixedTime);
 
-            _afterimages.Tick(Time.fixedTime);
+                if (_field != null) _field.Sync();
+            }
 
-            if (_field != null) _field.Sync();
+            _bullets?.Tick(deltaTime);
+        }
+
+        private void AttachBullets()
+        {
+            if (_bullets != null) return;
+
+            GameObject host = new(nameof(BulletField));
+            host.transform.SetParent(transform, false);
+
+            GameObject prefab = bulletPrefab != null
+                ? bulletPrefab
+                : Resources.Load<GameObject>(BulletPath);
+
+            BulletField field = host.AddComponent<BulletField>();
+            field.Init(prefab, playerController.transform, playerController.HitSink);
+
+            _bullets = new BulletLogic(field);
+
+            playerController.BindBulletLauncher(_bullets);
         }
     }
 }

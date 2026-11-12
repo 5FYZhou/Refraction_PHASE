@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>攻击盒：碰到对方的受击盒就结算一次伤害，数值由挂上来的 IAttack 给</summary>
+    /// <summary>攻击盒：碰到对方的受击盒就结算一次伤害，数值由挂上来的 IAttacker 给</summary>
     public sealed class AttackBox : MonoBehaviour
     {
         public IAttacker Attacker { get; private set; }

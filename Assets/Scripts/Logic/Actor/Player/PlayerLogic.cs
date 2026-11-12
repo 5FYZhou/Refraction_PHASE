@@ -217,6 +217,8 @@ namespace Refraction.Logic.Actor
             if (_chargePhase == ChargePhase.Charged) spawner?.Arm();
         }
 
+        public void BindBulletLauncher(IBulletLauncher launcher) => _attackGroup.BindLauncher(launcher);
+
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {
             _pendingEntry = entry;
