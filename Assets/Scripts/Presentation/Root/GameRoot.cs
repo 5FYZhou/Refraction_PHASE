@@ -6,6 +6,7 @@ using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
+using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
@@ -19,11 +20,13 @@ namespace Refraction.Presentation
     {
         private readonly List<ISceneRoot> _sceneRoots = new();
         private readonly List<ISceneRoot> _pendingAttach = new();
+        private readonly List<IService> _services = new();
 
         private InputProvider _inputProvider;
         private DoorReader _doorReader;
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
+        private PauseService _pauseService;
 
         private int _pendingDoorId;
         private MovementStateTag _pendingDoorTag;
@@ -39,15 +42,21 @@ namespace Refraction.Presentation
         private bool _hasPendingRespawn;
         private bool _warnedNoLevel;
 
+        private WorldPolarity _world = WorldPolarity.White;
+
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
 
         public IDoorReader DoorReader => _doorReader;
 
+        public WorldPolarity World => _world;
+
         public int LevelId => _doorReader != null ? _doorReader.LevelId : 0;
 
         public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
         public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
+
+        public PauseService Pause => _pauseService;
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -80,6 +89,7 @@ namespace Refraction.Presentation
 
             _inputProvider.Init();
             EventBus<LevelLoadRequested>.Subscribe(OnLevelLoadRequested);
+            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -87,6 +97,9 @@ namespace Refraction.Presentation
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             EventBus<LevelLoadRequested>.Unsubscribe(OnLevelLoadRequested);
+            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+
+            DisposeServices();
 
             _inputProvider?.Dispose();
             _inputProvider = null;
@@ -95,6 +108,13 @@ namespace Refraction.Presentation
             _pendingAttach.Clear();
             _hasPendingRespawn = false;
             _doorReader = null;
+            _world = WorldPolarity.White;
+        }
+
+        private void OnWorldReversed(WorldReversed evt)
+        {
+            _world = _world == WorldPolarity.White ? WorldPolarity.Black : WorldPolarity.White;
+            EventBus<WorldPolarityChanged>.Publish(new(_world));
         }
 
         /// <summary>首关装配：用 Inspector 里连好的引用。玩家的接入走场景根注册表，这里不碰。</summary>
@@ -102,8 +122,44 @@ namespace Refraction.Presentation
         {
             _inputProvider = new();
 
+            _pauseService = new PauseService(new Adapters.GameTimer());
+            RegisterService(_pauseService);
+
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
+        }
+
+        public void RegisterService(IService service)
+        {
+            if (service == null || _services.Contains(service)) return;
+
+            _services.Add(service);
+            service.Init();
+        }
+
+        private void TickServices(float deltaTime, float unscaledDeltaTime)
+        {
+            for (int i = 0; i < _services.Count; i++)
+            {
+                _services[i].Tick(deltaTime, unscaledDeltaTime);
+            }
+        }
+
+        private void DisposeServices()
+        {
+            for (int i = _services.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    _services[i].Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
+
+            _services.Clear();
         }
 
         /// <summary>注册场景根（重复是 no-op）。真正的 Attach 推迟到下一个被驱动的帧，按 Order 顺序执行。</summary>
@@ -345,6 +401,7 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Tick();
+            TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             TickSceneRootsRender(Time.deltaTime);
         }
 

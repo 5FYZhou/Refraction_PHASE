@@ -41,6 +41,16 @@ namespace Refraction.Logic.Events
     {
     }
 
+    public readonly struct WorldPolarityChanged
+    {
+        public readonly WorldPolarity World;
+
+        public WorldPolarityChanged(WorldPolarity world)
+        {
+            World = world;
+        }
+    }
+
     public readonly struct PlayerPolarityChanged
     {
         public readonly int cur;
