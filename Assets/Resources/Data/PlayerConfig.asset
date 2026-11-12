@@ -35,17 +35,17 @@ MonoBehaviour:
   airJumpSpeed: 12
   dashSpeed: 14.7
   dashDuration: 0.22
-  dashCooldown: 0.25
+  dashCooldown: 0.12
   maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
   crouchPrepareTime: 0.1
   crouchHeightRatio: 0.5
   crouchMoveSpeedScale: 0.65
-  crouchRecoilScale: 0.7
-  crouchAllowJump: 0
-  crouchAllowDash: 0
-  crouchGroundGrace: 0.08
+  crouchRecoilScale: 0.44
+  crouchAllowJump: 1
+  crouchAllowDash: 1
+  crouchGroundGrace: 0.33
   bulletDamage: 20
   attackCooldown: 0.4
   bulletSpeed: 18
@@ -57,11 +57,11 @@ MonoBehaviour:
   attackRecoverTime: 0.12
   chargePrepareTime: 0.5
   chargeCooldown: 0.5
-  maxAfterimages: 4
+  maxAfterimages: 3
   afterimageDuration: 30
   afterimageLinkDamage: 1
   afterimageLinkThickness: 0.25
   afterimageLinkSenseRadius: 10
   afterimageAlpha: 0.35
-  afterimageLinkColor: {r: 0.55, g: 0.9, b: 1, a: 0.50980395}
+  afterimageLinkColor: {r: 0.9329341, g: 0.93710685, b: 0.82807237, a: 0.50980395}
   bulletTransferSpeed: 26
