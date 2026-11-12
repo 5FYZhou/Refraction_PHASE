@@ -120,7 +120,7 @@ namespace Refraction.Logic.Combat
             return shot != null ? shot.Damage : default;
         }
 
-        /// <summary>销毁一发：表现层撞到 bound、地面或敌人时调这里，本层摘账再让视图回收</summary>
+        /// <summary>收一发：撞到 bound、地面，或命中敌人结算完时调这里，本层摘账再让视图回池</summary>
         public void Kill(int id)
         {
             Shot shot = Find(id);

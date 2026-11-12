@@ -30,7 +30,7 @@ namespace Refraction.Logic.Combat
         }
     }
 
-    /// <summary>子弹表现层端口：逻辑层只下发姿势与生死，刚体、碰撞体、销毁都归实现侧</summary>
+    /// <summary>子弹表现层端口：逻辑层只下发姿势与生死，刚体、碰撞体、回收都归实现侧</summary>
     public interface IBulletView
     {
         /// <summary>飞行中位置归物理，逻辑层跟读而不自己积分</summary>
