@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>白色子弹：直线飞行，进残影后按路径走位，再从残影朝向出射</summary>
-    /// <remarks>伤害自己结算：击退方向要用飞行方向，且要排掉开火者自己</remarks>
+    /// <summary>白子弹：直线飞行，进残影后按路径走位再出射</summary>
+    /// <remarks>伤害自己结算：击退方向用飞行方向，排掉开火者</remarks>
     public sealed class Bullet : MonoBehaviour, IAttack, ISceneRoot, IPhysicsTicked
     {
         private enum State
@@ -19,6 +19,7 @@ namespace Refraction.Presentation.Combat
 
         private const string BoundTag = "Bound";
         private const int GroundLayer = 6;
+        private const int PlayerLayer = 7;
         private const float ArriveEps = 1e-4f;
 
         private readonly List<TransferNode> _plan = new();
@@ -40,7 +41,7 @@ namespace Refraction.Presentation.Combat
         private int _hotFrom = -1;
         private int _hotTo = -1;
 
-        /// <summary>生成后由组合根调用一次；预制体没刚体时补一个</summary>
+        /// <summary>组合根调用一次；没刚体时补一个</summary>
         public void Init(in BulletSpawn spawn, Transform owner)
         {
             _owner = owner;
@@ -61,12 +62,12 @@ namespace Refraction.Presentation.Combat
 
             _colliders = GetComponents<Collider2D>();
 
-            // 默认朝右（+X），直接按飞行方向旋转
+            // 默认朝右（+X），按飞行方向旋转
             float angle = Mathf.Atan2(spawn.Direction.y, spawn.Direction.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
             transform.position = new Vector3(spawn.Origin.x, spawn.Origin.y, transform.position.z);
 
-            // 预制体上的攻击盒会重复结算，本弹自己算
+            // 预制体自带攻击盒会重复结算，本弹自己算
             AttackBox attackBox = GetComponent<AttackBox>();
             if (attackBox != null) attackBox.SetAttack(this);
 
@@ -76,7 +77,7 @@ namespace Refraction.Presentation.Combat
 
         public void Attach() { }
 
-        // 传输只做位移，路径走完或目标失效就地出射
+        // 路径走完或目标失效就地出射
         public void FixedTick(float deltaTime)
         {
             if (_state != State.Transporting || _rb == null) return;
@@ -119,14 +120,11 @@ namespace Refraction.Presentation.Combat
         {
             if (other == null) return;
 
-            // 出生点在开火者体内，先排自己人
-            if (_owner != null && (other.transform == _owner || other.transform.IsChildOf(_owner))) return;
+            // Bound 是地图边界，穿过去飞，飞出才销毁
+            if (other.CompareTag(BoundTag)) return;
 
-            if (other.CompareTag(BoundTag))
-            {
-                Destroy(gameObject);
-                return;
-            }
+            // 排开火者
+            if (_owner != null && (other.transform == _owner || other.transform.IsChildOf(_owner))) return;
 
             AfterimageAnchor anchor = other.GetComponentInParent<AfterimageAnchor>();
             if (anchor != null)
@@ -135,30 +133,32 @@ namespace Refraction.Presentation.Combat
                 return;
             }
 
-            // 打在墙地上一并消散
             if (other.gameObject.layer == GroundLayer)
             {
                 Destroy(gameObject);
                 return;
             }
 
-            // 命中即消散，一颗只结算一次
+            // 命中即消散，只结算一次
             Destroy(gameObject);
         }
 
         private void OnTriggerExit2D(Collider2D other)
         {
+            // 传输时禁用碰撞体也会发退出回调，别当成飞出地图
+            if (_state != State.Flying) return;
+
             if (other != null && other.CompareTag(BoundTag)) Destroy(gameObject);
         }
 
-        // 进入残影：当场规划整条路径并锁住，每段出发前再验活
+        // 进入残影：规划整条路径并锁住，出发前再验活
         private void TryEnterTransport(AfterimageAnchor anchor)
         {
             if (_state == State.Transporting) return;
             if (anchor.Logic == null) return;
             if (_owner != anchor.PlayerRoot) return;
 
-            // 走完一次链就作废：出射后飞回残影再接管会无限循环
+            // 走完一次链就作废，否则无限循环
             if (_transported) return;
 
             if (anchor.Logic.BuildTransfer(anchor.Index, _plan) < 2) return;

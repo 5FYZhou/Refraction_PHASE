@@ -31,6 +31,9 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private GameObject bulletPre;
 
+        [SerializeField]
+        private Transform spawnT;
+
 
         private GameRoot _root;
         private bool _attached = false;
