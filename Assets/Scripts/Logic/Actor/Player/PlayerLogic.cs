@@ -74,7 +74,18 @@ namespace Refraction.Logic.Actor
 
         public int MaxPolarity => _polarity.Max;
 
-        public void OnHitLanded() => _polarity.Add(_config.polarityPerHit);
+        public void OnHitLanded()
+        {
+            int before = _polarity.Value;
+            _polarity.Add(_config.polarityPerHit);
+
+            if (_polarity.Value != before) AnnouncePolarity();
+        }
+
+        public void AnnouncePolarity()
+        {
+            EventBus<PlayerPolarityChanged>.Publish(new(_polarity.Value, _polarity.Max));
+        }
 
         public ChargePhase ChargeStage => _chargePhase;
 
@@ -129,6 +140,8 @@ namespace Refraction.Logic.Actor
 
             TickCharge(in tick, dashStarted);
 
+            TryReverseWorld(in tick);
+
             _transit.AfterTick(in tick);
         }
 
@@ -169,6 +182,16 @@ namespace Refraction.Logic.Actor
         {
             _chargePhase = ChargePhase.Charged;
             _afterimages?.Arm();
+        }
+
+        private void TryReverseWorld(in LogicContext ctx)
+        {
+            if (!ctx.InputSnapshot.ReversePressed) return;
+            if (_polarity.Value < _polarity.Max) return;
+
+            _polarity.Clear();
+            AnnouncePolarity();
+            EventBus<WorldReversed>.Publish(default);
         }
 
         protected override void OnTick(in LogicContext ctx)
@@ -225,6 +248,7 @@ namespace Refraction.Logic.Actor
             Conditions.Revive();
             _polarity.Clear();
             Announce();
+            AnnouncePolarity();
         }
 
         public override bool TakeDamage(in Damage d)

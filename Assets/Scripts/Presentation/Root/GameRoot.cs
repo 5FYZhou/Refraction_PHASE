@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
+using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
@@ -20,10 +21,13 @@ namespace Refraction.Presentation
         private readonly List<ISceneRoot> _pendingAttach = new();
 
         private InputProvider _inputProvider;
-        private LevelManager _levelMgr;
         private DoorReader _doorReader;
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
+
+        private int _pendingDoorId;
+        private MovementStateTag _pendingDoorTag;
+        private int _pendingDoorFace;
 
         private DoorEntry _entry;
         private MovementStateTag _entryTag;
@@ -37,6 +41,8 @@ namespace Refraction.Presentation
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
+
+        public IDoorReader DoorReader => _doorReader;
 
         public int LevelId => _doorReader != null ? _doorReader.LevelId : 0;
 
@@ -73,16 +79,14 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Init();
-            _levelMgr?.Init();
+            EventBus<LevelLoadRequested>.Subscribe(OnLevelLoadRequested);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-
-            _levelMgr?.Dispose();
-            _levelMgr = null;
+            EventBus<LevelLoadRequested>.Unsubscribe(OnLevelLoadRequested);
 
             _inputProvider?.Dispose();
             _inputProvider = null;
@@ -100,7 +104,6 @@ namespace Refraction.Presentation
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
-            _levelMgr = new LevelManager(_doorReader.LevelId, _doorReader);
         }
 
         /// <summary>注册场景根（重复是 no-op）。真正的 Attach 推迟到下一个被驱动的帧，按 Order 顺序执行。</summary>
@@ -208,20 +211,35 @@ namespace Refraction.Presentation
         {
             if (_inputProvider == null) return;
 
-            // 目标门 id 记在旧 LevelManager 上，得在换掉它之前取出来
-            int pendingDoorId = _levelMgr != null ? _levelMgr.PendingDoorId : 0;
+            int pendingDoorId = TakePendingDoor(out MovementStateTag pendingTag, out int pendingFace);
 
             // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
             _doorReader = FindOrCreateDoorReader(scene);
 
             // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
             _hasEntryPoint = false;
-            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, _levelMgr?.PendingEntryTag ?? MovementStateTag.None, _levelMgr != null ? _levelMgr.PendingEntryFace : 0);
+            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, pendingTag, pendingFace);
+        }
 
-            // 推进器换成新关的：旧的那个还订阅着 RequestNextDoor，不 Dispose 会和新的一起响应
-            _levelMgr?.Dispose();
-            _levelMgr = new LevelManager(_doorReader.LevelId, _doorReader);
-            _levelMgr.Init();
+        private void OnLevelLoadRequested(LevelLoadRequested evt)
+        {
+            _pendingDoorId = evt.nextDoor;
+            _pendingDoorTag = evt.enterTag;
+            _pendingDoorFace = evt.enterFace;
+        }
+
+        /// <summary>取走这次加载的门落点，取一次就清空：残留会把之后的重载丢到错的门口</summary>
+        private int TakePendingDoor(out MovementStateTag enterTag, out int enterFace)
+        {
+            enterTag = _pendingDoorTag;
+            enterFace = _pendingDoorFace;
+
+            int doorId = _pendingDoorId;
+            _pendingDoorId = 0;
+            _pendingDoorTag = MovementStateTag.None;
+            _pendingDoorFace = 0;
+
+            return doorId;
         }
 
         private void ResolveEntryPoint(Scene scene, int doorId, MovementStateTag enterTag, int enterFace)
@@ -297,8 +315,12 @@ namespace Refraction.Presentation
                     Debug.LogException(ex);
                 }
 
-                // 玩家装配完立刻广播一次血量：界面这一帧就有初值，不必等第一次受击
-                if (batch[i] is PlayerController player) player.Announce();
+                // 玩家装配完立刻广播血量与极性：界面这一帧就有初值
+                if (batch[i] is PlayerController player)
+                {
+                    player.Announce();
+                    player.AnnouncePolarity();
+                }
             }
         }
 

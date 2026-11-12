@@ -33,6 +33,7 @@ namespace Refraction.Presentation.UI
 
         private TMP_Text _text;
         private TMP_Text _enemyText;
+        private bool _black = true;
         private float _nextRefresh;
         private int _curHealth;
         private int _maxHealth;
@@ -42,6 +43,7 @@ namespace Refraction.Presentation.UI
             base.Awake();
             _text = GetComponent<TMP_Text>(TextNodeName);
             _enemyText = GetComponent<TMP_Text>(EnemyTextNodeName);
+            ApplyTextColor();
         }
 
         /// <summary>保留预制体里写的占位文本：第一帧快照到达前也能看出面板活着</summary>
@@ -65,12 +67,28 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerDebugSnapshot>.Subscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
+            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
         }
 
         private void OnDisable()
         {
             EventBus<PlayerDebugSnapshot>.Unsubscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
+            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+        }
+
+        private void OnWorldReversed(WorldReversed evt)
+        {
+            _black = !_black;
+            ApplyTextColor();
+        }
+
+        private void ApplyTextColor()
+        {
+            Color color = _black ? Color.black : Color.white;
+
+            if (_text != null) _text.color = color;
+            if (_enemyText != null) _enemyText.color = color;
         }
 
         private void OnHealthChanged(PlayerHealthChanged evt)

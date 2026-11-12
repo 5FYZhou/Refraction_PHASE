@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using UnityEngine;
@@ -12,11 +13,11 @@ namespace Refraction.Logic.Level
     {
         private readonly int _curId;
         private readonly IDoorReader _doorReader;
+        private readonly List<IReverse> _reverses = new();
+
+        private WorldPolarity _world = WorldPolarity.White;
 
         private bool _loading;
-        private int _pendingDoorId;
-        private MovementStateTag _pendingEntryTag;
-        private int _pendingEntryFace;
 
         public LevelManager(int id, IDoorReader doorReader = null)
         {
@@ -29,26 +30,50 @@ namespace Refraction.Logic.Level
             }
         }
 
-        /// <summary>上一次成功发起的切场景请求里，目标场景指定的门 id；0 表示没指定。</summary>
-        public int PendingDoorId => _pendingDoorId;
+        /// <summary>当前世界极性，随本对象所在关卡重建，所以总是从白开始</summary>
+        public WorldPolarity World => _world;
 
-        public MovementStateTag PendingEntryTag => _pendingEntryTag;
-
-        /// <summary>玩家触发那扇门时的朝向（-1 左 / 1 右）。</summary>
-        public int PendingEntryFace => _pendingEntryFace;
+        public bool IsBlackWorld => _world == WorldPolarity.Black;
 
         public void Init()
         {
             EventBus<RequestNextDoor>.Subscribe(OnRequestNextLevel);
+            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
         }
 
         public void Dispose()
         {
             EventBus<RequestNextDoor>.Unsubscribe(OnRequestNextLevel);
+            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+            _reverses.Clear();
+            _world = WorldPolarity.White;
             _loading = false;
-            _pendingDoorId = 0;
-            _pendingEntryTag = MovementStateTag.None;
-            _pendingEntryFace = 0;
+        }
+
+        /// <summary>登记要随世界换色的对象，登记时就套一次当前极性</summary>
+        public void RegisterReverse(IReverse reverse)
+        {
+            if (reverse == null || _reverses.Contains(reverse)) return;
+
+            _reverses.Add(reverse);
+            reverse.Apply(_world);
+        }
+
+        private void OnWorldReversed(WorldReversed evt)
+        {
+            _world = _world == WorldPolarity.White ? WorldPolarity.Black : WorldPolarity.White;
+
+            for (int i = 0; i < _reverses.Count; i++)
+            {
+                try
+                {
+                    _reverses[i].Apply(_world);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
         }
 
         private void OnRequestNextLevel(RequestNextDoor evt)
@@ -56,7 +81,6 @@ namespace Refraction.Logic.Level
             // 玩家身上多个碰撞体会让门触发连续进来多次，用 _loading 挡住，避免同一帧多次 LoadScene
             if (_loading) return;
 
-            // 门可以直接指定任意目标关；没指定才退回命名约定里的下一关
             int nextId;
 
             if (evt.nextLevel > 0)
@@ -91,9 +115,9 @@ namespace Refraction.Logic.Level
             }
 
             _loading = true;
-            _pendingDoorId = evt.nextDoor;
-            _pendingEntryTag = evt.enterTag;
-            _pendingEntryFace = evt.enterFace;
+
+            // 目标门要由常驻的 GameRoot 带走：本对象随旧场景销毁，加载完成时再也问不到
+            EventBus<LevelLoadRequested>.Publish(new(evt.nextDoor, evt.enterTag, evt.enterFace));
 
             try
             {
@@ -101,10 +125,8 @@ namespace Refraction.Logic.Level
             }
             catch (Exception ex)
             {
-                // 加载失败要放开 _loading 与落点，否则这扇门以及后面所有门都会永久失效
+                // 加载失败要放开 _loading，否则这扇门以及后面所有门都会永久失效
                 _loading = false;
-                _pendingDoorId = 0;
-                _pendingEntryFace = 0;
                 Debug.LogError($"[LevelManager] 加载场景 \"{nextName}\" 失败：{ex.Message}");
             }
         }

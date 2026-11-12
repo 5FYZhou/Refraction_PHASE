@@ -1,12 +1,20 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using Refraction.Logic.Level;
+using UnityEngine;
 
 namespace Refraction.Presentation
 {
     /// <summary>把子物体统一补成可探测地面：场景只管摆位置和缩放，Layer 与碰撞框由这里补</summary>
-    public class GroundIniter : MonoBehaviour
+    public class GroundIniter : MonoBehaviour, IReverse
     {
-        /// <summary>地面层级。与 ProjectSettings/TagManager 中第 7 项 Ground 对应，索引为 6。</summary>
+        /// <summary>地面层级，与 TagManager 第 7 项 Ground 对应，索引 6</summary>
         private const int GroundLayer = 6;
+
+        private static readonly Color WhiteColor = Color.white;
+
+        private static readonly Color BlackColor = Color.black;
+
+        private readonly List<SpriteRenderer> _sprites = new();
 
         private void Awake()
         {
@@ -18,6 +26,8 @@ namespace Refraction.Presentation
             // true = 未激活的子物体也要算，否则隐藏的地面踩不到
             Transform[] children = GetComponentsInChildren<Transform>(true);
 
+            _sprites.Clear();
+
             for (int i = 0; i < children.Length; i++)
             {
                 Transform child = children[i];
@@ -25,6 +35,23 @@ namespace Refraction.Presentation
 
                 child.gameObject.layer = GroundLayer;
                 EnsureCollider(child.gameObject);
+
+                if (child.TryGetComponent(out SpriteRenderer sprite)) _sprites.Add(sprite);
+            }
+        }
+
+        public void Apply(WorldPolarity world)
+        {
+            Color color = world == WorldPolarity.Black ? BlackColor : WhiteColor;
+
+            for (int i = 0; i < _sprites.Count; i++)
+            {
+                SpriteRenderer sprite = _sprites[i];
+                if (sprite == null) continue;
+
+                // 只换色调，各自的透明度要留着
+                color.a = sprite.color.a;
+                sprite.color = color;
             }
         }
 

@@ -19,7 +19,9 @@ namespace Refraction.Logic
 
         public readonly bool SavePressed;
 
-        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld, bool attack, bool chargePressed, bool savePressed = false)
+        public readonly bool ReversePressed;
+
+        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld, bool attack, bool chargePressed, bool savePressed = false, bool reversePressed = false)
         {
             this.Move = move;
             this.Jump = jump;
@@ -29,6 +31,7 @@ namespace Refraction.Logic
             this.Attack = attack;
             this.ChargePressed = chargePressed;
             this.SavePressed = savePressed;
+            this.ReversePressed = reversePressed;
         }
     }
 

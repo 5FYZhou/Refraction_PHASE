@@ -9,6 +9,8 @@ namespace Refraction.Logic.Input
     {
         private InputSys _input = new();
 
+        private readonly InputAction _reverseAction = new("Reverse", InputActionType.Button, "<Keyboard>/q");
+
         private Vector2 _move;
         private bool _jump;
         private bool _dash;
@@ -16,6 +18,7 @@ namespace Refraction.Logic.Input
         private bool _crouchHeld;
         private bool _attack;
         private bool _charge;
+        private bool _reverse;
         private bool _save;
         private bool _upHeld;
 
@@ -24,10 +27,12 @@ namespace Refraction.Logic.Input
         public void Init()
         {
             _input.Enable();
+            _reverseAction.Enable();
         }
         public void Dispose()
         {
             _input.Disable();
+            _reverseAction.Disable();
         }
 
         public void Tick()
@@ -41,6 +46,7 @@ namespace Refraction.Logic.Input
             _dash |= _input.Player.Dash.WasPressedThisFrame();
             _attack |= _input.Player.Attack.WasPressedThisFrame();
             _charge |= _input.Player.Charge.WasPressedThisFrame();
+            _reverse |= _reverseAction.WasPressedThisFrame();
 
             bool upHeld = _move.y > 0.5f;
             _save |= upHeld && !_upHeld;
@@ -53,12 +59,13 @@ namespace Refraction.Logic.Input
         /// <summary>物理帧取走一次按下沿；取走即清零，不能留着，否则会被反复消费</summary>
         public InputSnapshot ConsumeSnapshot()
         {
-            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save);
+            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save, _reverse);
 
             _jump = false;
             _dash = false;
             _attack = false;
             _charge = false;
+            _reverse = false;
             _save = false;
 
             return snapshot;

@@ -148,6 +148,8 @@ namespace Refraction.Presentation.Actor
 
         public void Announce() => _logic?.Announce();
 
+        public void AnnouncePolarity() => _logic?.AnnouncePolarity();
+
         public void BindAfterimageSpawner(IAfterimageSpawner spawner)
         {
             _afterimageSpawner = spawner;
