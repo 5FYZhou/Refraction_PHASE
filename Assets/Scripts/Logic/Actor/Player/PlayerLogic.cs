@@ -11,6 +11,8 @@ namespace Refraction.Logic.Actor
 {
     public sealed class PlayerLogic : ActorLogic
     {
+        private const int FallDamage = 1;
+
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
         private AttackGroup _attackGroup;
@@ -83,6 +85,8 @@ namespace Refraction.Logic.Actor
         public bool IsCharged => _chargePhase == ChargePhase.Charged;
 
         public ConditionStateTag ConditionTag => Conditions.Current;
+
+        public bool IsInvulnerable => Conditions.IsInvulnerable;
 
         public Vector2 HurtVelocity => Conditions.HurtVelocity;
 
@@ -199,6 +203,8 @@ namespace Refraction.Logic.Actor
             SpawnTo(_lastGroundedPos);
             return true;
         }
+
+        public void TakeFallDamage() => TakeDamage(new Damage(FallDamage, DamageSource.Fall));
 
         private void RememberGround(Vector2 pos)
         {

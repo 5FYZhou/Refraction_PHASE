@@ -12,6 +12,8 @@ namespace Refraction.Logic.Combat
         Contact = 2,
 
         AfterimageLink = 3,
+
+        Fall = 4,
     }
 
     public readonly struct Damage

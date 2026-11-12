@@ -15,6 +15,9 @@ namespace Refraction.Presentation.Actor
 {
     public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IBulletLauncher
     {
+        private const float BlinkHz = 5f;
+        private const float BlinkMinAlpha = 0.3f;
+
         public int Order => SceneOrder.Player;
 
         [SerializeField]
@@ -61,6 +64,7 @@ namespace Refraction.Presentation.Actor
         private Sprite _viewBaseSprite;
         private float _lastChargeProgress = -1f;
         private bool _lastCharged;
+        private float _blinkElapsed;
 
         private static readonly Color ChargeYellow = new(1f, 0.92f, 0.3f, 1f);
         private static readonly Color ChargeOrange = new(1f, 0.5f, 0.08f, 1f);
@@ -205,11 +209,20 @@ namespace Refraction.Presentation.Actor
                 return;
             }
 
-            // 掉出世界：本关有存档点先回存档点
+            // 掉出世界：扣坠落伤害并回上次落脚点，扣到没血就走死亡分支
             if (context.WorldInfo.Pos.y < _spawnY)
             {
-                if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint)) _logic.SpawnTo(checkpoint);
-                else if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+                if (!_logic.HasGroundedPos)
+                {
+                    WarnNoGroundedPoint();
+                }
+                else
+                {
+                    _logic.TakeFallDamage();
+
+                    if (!_logic.IsAlive) HandleDeath();
+                    else _logic.RespawnToLastGrounded();
+                }
             }
 
             if (context.InputSnapshot.SavePressed) TrySaveCheckpoint();
@@ -252,6 +265,30 @@ namespace Refraction.Presentation.Actor
             }
 
             ApplyChargeVisual(_logic.ChargeProgress, _logic.IsCharged);
+            ApplyBlinkVisual(deltaTime);
+        }
+
+        private void ApplyBlinkVisual(float deltaTime)
+        {
+            float alpha = _viewBaseColor.a;
+
+            if (_logic.IsInvulnerable)
+            {
+                _blinkElapsed += deltaTime;
+                if (Mathf.Repeat(_blinkElapsed * BlinkHz, 1f) < 0.5f) alpha = BlinkMinAlpha * _viewBaseColor.a;
+            }
+            else
+            {
+                _blinkElapsed = 0f;
+            }
+
+            if (_viewRenderer == null) return;
+
+            Color color = _viewRenderer.color;
+            if (Mathf.Approximately(color.a, alpha)) return;
+
+            color.a = alpha;
+            _viewRenderer.color = color;
         }
 
         private void ApplyChargeVisual(float progress, bool charged)
