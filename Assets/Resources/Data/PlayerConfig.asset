@@ -55,6 +55,8 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
+  maxPolarity: 10
+  polarityPerHit: 5
   chargePrepareTime: 0.5
   chargeCooldown: 0.5
   maxAfterimages: 4

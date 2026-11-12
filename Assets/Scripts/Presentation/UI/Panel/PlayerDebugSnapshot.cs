@@ -25,6 +25,10 @@ namespace Refraction.Presentation.UI
 
         public readonly AttackStateTag Attack;
 
+        public readonly int Polarity;
+
+        public readonly int MaxPolarity;
+
         public PlayerDebugSnapshot(
             Vector2 frameStartVelocity,
             Vector2 ledgerVelocity,
@@ -33,7 +37,9 @@ namespace Refraction.Presentation.UI
             ConditionStateTag condition,
             MovementStateTag move,
             PostureStateTag posture,
-            AttackStateTag attack)
+            AttackStateTag attack,
+            int polarity,
+            int maxPolarity)
         {
             FrameStartVelocity = frameStartVelocity;
             LedgerVelocity = ledgerVelocity;
@@ -43,6 +49,8 @@ namespace Refraction.Presentation.UI
             Move = move;
             Posture = posture;
             Attack = attack;
+            Polarity = polarity;
+            MaxPolarity = maxPolarity;
         }
     }
 }

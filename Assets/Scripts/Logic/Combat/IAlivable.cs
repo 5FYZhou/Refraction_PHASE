@@ -12,10 +12,10 @@ namespace Refraction.Logic.Combat
 
     public interface IHurtable : IAlivable
     {
-        void TakeDamage(in Damage damage);
+        bool TakeDamage(in Damage damage);
     }
 
-    public interface IAttack
+    public interface IAttacker
     {
         Damage ProduceDamage();
     }

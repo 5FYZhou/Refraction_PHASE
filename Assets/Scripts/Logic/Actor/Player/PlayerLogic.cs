@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    public sealed class PlayerLogic : ActorLogic
+    public sealed class PlayerLogic : ActorLogic, IHitLanded
     {
         private const int FallDamage = 1;
 
@@ -20,6 +20,7 @@ namespace Refraction.Logic.Actor
         private IMoveMotor _motor;
         private InputBuffer _buffer;
         private PlayerConfig _config;
+        private readonly PolarityGauge _polarity;
 
         private IAfterimageSpawner _afterimages;
         private readonly Cooldown _chargeCooldown = new();
@@ -45,6 +46,7 @@ namespace Refraction.Logic.Actor
             _motor = motor;
             _buffer = buffer;
             _config = config;
+            _polarity = new(config.maxPolarity);
         }
 
         /// <summary>还没踩过地（出生就在空中）时为 false</summary>
@@ -67,6 +69,12 @@ namespace Refraction.Logic.Actor
         public PostureStateTag PostureTag => _postureGroup.Current;
 
         public AttackStateTag AttackTag => _attackGroup.Current;
+
+        public int Polarity => _polarity.Value;
+
+        public int MaxPolarity => _polarity.Max;
+
+        public void OnHitLanded() => _polarity.Add(_config.polarityPerHit);
 
         public ChargePhase ChargeStage => _chargePhase;
 
@@ -215,18 +223,22 @@ namespace Refraction.Logic.Actor
         public void Revive()
         {
             Conditions.Revive();
+            _polarity.Clear();
             Announce();
         }
 
-        public override void TakeDamage(in Damage d)
+        public override bool TakeDamage(in Damage d)
         {
-            if (d.Source == DamageSource.Bullet) return;
+            if (d.Source == DamageSource.Bullet) return false;
 
             int before = CurHealth;
             Conditions.TryApply(in d);
 
             // 无敌窗吞掉的那一下血量没动，不该让界面重画
-            if (CurHealth != before) Announce();
+            if (CurHealth == before) return false;
+
+            Announce();
+            return true;
         }
     }
 }

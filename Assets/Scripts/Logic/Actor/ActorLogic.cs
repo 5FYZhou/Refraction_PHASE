@@ -28,7 +28,12 @@ namespace Refraction.Logic.Actor
 
         /// <summary>受击入口：扣血与无敌窗当帧生效，击退排到下一个固定帧</summary>
         /// <remarks>子类覆盖后必须落到 Conditions.TryApply，绕过去血量再也不会变</remarks>
-        public virtual void TakeDamage(in Damage damage) => Conditions.TryApply(in damage);
+        public virtual bool TakeDamage(in Damage damage)
+        {
+            int before = Conditions.CurHealth;
+            Conditions.TryApply(in damage);
+            return Conditions.CurHealth < before;
+        }
 
         public void FixedTick(LogicContext ctx)
         {

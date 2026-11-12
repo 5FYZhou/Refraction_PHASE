@@ -177,7 +177,7 @@ namespace Refraction.Presentation.Actor
             GameObject go = Instantiate(bulletPre);
             Bullet bullet = go.GetComponent<Bullet>();
             if (bullet == null) bullet = go.AddComponent<Bullet>();
-            bullet.Init(in spawn, transform);
+            bullet.Init(in spawn, transform, _logic);
         }
 
         public void FixedTick(float deltaTime)
@@ -200,7 +200,9 @@ namespace Refraction.Presentation.Actor
                 _logic.ConditionTag,
                 _logic.CurrentTag,
                 _logic.PostureTag,
-                _logic.AttackTag));
+                _logic.AttackTag,
+                _logic.Polarity,
+                _logic.MaxPolarity));
 
             // 掉血到 0：回存档点，连存档记录都没有才退回原地满血
             if (!_logic.IsAlive)

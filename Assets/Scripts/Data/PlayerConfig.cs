@@ -130,6 +130,15 @@ namespace Refraction.Data
         [Min(0f)]
         public float attackRecoverTime = 0.12f;
 
+        [Header("极性值")]
+        [Tooltip("极性值上限（点）：每次有效攻击累加 polarityPerHit，涨到上限就停，不会溢出。")]
+        [Min(1)]
+        public int maxPolarity = 10;
+
+        [Tooltip("每次有效攻击获得的极性值（点）：子弹真正扣掉怪物血量才算有效。\n打在受击无敌窗上、目标已死、或伤害值为 0 都不算，不会涨。")]
+        [Min(0)]
+        public int polarityPerHit = 5;
+
         [Header("充能 · 残影")]
         [Tooltip("充能前摇时长（秒）：按一下充能键开始蓄力，走满进入蓄满态（玩家变橙）。\n0 表示按下当帧就蓄满。")]
         [Min(0f)]

@@ -7,7 +7,7 @@ namespace Refraction.Presentation.Combat
 {
     /// <summary>白子弹：直线飞行，进残影后按路径走位再出射</summary>
     /// <remarks>伤害自己结算：击退方向用飞行方向，排掉开火者</remarks>
-    public sealed class Bullet : MonoBehaviour, IAttack, ISceneRoot, IPhysicsTicked
+    public sealed class Bullet : MonoBehaviour, IAttacker, ISceneRoot, IPhysicsTicked, IHitLanded
     {
         private enum State
         {
@@ -26,6 +26,7 @@ namespace Refraction.Presentation.Combat
 
         private Damage _damage;
         private Transform _owner;
+        private IHitLanded _hitSink;
         private GameRoot _root;
         private Rigidbody2D _rb;
         private Collider2D[] _colliders;
@@ -42,9 +43,10 @@ namespace Refraction.Presentation.Combat
         private int _hotTo = -1;
 
         /// <summary>组合根调用一次；没刚体时补一个</summary>
-        public void Init(in BulletSpawn spawn, Transform owner)
+        public void Init(in BulletSpawn spawn, Transform owner, IHitLanded hitSink)
         {
             _owner = owner;
+            _hitSink = hitSink;
             _damage = new Damage(spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.KnockbackSpeed);
             _speed = spawn.Speed;
             _transferSpeed = spawn.TransferSpeed;
@@ -237,6 +239,11 @@ namespace Refraction.Presentation.Combat
         public Damage ProduceDamage()
         {
             return _damage;
+        }
+
+        public void OnHitLanded()
+        {
+            if (_hitSink != null) _hitSink.OnHitLanded();
         }
     }
 }

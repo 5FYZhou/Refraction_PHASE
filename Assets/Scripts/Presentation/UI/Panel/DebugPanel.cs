@@ -98,7 +98,8 @@ namespace Refraction.Presentation.UI
                     .Append("\n移动 ").Append(snapshot.Move.ToString())
                     .Append("\n姿态 ").Append(snapshot.Posture.ToString())
                     .Append("\n攻击 ").Append(snapshot.Attack.ToString())
-                    .Append("\n血量：").Append(_curHealth).Append('/').Append(_maxHealth);
+                    .Append("\n血量：").Append(_curHealth).Append('/').Append(_maxHealth)
+                    .Append("\n极性：").Append(snapshot.Polarity).Append('/').Append(snapshot.MaxPolarity);
 
             _text.SetText(_builder);
 

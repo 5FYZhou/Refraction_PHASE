@@ -7,7 +7,7 @@ namespace Refraction.Logic.Actor
 {
     /// <summary>敌人逻辑：持有索敌结果与丢目标计时，状态推进交给 EnemyMoveGroup</summary>
     /// <remarks>索敌结果由表现层每物理帧注入</remarks>
-    public sealed class EnemyLogic : ActorLogic, IAttack
+    public sealed class EnemyLogic : ActorLogic, IAttacker
     {
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
@@ -63,18 +63,14 @@ namespace Refraction.Logic.Actor
         }
 
         /// <summary>站桩时受击表现照常（受伤态与击退都走基类），只把伤害值抹成 0，血掉不下去</summary>
-        public override void TakeDamage(in Damage damage)
+        public override bool TakeDamage(in Damage damage)
         {
             // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
-            if (damage.Source == DamageSource.Contact) return;
+            if (damage.Source == DamageSource.Contact) return false;
 
-            if (_aiEnabled)
-            {
-                base.TakeDamage(in damage);
-                return;
-            }
+            if (_aiEnabled) return base.TakeDamage(in damage);
 
-            base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
+            return base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
         }
 
         /// <summary>接触伤害：挨打的人往自己的反方向退</summary>
