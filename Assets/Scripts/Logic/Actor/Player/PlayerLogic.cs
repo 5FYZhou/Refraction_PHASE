@@ -190,6 +190,8 @@ namespace Refraction.Logic.Actor
             if (_polarity.Value < _polarity.Max) return;
 
             _polarity.Clear();
+            ResetHealth();
+            Announce();
             AnnouncePolarity();
             EventBus<WorldReversed>.Publish(default);
         }
@@ -245,7 +247,8 @@ namespace Refraction.Logic.Actor
 
         public void Revive()
         {
-            Conditions.Revive();
+            ResetHealth();
+            Conditions.ClearHurt();
             _polarity.Clear();
             Announce();
             AnnouncePolarity();
@@ -254,12 +257,7 @@ namespace Refraction.Logic.Actor
         public override bool TakeDamage(in Damage d)
         {
             if (d.Source == DamageSource.Bullet) return false;
-
-            int before = CurHealth;
-            Conditions.TryApply(in d);
-
-            // 无敌窗吞掉的那一下血量没动，不该让界面重画
-            if (CurHealth == before) return false;
+            if (!base.TakeDamage(in d)) return false;
 
             Announce();
             return true;

@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>条件组：玩家与敌人共用一套，生命、受击无敌与击退都归它，每帧把门禁交给移动层</summary>
-    /// <remarks>扣血在挨打当帧就落地（调用方要能立刻问 IsAlive），击退排到下一个物理帧，门禁在该帧末统一覆盖速度</remarks>
+    /// <summary>条件组：玩家与敌人共用，受击无敌与击退归它，每帧把门禁交给移动层</summary>
+    /// <remarks>血量在 ActorLogic，这里只管状态与门禁；击退排到下一个物理帧</remarks>
     public sealed class ConditionGroup : StateGroup<ConditionStateTag, LogicContext>
     {
         private readonly CharacterConfig _config;
@@ -17,7 +17,6 @@ namespace Refraction.Logic.Actor
         private bool _hasPending;
         private float _now;
         private float _invulnerableUntil;
-        private int _curHealth;
 
         public ConditionGroup(IMoveMotor motor, CharacterConfig config)
         {
@@ -27,8 +26,6 @@ namespace Refraction.Logic.Actor
 
             RegisterState(new NormalState());
             RegisterState(_hurt);
-
-            _curHealth = Mathf.Max(1, config.maxHealth);
         }
 
         protected override ConditionStateTag EmptyTag => ConditionStateTag.Normal;
@@ -45,39 +42,20 @@ namespace Refraction.Logic.Actor
         /// 受伤期接管速度（方向 × 速率），非受伤态为零
         public Vector2 HurtVelocity => _hurt.ForcedVelocity;
 
-        public bool IsAlive => _curHealth > 0;
-
-        public int CurHealth => _curHealth;
-
-        public int MaxHealth => Mathf.Max(1, _config.maxHealth);
-
-        /// <summary>受击入口：无敌窗内整下吞掉。返回 false 表示没吃到，血量与击退都没变</summary>
-        public bool TryApply(in Damage damage)
+        /// <summary>受击登记：只有真掉血才开无敌窗（纯击退不算），击退排到下一个固定帧</summary>
+        public void RegisterHit(in Damage damage, bool damaged)
         {
-            if (!IsAlive) return false;
-            if (_now < _invulnerableUntil) return false;
+            if (damaged && _config.invulnerableTime > 0f) _invulnerableUntil = _now + _config.invulnerableTime;
 
-            if (damage.HasDamage)
-            {
-                _curHealth = Mathf.Max(0, _curHealth - Mathf.RoundToInt(damage.Amount));
+            if (!damage.HasKnockback) return;
 
-                // 只有真掉血才进无敌：0 伤害的纯效果（击退、标记）不该把下一次真伤害挡掉
-                if (_config.invulnerableTime > 0f) _invulnerableUntil = _now + _config.invulnerableTime;
-            }
-
-            if (damage.HasKnockback)
-            {
-                _pending = damage;
-                _hasPending = true;
-            }
-
-            return true;
+            _pending = damage;
+            _hasPending = true;
         }
 
-        /// <summary>复活：血量回满、清无敌与排队击退，回常态。位置由调用方决定</summary>
-        public void Revive()
+        /// <summary>清掉无敌窗与排队中的击退，回常态；血量归 ActorLogic 管</summary>
+        public void ClearHurt()
         {
-            _curHealth = MaxHealth;
             _invulnerableUntil = 0f;
             _hasPending = false;
             ChangeState(ConditionStateTag.Normal, default);
