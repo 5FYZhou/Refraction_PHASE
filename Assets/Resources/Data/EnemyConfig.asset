@@ -28,4 +28,5 @@ MonoBehaviour:
   loseTargetTime: 1.5
   chaseStopDistance: 1
   contactDamage: 1
+  contactInterval: 1
   contactKnockback: 10

@@ -88,6 +88,9 @@ namespace Refraction.Presentation
             Body.freezeRotation = true;
             Body.interpolation = RigidbodyInterpolation2D.Interpolate;
 
+            // Stay 靠物理回调，双方睡着就断
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+
             CacheRefs();
             CacheBody();
         }
@@ -347,7 +350,6 @@ namespace Refraction.Presentation
             float feetY = ResolveFeetWorldY();
             Vector2 basePos = SafeBodyPosition();
 
-            // ---------- 地面探针 ----------
             Vector2 start = new(basePos.x, feetY + groundProbe.lift + groundProbe.radius);
             Vector2 end = start + Vector2.down * (groundProbe.lift + groundProbe.distance);
 
@@ -356,7 +358,6 @@ namespace Refraction.Presentation
             Gizmos.DrawWireSphere(end, groundProbe.radius);
             Gizmos.DrawLine(start, end);
 
-            // ---------- 墙面探针（左右两侧，胶囊） ----------
             float r = wallProbe.radius;
             float h = Mathf.Max(wallProbe.height, r * 2f);
             float halfStraight = (h - r * 2f) * 0.5f;
@@ -373,7 +374,6 @@ namespace Refraction.Presentation
                 Gizmos.DrawLine(origin, tip);
             }
 
-            // ---------- 悬崖探针（脚底前方，向下） ----------
             Gizmos.color = new Color(1f, 0.4f, 0.75f, 0.95f);
 
             foreach (int side in new[] { -1, 1 })

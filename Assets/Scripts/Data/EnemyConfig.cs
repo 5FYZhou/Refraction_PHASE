@@ -21,9 +21,13 @@ namespace Refraction.Data
         public float chaseStopDistance = 1f;
 
         [Header("伤害")]
-        [Tooltip("贴身接触造成的伤害点数：身体攻击盒碰到玩家就结算，频率由玩家自己的 invulnerableTime 限制。")]
+        [Tooltip("贴身接触造成的伤害点数：身体攻击盒碰到玩家就结算一次，之后由 contactInterval 决定多久再来一次。")]
         [Min(0f)]
         public float contactDamage = 1f;
+
+        [Tooltip("两次接触伤害的最小间隔（秒）：玩家站在攻击盒里不走，就按这个节奏反复掉血。\n要 ≥ 玩家自己的 invulnerableTime（当前 0.4s），否则多出来的那几次会被无敌窗吞掉。")]
+        [Min(0f)]
+        public float contactInterval = 1f;
 
         [Tooltip("接触伤害的击退初速度（单位/秒）：0 表示不击退。\n滑多远还要乘上玩家自己的 KnockbackDecay（位移 = 本值² / (2 × 阻尼)）。")]
         [Min(0f)]

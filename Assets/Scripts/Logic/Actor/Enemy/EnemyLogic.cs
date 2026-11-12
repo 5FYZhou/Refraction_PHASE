@@ -1,4 +1,5 @@
 ﻿using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Move;
 using UnityEngine;
@@ -7,10 +8,11 @@ namespace Refraction.Logic.Actor
 {
     /// <summary>敌人逻辑：持有索敌结果与丢目标计时，状态推进交给 EnemyMoveGroup</summary>
     /// <remarks>索敌结果由表现层每物理帧注入</remarks>
-    public sealed class EnemyLogic : ActorLogic, IAttacker
+    public sealed class EnemyLogic : ActorLogic, IAttacker, IIntervalAttacker
     {
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
+        private readonly Cooldown _contactCooldown = new();
         private readonly bool _aiEnabled;
         private readonly IMoveMotor _motor;
 
@@ -73,7 +75,7 @@ namespace Refraction.Logic.Actor
             return base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
         }
 
-        /// <summary>接触伤害：挨打的人往自己的反方向退</summary>
+        /// <summary>接触伤害</summary>
         public Damage ProduceDamage()
         {
             if (_config == null) return default;
@@ -86,6 +88,10 @@ namespace Refraction.Logic.Actor
                 dir,
                 _config.contactKnockback);
         }
+
+        public bool ReadyToHit(float now) => _contactCooldown.CanUse(now);
+
+        public void MarkHit(float now) => _contactCooldown.MarkUsed(now, _config.contactInterval);
 
         protected override void OnTick(in LogicContext ctx) { }
 
