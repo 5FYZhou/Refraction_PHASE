@@ -64,22 +64,6 @@ namespace Refraction.Logic.Events
         }
     }
 
-    public readonly struct LevelLoadRequested
-    {
-        public readonly int nextDoor;
-
-        public readonly MovementStateTag enterTag;
-
-        public readonly int enterFace;
-
-        public LevelLoadRequested(int nextDoor, MovementStateTag enterTag, int enterFace)
-        {
-            this.nextDoor = nextDoor;
-            this.enterTag = enterTag;
-            this.enterFace = enterFace;
-        }
-    }
-
     public readonly struct RequestPlayerPosChange
     {
         public readonly DoorEntry Entry;

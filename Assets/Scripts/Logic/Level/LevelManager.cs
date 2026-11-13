@@ -13,6 +13,7 @@ namespace Refraction.Logic.Level
     {
         private readonly int _curId;
         private readonly IDoorReader _doorReader;
+        private readonly ISceneTransfer _transfer;
         private readonly List<IReverse> _reverses = new();
         private readonly WorldPolarity _initialWorld;
 
@@ -20,10 +21,11 @@ namespace Refraction.Logic.Level
 
         private bool _loading;
 
-        public LevelManager(int id, IDoorReader doorReader = null, WorldPolarity world = WorldPolarity.White)
+        public LevelManager(int id, IDoorReader doorReader = null, WorldPolarity world = WorldPolarity.White, ISceneTransfer transfer = null)
         {
             _curId = id;
             _doorReader = doorReader;
+            _transfer = transfer;
             _initialWorld = world;
             _world = world;
 
@@ -119,10 +121,16 @@ namespace Refraction.Logic.Level
                 return;
             }
 
+            // 目标门要由常驻的 GameRoot 带走：本对象随旧场景销毁，加载完成时再也问不到
+            if (_transfer == null)
+            {
+                Debug.LogError($"[LevelManager] 没有跨场景通道（ISceneTransfer），无法把目标门带进 \"{nextName}\"，本次不加载。");
+                return;
+            }
+
             _loading = true;
 
-            // 目标门要由常驻的 GameRoot 带走：本对象随旧场景销毁，加载完成时再也问不到
-            EventBus<LevelLoadRequested>.Publish(new(evt.nextDoor, evt.enterTag, evt.enterFace));
+            _transfer.RequestLevelLoad(evt.nextDoor, evt.enterTag, evt.enterFace);
 
             try
             {

@@ -83,7 +83,7 @@ namespace Refraction.Presentation.Combat
                 return;
             }
 
-            _levelMgr = new LevelManager(_root.LevelId, _root.DoorReader, _root.World);
+            _levelMgr = new LevelManager(_root.LevelId, _root.DoorReader, _root.World, _root);
             _levelMgr.Init();
 
             MonoBehaviour[] all = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);

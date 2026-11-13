@@ -15,12 +15,13 @@ using UnityEngine.SceneManagement;
 
 namespace Refraction.Presentation
 {
-    /// <summary>场景根：全场唯一常驻对象，持有输入源与关卡推进器，切场景后把世界侧整体换成新场景的</summary>
-    public class GameRoot : Singleton<GameRoot>
+    /// <summary>场景根：全场唯一常驻对象，持有输入源、关卡推进器与跨场景数据，切场景后把世界侧整体换成新场景的</summary>
+    public class GameRoot : Singleton<GameRoot>, ISceneTransfer
     {
         private readonly List<ISceneRoot> _sceneRoots = new();
         private readonly List<ISceneRoot> _pendingAttach = new();
         private readonly List<IService> _services = new();
+        private readonly SceneContext _scenectx = new();
 
         private InputProvider _inputProvider;
         private DoorReader _doorReader;
@@ -28,28 +29,14 @@ namespace Refraction.Presentation
         private ResMgr _resMgr;
         private PauseService _pauseService;
 
-        private int _pendingDoorId;
-        private MovementStateTag _pendingDoorTag;
-        private int _pendingDoorFace;
-
-        private DoorEntry _entry;
-        private MovementStateTag _entryTag;
-        private int _entryFace;
-        private bool _hasEntryPoint;
-
-        private readonly CheckpointBook _checkpoints = new();
-        private Vector2 _pendingRespawn;
-        private bool _hasPendingRespawn;
         private bool _warnedNoLevel;
-
-        private WorldPolarity _world = WorldPolarity.White;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
 
         public IDoorReader DoorReader => _doorReader;
 
-        public WorldPolarity World => _world;
+        public WorldPolarity World => _scenectx.World;
 
         public int LevelId => _doorReader != null ? _doorReader.LevelId : 0;
 
@@ -88,7 +75,6 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Init();
-            EventBus<LevelLoadRequested>.Subscribe(OnLevelLoadRequested);
             EventBus<WorldReversed>.Subscribe(OnWorldReversed);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
@@ -96,7 +82,6 @@ namespace Refraction.Presentation
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            EventBus<LevelLoadRequested>.Unsubscribe(OnLevelLoadRequested);
             EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
 
             DisposeServices();
@@ -106,15 +91,14 @@ namespace Refraction.Presentation
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
-            _hasPendingRespawn = false;
+            _scenectx.Reset();
             _doorReader = null;
-            _world = WorldPolarity.White;
         }
 
         private void OnWorldReversed(WorldReversed evt)
         {
-            _world = _world == WorldPolarity.White ? WorldPolarity.Black : WorldPolarity.White;
-            EventBus<WorldPolarityChanged>.Publish(new(_world));
+            _scenectx.ReverseWorld();
+            EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
         }
 
         /// <summary>首关装配：用 Inspector 里连好的引用。玩家的接入走场景根注册表，这里不碰。</summary>
@@ -179,22 +163,21 @@ namespace Refraction.Presentation
             _pendingAttach.Remove(root);
         }
 
+        /// <summary>跨关：记下这次加载要落到的门，LevelManager 在 LoadScene 之前通过它交棒</summary>
+        public void RequestLevelLoad(int doorId, MovementStateTag enterTag, int enterFace)
+        {
+            _scenectx.SetNextDoor(doorId, enterTag, enterFace);
+        }
+
         /// <summary>取走本关的进门口数据、进门时的移动状态与朝向，一次性。没有落点返回 false，调用方保持场景摆放</summary>
         public bool TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace)
         {
-            entry = _entry;
-            enterTag = _entryTag;
-            enterFace = _entryFace;
-
-            if (!_hasEntryPoint) return false;
-
-            _hasEntryPoint = false;
-            return true;
+            return _scenectx.TryConsumeEntry(out entry, out enterTag, out enterFace);
         }
 
         public bool SaveCheckpoint(Vector2 pivot)
         {
-            if (_checkpoints.Save(LevelId, pivot)) return true;
+            if (_scenectx.SaveCheckpoint(LevelId, pivot)) return true;
 
             if (!_warnedNoLevel)
             {
@@ -209,7 +192,7 @@ namespace Refraction.Presentation
         {
             pivot = default;
 
-            if (!_checkpoints.TryGetRespawn(out Vector2 point, out int level)) return false;
+            if (!_scenectx.TryGetCheckpoint(out Vector2 point, out int level)) return false;
             if (level != LevelId) return false;
 
             pivot = point;
@@ -218,7 +201,7 @@ namespace Refraction.Presentation
 
         public bool TryStartRespawnInCheckpointLevel()
         {
-            if (!_checkpoints.TryGetRespawn(out Vector2 point, out int level)) return false;
+            if (!_scenectx.TryGetCheckpoint(out Vector2 point, out int level)) return false;
 
             string sceneName = SceneName.GetLevelName(level);
 
@@ -228,8 +211,7 @@ namespace Refraction.Presentation
                 return false;
             }
 
-            _pendingRespawn = point;
-            _hasPendingRespawn = true;
+            _scenectx.BeginRespawn(point);
 
             try
             {
@@ -238,7 +220,7 @@ namespace Refraction.Presentation
             }
             catch (Exception ex)
             {
-                _hasPendingRespawn = false;
+                _scenectx.CancelRespawn();
                 Debug.LogError($"[GameRoot] 加载存档关 \"{sceneName}\" 失败：{ex.Message}");
                 return false;
             }
@@ -246,12 +228,7 @@ namespace Refraction.Presentation
 
         public bool TryConsumeRespawnPoint(out Vector2 pivot)
         {
-            pivot = _pendingRespawn;
-
-            if (!_hasPendingRespawn) return false;
-
-            _hasPendingRespawn = false;
-            return true;
+            return _scenectx.TryConsumeRespawn(out pivot);
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -267,35 +244,14 @@ namespace Refraction.Presentation
         {
             if (_inputProvider == null) return;
 
-            int pendingDoorId = TakePendingDoor(out MovementStateTag pendingTag, out int pendingFace);
+            int pendingDoorId = _scenectx.TakeNextDoor(out MovementStateTag pendingTag, out int pendingFace);
 
             // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
             _doorReader = FindOrCreateDoorReader(scene);
 
             // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
-            _hasEntryPoint = false;
+            _scenectx.ClearEntry();
             if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, pendingTag, pendingFace);
-        }
-
-        private void OnLevelLoadRequested(LevelLoadRequested evt)
-        {
-            _pendingDoorId = evt.nextDoor;
-            _pendingDoorTag = evt.enterTag;
-            _pendingDoorFace = evt.enterFace;
-        }
-
-        /// <summary>取走这次加载的门落点，取一次就清空：残留会把之后的重载丢到错的门口</summary>
-        private int TakePendingDoor(out MovementStateTag enterTag, out int enterFace)
-        {
-            enterTag = _pendingDoorTag;
-            enterFace = _pendingDoorFace;
-
-            int doorId = _pendingDoorId;
-            _pendingDoorId = 0;
-            _pendingDoorTag = MovementStateTag.None;
-            _pendingDoorFace = 0;
-
-            return doorId;
         }
 
         private void ResolveEntryPoint(Scene scene, int doorId, MovementStateTag enterTag, int enterFace)
@@ -313,10 +269,7 @@ namespace Refraction.Presentation
                 return;
             }
 
-            _entry = entry;
-            _entryTag = enterTag;
-            _entryFace = enterFace;
-            _hasEntryPoint = true;
+            _scenectx.SetEntry(in entry, enterTag, enterFace);
         }
 
         /// <summary>取本关的门读取器：场景里没挂就运行时补一个，门索引是装配期必需品，缺了玩家落不到指定的门</summary>
