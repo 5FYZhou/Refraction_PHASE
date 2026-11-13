@@ -18,7 +18,7 @@ MonoBehaviour:
   turnAcceleration: 225
   externalDeceleration: 40
   maxHealth: 5
-  invulnerableTime: 0.4
+  invulnerableTime: 1.4
   KnockbackDecay: 80
   enableGravity: 1
   maxFallSpeed: 26
@@ -39,13 +39,13 @@ MonoBehaviour:
   maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
-  crouchPrepareTime: 0.1
+  crouchPrepareTime: 0.12
   crouchHeightRatio: 0.5
   crouchMoveSpeedScale: 0.65
   crouchRecoilScale: 0.44
   crouchAllowJump: 1
   crouchAllowDash: 1
-  crouchGroundGrace: 0.33
+  crouchGroundGrace: 0.23
   bulletDamage: 20
   attackCooldown: 0.4
   bulletSpeed: 18
@@ -55,15 +55,15 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  maxPolarity: 10
-  polarityPerHit: 5
+  maxPolarity: 180
+  polarityPerHit: 20
   chargePrepareTime: 0.5
   chargeCooldown: 0.5
-  maxAfterimages: 3
-  afterimageDuration: 30
-  afterimageLinkDamage: 1
+  maxAfterimages: 5
+  afterimageDuration: 40
+  afterimageLinkDamage: 30
   afterimageLinkThickness: 0.25
   afterimageLinkSenseRadius: 10
   afterimageAlpha: 0.35
   afterimageLinkColor: {r: 0.9329341, g: 0.93710685, b: 0.82807237, a: 0.50980395}
-  bulletTransferSpeed: 26
+  bulletTransferSpeed: 45

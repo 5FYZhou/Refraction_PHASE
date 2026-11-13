@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e17a2d7fa8bc4e04dacea76d44751dfb, type: 3}
   m_Name: EnemyConfig
   m_EditorClassIdentifier: 
-  moveSpeed: 4.5
-  moveAcceleration: 60
-  moveDeceleration: 80
-  turnAcceleration: 120
+  moveSpeed: 3
+  moveAcceleration: 45
+  moveDeceleration: 105
+  turnAcceleration: 60
   externalDeceleration: 40
-  maxHealth: 3
-  invulnerableTime: 0.4
-  KnockbackDecay: 30
+  maxHealth: 60
+  invulnerableTime: 0
+  KnockbackDecay: 0.5
   enableGravity: 1
   maxFallSpeed: 20
   maxRiseSpeed: 20
   fallGravity: 70
-  patrolSpeed: 2.5
-  loseTargetTime: 1.5
+  patrolSpeed: 1.5
+  loseTargetTime: 1
   chaseStopDistance: 1
   contactDamage: 1
   contactInterval: 1
-  contactKnockback: 10
+  contactKnockback: 18.5
