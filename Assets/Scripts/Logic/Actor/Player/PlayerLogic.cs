@@ -82,6 +82,12 @@ namespace Refraction.Logic.Actor
             if (_polarity.Value != before) AnnouncePolarity();
         }
 
+        public void OnBlackAttackHitLanded()
+        {
+            OnHitLanded();
+            EventBus<HitStopRequested>.Publish(new(_config.blackAttackHitStopTime));
+        }
+
         public void AnnouncePolarity()
         {
             EventBus<PlayerPolarityChanged>.Publish(new(_polarity.Value, _polarity.Max));
@@ -264,6 +270,9 @@ namespace Refraction.Logic.Actor
             if (!base.TakeDamage(in d)) return false;
 
             Announce();
+
+            if (d.Source == DamageSource.Contact) EventBus<HitStopRequested>.Publish(new(_config.contactHitStopTime));
+
             return true;
         }
     }

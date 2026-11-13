@@ -28,6 +28,7 @@ namespace Refraction.Presentation
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
         private PauseService _pauseService;
+        private HitStopService _hitStopService;
 
         private bool _warnedNoLevel;
 
@@ -44,6 +45,8 @@ namespace Refraction.Presentation
         public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
 
         public PauseService Pause => _pauseService;
+
+        public HitStopService HitStop => _hitStopService;
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -108,6 +111,9 @@ namespace Refraction.Presentation
 
             _pauseService = new PauseService(new Adapters.GameTimer());
             RegisterService(_pauseService);
+
+            _hitStopService = new HitStopService(_pauseService);
+            RegisterService(_hitStopService);
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
@@ -357,10 +363,7 @@ namespace Refraction.Presentation
         private void Update()
         {
             AttachPending();
-
-            if (_inputProvider == null) return;
-
-            _inputProvider.Tick();
+            _inputProvider?.Tick();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             TickSceneRootsRender(Time.deltaTime);
         }

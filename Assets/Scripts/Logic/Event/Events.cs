@@ -79,4 +79,24 @@ namespace Refraction.Logic.Events
             this.EnterFace = enterFace;
         }
     }
+
+    public readonly struct HitStopRequested
+    {
+        public readonly float seconds;
+
+        public HitStopRequested(float seconds)
+        {
+            this.seconds = seconds;
+        }
+    }
+
+    public readonly struct CameraShakeRequested
+    {
+        public readonly float force;
+
+        public CameraShakeRequested(float force)
+        {
+            this.force = force;
+        }
+    }
 }

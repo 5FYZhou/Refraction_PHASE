@@ -62,10 +62,12 @@ MonoBehaviour:
   blackAttackKnockback: 4
   blackAttackMissRecoilAhead: 3
   blackAttackMissRecoilUp: 3
-  blackAttackMissRecoilDown: 3
+  blackAttackMissRecoilDown: 0
   blackAttackHitRecoilAhead: 10
   blackAttackHitRecoilUp: 10
-  blackAttackHitRecoilDown: 200
+  blackAttackHitRecoilDown: 20
+  blackAttackHitStopTime: 0.1
+  contactHitStopTime: 0.1
   maxPolarity: 10
   polarityPerHit: 5
   chargePrepareTime: 0.5
