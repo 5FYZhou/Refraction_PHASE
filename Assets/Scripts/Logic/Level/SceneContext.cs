@@ -31,6 +31,11 @@ namespace Refraction.Logic.Level
             World = World == WorldPolarity.White ? WorldPolarity.Black : WorldPolarity.White;
         }
 
+        public void SetWorld(WorldPolarity world)
+        {
+            World = world;
+        }
+
         /// <summary>记下这次加载要落到的门，必须在 LoadScene 之前调用：发起方随旧场景一起销毁</summary>
         public void SetNextDoor(int doorId, MovementStateTag enterTag, int enterFace)
         {

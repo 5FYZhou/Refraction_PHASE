@@ -15,7 +15,7 @@ using UnityEngine.SceneManagement;
 
 namespace Refraction.Presentation
 {
-    /// <summary>场景根：全场唯一常驻对象，持有输入源、关卡推进器与跨场景数据，切场景后把世界侧整体换成新场景的</summary>
+    /// <summary>场景根：全场唯一常驻对象，持有输入源、关卡推进器与跨场景数据</summary>
     public class GameRoot : Singleton<GameRoot>, ISceneTransfer
     {
         private readonly List<ISceneRoot> _sceneRoots = new();
@@ -101,7 +101,7 @@ namespace Refraction.Presentation
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
         }
 
-        /// <summary>首关装配：用 Inspector 里连好的引用。玩家的接入走场景根注册表，这里不碰。</summary>
+        /// <summary>首关装配：玩家的接入走场景根注册表，这里不碰</summary>
         private void Assemble()
         {
             _inputProvider = new();
@@ -161,6 +161,13 @@ namespace Refraction.Presentation
 
             _sceneRoots.Remove(root);
             _pendingAttach.Remove(root);
+        }
+
+        /// <summary>场景配置覆盖世界极性，要在其他场景根装配前调用，否则地面会先按上一关的颜色刷一次</summary>
+        public void ApplyWorldPolarity(WorldPolarity world)
+        {
+            _scenectx.SetWorld(world);
+            EventBus<WorldPolarityChanged>.Publish(new(world));
         }
 
         /// <summary>跨关：记下这次加载要落到的门，LevelManager 在 LoadScene 之前通过它交棒</summary>

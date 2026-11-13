@@ -73,6 +73,10 @@ namespace Refraction.Presentation.UI
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPolarityChanged);
             EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
+
+            // 晚于进关广播才显示时，这里补一次
+            _blackWorld = root != null && root.World == WorldPolarity.Black;
+            ApplyColors();
         }
 
         private void OnDisable()

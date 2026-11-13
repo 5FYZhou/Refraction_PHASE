@@ -80,6 +80,17 @@ namespace Refraction.Tests
         }
 
         [Test]
+        public void 场景配置_直接覆盖上一关留下的极性()
+        {
+            SceneContext scene = new();
+            scene.ReverseWorld();
+
+            scene.SetWorld(WorldPolarity.White);
+
+            Assert.AreEqual(WorldPolarity.White, scene.World, "配置值直接覆盖，不按翻转算");
+        }
+
+        [Test]
         public void 重置_清掉跨关落点但保留存档点()
         {
             SceneContext scene = new();
