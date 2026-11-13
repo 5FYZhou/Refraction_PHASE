@@ -20,7 +20,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private EnemyMotor moveMotor;
 
-        [Tooltip("是否启用 AI。关掉即站桩靶子：巡逻/追踪都不推进、原地不动，受击表现照常，但伤害值恒为 0（打不死）。")]
+        [Tooltip("是否启用 AI。关掉即站桩靶子：巡逻/追踪都不推进、原地不动，受击表现、命中反馈与子弹回收照常，但伤害值恒为 0（打不死）。")]
         [SerializeField]
         private bool OpenAI = true;
 

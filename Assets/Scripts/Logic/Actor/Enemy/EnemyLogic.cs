@@ -64,7 +64,7 @@ namespace Refraction.Logic.Actor
             _moveGroup.Tick(in ctx);
         }
 
-        /// <summary>站桩时受击表现照常（受伤态与击退都走基类），只把伤害值抹成 0，血掉不下去</summary>
+        /// <summary>站桩：伤害值抹成 0、血量不动，但受击表现与命中反馈照常，所以照样算命中</summary>
         public override bool TakeDamage(in Damage damage)
         {
             // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
@@ -72,7 +72,10 @@ namespace Refraction.Logic.Actor
 
             if (_aiEnabled) return base.TakeDamage(in damage);
 
-            return base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
+            base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
+
+            // 基类按「血量没掉」返回 false，这里改由无敌窗判定
+            return IsAlive && !Conditions.IsInvulnerable;
         }
 
         /// <summary>接触伤害</summary>
