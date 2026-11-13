@@ -39,7 +39,7 @@ namespace Refraction.Logic.Actor
         /// <summary>丢目标还没超时：两态共用同一个计时，谁也别自己再维护一份</summary>
         public bool Alert => _target.Visible || _lostTime < _config.loseTargetTime;
 
-        /// <summary>本帧的巡逻范围：无界表示没有 PatrolCollider 或已经跑出去了，整平台随便走</summary>
+        /// <summary>本帧的巡逻范围：无界表示巡逻框宽度 ≤ 0，整平台随便走</summary>
         public EnemyPatrolArea PatrolArea => _patrolArea;
 
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>

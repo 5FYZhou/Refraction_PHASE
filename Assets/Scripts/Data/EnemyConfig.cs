@@ -7,7 +7,7 @@ namespace Refraction.Data
     public sealed class EnemyConfig : CharacterConfig
     {
         [Header("巡逻")]
-        [Tooltip("巡逻速度（单位/秒），不乘 moveSpeed；追踪速度直接复用 moveSpeed。\n来回走的范围由预制体上的 PatrolCollider 决定，没有它就走到墙或悬崖。")]
+        [Tooltip("巡逻速度（单位/秒），不乘 moveSpeed；追踪速度直接复用 moveSpeed。\n来回走的范围由 EnemyController 上的巡逻框决定，框宽 ≤ 0 时走到墙或悬崖才掉头。")]
         [Min(0f)]
         public float patrolSpeed = 2.5f;
 

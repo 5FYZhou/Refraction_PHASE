@@ -1,6 +1,6 @@
 ﻿namespace Refraction.Logic.Actor
 {
-    /// <summary>巡逻范围：由表现层的 PatrolCollider 给出，无界时只靠墙与悬崖掉头</summary>
+    /// <summary>巡逻范围：由表现层的巡逻框给出，无界时只靠墙与悬崖掉头</summary>
     public readonly struct EnemyPatrolArea
     {
         public readonly bool HasBounds;

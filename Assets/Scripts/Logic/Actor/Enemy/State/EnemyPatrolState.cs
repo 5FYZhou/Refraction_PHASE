@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>巡逻：有 PatrolCollider 就在它的 x 范围内来回走，没有就走到墙或悬崖才掉头；离地不推进</summary>
+    /// <summary>巡逻：有巡逻框就在它的 x 范围内来回走，没有就走到墙或悬崖才掉头；离地不推进</summary>
     public sealed class EnemyPatrolState : BaseState<EnemyStateTag, LogicContext>
     {
         public override EnemyStateTag Tag => EnemyStateTag.Patrol;
