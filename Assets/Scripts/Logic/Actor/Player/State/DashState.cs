@@ -35,7 +35,8 @@ namespace Refraction.Logic.Actor
         {
             _startTime = ctx.GameTime.now;
             _motor.SetGravityEnable(false);
-            _motor.SnapVelocity(_dir * _speed);
+            _motor.SetVelocityX(_dir.x * _speed);
+            _motor.SetVelocityY(_dir.y * _speed);
         }
 
         public override void Exit()

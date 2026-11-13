@@ -17,11 +17,13 @@ namespace Refraction.Logic.Actor
         private readonly Cooldown _cooldown = new();
         private readonly WhiteAttackState _white;
         private readonly BlackAttackState _blackState;
+        private readonly ConditionGroup _conditions;
         private bool _black;
 
-        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null)
+        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null, ConditionGroup conditions = null)
         {
             _config = config;
+            _conditions = conditions;
             _white = new WhiteAttackState(config, motor, launcher, posture);
 
             RegisterState(new NoneAttackState());
@@ -76,6 +78,7 @@ namespace Refraction.Logic.Actor
             target = EmptyTag;
 
             if (Current != AttackStateTag.None) return false;
+            if (_conditions != null && _conditions.IsHurt) return false;
             if (!ctx.InputSnapshot.Attack) return false;
             if (!_cooldown.CanUse(ctx.GameTime.now)) return false;
 

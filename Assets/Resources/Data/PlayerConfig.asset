@@ -55,9 +55,9 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  blackAttackPrepareTime: 0.15
+  blackAttackPrepareTime: 0.02
   blackAttackTime: 0.3
-  blackAttackRecoverTime: 0.2
+  blackAttackRecoverTime: 0.05
   blackAttackDamage: 20
   blackAttackKnockback: 4
   blackAttackMissRecoilAhead: 3
@@ -65,7 +65,7 @@ MonoBehaviour:
   blackAttackMissRecoilDown: 3
   blackAttackHitRecoilAhead: 10
   blackAttackHitRecoilUp: 10
-  blackAttackHitRecoilDown: 30
+  blackAttackHitRecoilDown: 200
   maxPolarity: 10
   polarityPerHit: 5
   chargePrepareTime: 0.5

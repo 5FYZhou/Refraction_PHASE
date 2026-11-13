@@ -2,6 +2,7 @@
 using Refraction.Data;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
+using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
 using Refraction.Logic.Level;
 using Refraction.Logic.Move;
@@ -14,6 +15,7 @@ namespace Refraction.Tests
         private const float Dt = 0.02f;
 
         private PlayerConfig _config;
+        private ConditionGroup _conditions;
         private AttackGroup _group;
 
         [SetUp]
@@ -27,8 +29,10 @@ namespace Refraction.Tests
             _config.blackAttackTime = 0.2f;
             _config.blackAttackRecoverTime = 0.15f;
 
-            PostureGroup posture = new(_config, new FakeMotor());
-            _group = new AttackGroup(_config, new FakeMotor(), null, posture);
+            FakeMotor motor = new();
+            PostureGroup posture = new(_config, motor);
+            _conditions = new ConditionGroup(motor, _config);
+            _group = new AttackGroup(_config, motor, null, posture, null, _conditions);
         }
 
         [TearDown]
@@ -55,6 +59,26 @@ namespace Refraction.Tests
 
             _group.Tick(Ctx(Dt, true));
             Assert.AreEqual(AttackStateTag.WhiteAttackPrepare, _group.Current, "白形态攻击先走白前摇");
+        }
+
+        [Test]
+        public void 受击期间_攻击键不生效()
+        {
+            _group.Tick(Ctx(0f, false));
+
+            _conditions.RegisterHit(new Damage(1, DamageSource.Contact, Vector2.up, 5f), true);
+            _conditions.Tick(Ctx(0f, false));
+            Assert.IsTrue(_conditions.IsHurt, "有击退的伤害登记后条件组应进入受伤");
+
+            _group.Tick(Ctx(Dt, true));
+            Assert.AreEqual(AttackStateTag.None, _group.Current, "受伤期间按攻击键也不该起手");
+
+            // 击退靠 KnockbackDecay 逐帧衰减，一帧掉不完，得连推几帧才脱伤
+            for (int i = 0; i < 15 && _conditions.IsHurt; i++) _conditions.Tick(Ctx(Dt * (i + 2), false));
+            Assert.IsFalse(_conditions.IsHurt, "击退衰减完就脱离受伤");
+
+            _group.Tick(Ctx(0.5f, true));
+            Assert.AreEqual(AttackStateTag.WhiteAttackPrepare, _group.Current, "伤好之后攻击键照常生效");
         }
 
         [Test]

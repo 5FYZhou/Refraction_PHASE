@@ -221,6 +221,7 @@ namespace Refraction.Tests
             state.Enter(Ctx(0f));
             Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "平劈空挥沿朝向反向");
             Assert.AreEqual(0f, motor.Total.y, 1e-3f, "平劈空挥不带竖直分量");
+            Assert.AreEqual(0, motor.ExternalCalls, "反冲力直接写速度，不走会衰减的外部速度");
         }
 
         [Test]
@@ -233,11 +234,15 @@ namespace Refraction.Tests
             Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "开打先给空挥那份");
 
             state.NotifyHit();
-            Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "命中后总外部速度等于命中那份，不是空挥 + 命中");
+            Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "命中只排队，不当场写速度");
+
+            state.Tick(Ctx(Dt));
+            Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "下一帧 tick 里重写一次，速度等于命中那份，不是空挥 + 命中");
 
             motor.Reset();
             state.Enter(Ctx(1f));
             state.NotifyHit();
+            state.Tick(Ctx(Dt));
             Assert.AreEqual(0f, motor.Total.x, 1e-3f, "上劈命中换成命中那份，横向仍为 0");
             Assert.AreEqual(-10f, motor.Total.y, 1e-3f, "上劈命中仍往下推");
         }
@@ -252,6 +257,7 @@ namespace Refraction.Tests
             Assert.AreEqual(1f, motor.Total.x, 1e-3f, "朝左平劈空挥要往右后推");
 
             state.NotifyHit();
+            state.Tick(Ctx(Dt));
             Assert.AreEqual(2f, motor.Total.x, 1e-3f, "命中那份同样按朝向镜像");
 
             motor.Reset();
@@ -268,9 +274,11 @@ namespace Refraction.Tests
 
             state.Enter(Ctx(0f));
             state.NotifyHit();
+            state.Tick(Ctx(Dt));
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "第一次命中换成命中那份");
 
             state.NotifyHit();
+            state.Tick(Ctx(Dt * 2f));
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "同一挥击砍到第二个目标不再补一份");
         }
 
@@ -301,7 +309,10 @@ namespace Refraction.Tests
             Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "盒刚点亮还没接触，先给空挥那份");
 
             view.ProduceDamage();
-            Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "AttackBox 接触后先取伤害，这时换成命中那份");
+            Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "物理回调里只排队，当场写不进速度");
+
+            state.Tick(Ctx(Dt));
+            Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "AttackBox 接触后先取伤害，下一帧换成命中那份");
         }
 
         [Test]
@@ -318,6 +329,7 @@ namespace Refraction.Tests
 
             // 模拟 AttackBox：取伤害 → TakeDamage 返回 false → 不回调 IHitLanded
             view.ProduceDamage();
+            state.Tick(Ctx(Dt));
 
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "没扣到血也是砍在实体上，反冲不该缩回空挥那份");
         }
@@ -371,6 +383,8 @@ namespace Refraction.Tests
 
             public Vector2 Last;
 
+            public int ExternalCalls;
+
             public void Reset()
             {
                 Total = Vector2.zero;
@@ -379,14 +393,23 @@ namespace Refraction.Tests
 
             public void AddExternalVelocity(Vector2 velocity)
             {
+                ExternalCalls++;
                 Last = velocity;
                 Total += velocity;
             }
             public void MoveTowardsX(Vector2 direction, float speed) { }
             public void BrakeTowardsX() { }
             public void AddImpulse(Vector2 deltaVelocity) { }
-            public void SetVelocityX(float speed) { }
-            public void SetVelocityY(float speed) { }
+            public void SetVelocityX(float speed)
+            {
+                Total.x = speed;
+                Last = new Vector2(speed, Last.y);
+            }
+            public void SetVelocityY(float speed)
+            {
+                Total.y = speed;
+                Last = new Vector2(Last.x, speed);
+            }
             public void SnapVelocity(Vector2 velocity) { }
             public void SetSpeedScaleX(float scale) { }
             public void ScaleVelocityY(float multiplier) { }

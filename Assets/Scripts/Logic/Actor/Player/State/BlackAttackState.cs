@@ -20,6 +20,7 @@ namespace Refraction.Logic.Actor
         private Vector2 _missRecoil;
         private Vector2 _hitRecoil;
         private bool _pending;
+        private bool _hitQueued;
 
         public BlackAttackState(PlayerConfig config, IBlackAttackView view = null, IStateMove motor = null, PostureGroup posture = null)
         {
@@ -42,19 +43,35 @@ namespace Refraction.Logic.Actor
             _hitRecoil = RecoilOf(ctx, true);
             _pending = _hitRecoil != _missRecoil;
 
-            if (_missRecoil != Vector2.zero) _motor?.AddExternalVelocity(_missRecoil);
+            if (_missRecoil != Vector2.zero) Apply(_missRecoil);
         }
 
-        /// <summary>命中回报：把空挥那份换成命中那份（补差值，不是相加），一次挥击只换一次</summary>
+        /// <summary>命中回报：只排队，速度留到下一帧 Tick 里写——物理回调早过了 Commit，当场写会被 BeginStep 清掉</summary>
         public void NotifyHit()
         {
             if (!_pending) return;
 
             _pending = false;
-            _motor?.AddExternalVelocity(_hitRecoil - _missRecoil);
+            _hitQueued = true;
         }
 
-        /// <summary>沿劈击反向的后坐力，乘下蹲倍率；空挥那份开打就落地，命中那份等回调用差值换上去</summary>
+        private void FlushHit()
+        {
+            if (!_hitQueued) return;
+
+            _hitQueued = false;
+            Apply(_hitRecoil);
+        }
+
+        private void Apply(Vector2 recoil)
+        {
+            if (_motor == null) return;
+
+            if (recoil.x != 0f) _motor.SetVelocityX(recoil.x);
+            if (recoil.y != 0f) _motor.SetVelocityY(recoil.y);
+        }
+
+        /// <summary>沿劈击反向的后坐力，乘下蹲倍率；空挥那份开打就写上，命中那份等回调再盖</summary>
         private Vector2 RecoilOf(in LogicContext ctx, bool hit)
         {
             if (_motor == null) return Vector2.zero;
@@ -78,13 +95,15 @@ namespace Refraction.Logic.Actor
             return -push * (speed * scale);
         }
 
-        public override void Tick(in LogicContext ctx) { }
+        public override void Tick(in LogicContext ctx) => FlushHit();
 
         public override bool IsDone(in LogicContext ctx)
             => ctx.GameTime.now - _enterTime >= _config.blackAttackTime;
 
         public override void Exit()
         {
+            // 卡在最后一帧的命中不能丢：Exit 同样在 tick 窗口内
+            FlushHit();
             _pending = false;
             _view?.End();
         }
