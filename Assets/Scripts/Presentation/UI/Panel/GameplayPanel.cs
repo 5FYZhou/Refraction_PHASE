@@ -1,4 +1,5 @@
 ﻿using Refraction.Logic.Events;
+using Refraction.Logic.Level;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,9 +27,11 @@ namespace Refraction.Presentation.UI
         private RectTransform _polarityNum;
         private float _polarityFullWidth;
 
-        private Color _aliveColor = Color.white;
+        private Color _whiteIcon = Color.white;
 
-        private Color _emptyColor = Color.black;
+        private Color _blackIcon = Color.black;
+
+        private bool _blackWorld;
 
         private int _alive = IconCount;
 
@@ -69,14 +72,14 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPolarityChanged);
-            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
         private void OnDisable()
         {
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Unsubscribe(OnPolarityChanged);
-            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
         private void OnPolarityChanged(PlayerPolarityChanged evt)
@@ -101,22 +104,22 @@ namespace Refraction.Presentation.UI
             ApplyColors();
         }
 
-        private void OnWorldReversed(WorldReversed evt)
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
         {
-            Color alive = _aliveColor;
-            _aliveColor = _emptyColor;
-            _emptyColor = alive;
-
+            _blackWorld = evt.World == WorldPolarity.Black;
             ApplyColors();
         }
 
         private void ApplyColors()
         {
+            Color alive = _blackWorld ? _blackIcon : _whiteIcon;
+            Color empty = _blackWorld ? _whiteIcon : _blackIcon;
+
             for (int i = 0; i < IconCount; i++)
             {
                 if (_icons[i] == null) continue;
 
-                _icons[i].color = i < _alive ? _aliveColor : _emptyColor;
+                _icons[i].color = i < _alive ? alive : empty;
             }
         }
     }

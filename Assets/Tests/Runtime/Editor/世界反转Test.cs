@@ -36,7 +36,7 @@ namespace Refraction.Tests
         public void 拆掉关卡()
         {
             _level.Dispose();
-            EventBus<WorldReversed>.Clear();
+            EventBus<WorldPolarityChanged>.Clear();
         }
 
         [Test]
@@ -49,24 +49,39 @@ namespace Refraction.Tests
         [Test]
         public void 反转_黑白互换_并把新极性推给地面()
         {
-            EventBus<WorldReversed>.Publish(default);
+            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
 
             Assert.AreEqual(WorldPolarity.Black, _level.World, "白世界反转一次是黑");
             Assert.AreEqual(WorldPolarity.Black, _ground.Applied, "地面跟着换到黑");
 
-            EventBus<WorldReversed>.Publish(default);
+            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.White));
 
             Assert.AreEqual(WorldPolarity.White, _level.World, "再反转一次回到白");
             Assert.AreEqual(WorldPolarity.White, _ground.Applied, "地面跟着回白");
         }
 
         [Test]
+        public void 跨关保留_新关卡从常驻极性起步()
+        {
+            LevelManager next = new(2, null, WorldPolarity.Black);
+            next.Init();
+
+            记色地面 ground = new();
+            next.RegisterReverse(ground);
+
+            Assert.AreEqual(WorldPolarity.Black, next.World, "新关卡的世界极性要接住上一关留下的黑");
+            Assert.AreEqual(WorldPolarity.Black, ground.Applied, "新场景的地面装配时就该是黑的");
+
+            next.Dispose();
+        }
+
+        [Test]
         public void 释放后_不再响应反转()
         {
             _level.Dispose();
-            EventBus<WorldReversed>.Publish(default);
+            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
 
-            Assert.AreEqual(WorldPolarity.White, _ground.Applied, "Dispose 之后不该再收到 WorldReversed");
+            Assert.AreEqual(WorldPolarity.White, _ground.Applied, "Dispose 之后不该再收到世界极性");
             Assert.AreEqual(1, _ground.Count, "已注销的关卡不再推极性");
         }
     }

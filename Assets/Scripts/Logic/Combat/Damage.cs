@@ -14,6 +14,8 @@ namespace Refraction.Logic.Combat
         AfterimageLink = 3,
 
         Fall = 4,
+
+        Melee = 5,
     }
 
     public readonly struct Damage

@@ -14,15 +14,18 @@ namespace Refraction.Logic.Level
         private readonly int _curId;
         private readonly IDoorReader _doorReader;
         private readonly List<IReverse> _reverses = new();
+        private readonly WorldPolarity _initialWorld;
 
         private WorldPolarity _world = WorldPolarity.White;
 
         private bool _loading;
 
-        public LevelManager(int id, IDoorReader doorReader = null)
+        public LevelManager(int id, IDoorReader doorReader = null, WorldPolarity world = WorldPolarity.White)
         {
             _curId = id;
             _doorReader = doorReader;
+            _initialWorld = world;
+            _world = world;
 
             if (id <= 0)
             {
@@ -30,7 +33,7 @@ namespace Refraction.Logic.Level
             }
         }
 
-        /// <summary>当前世界极性，随本对象所在关卡重建，所以总是从白开始</summary>
+        /// <summary>当前世界极性：跨关保留，进入关卡时由常驻根给定</summary>
         public WorldPolarity World => _world;
 
         public bool IsBlackWorld => _world == WorldPolarity.Black;
@@ -38,15 +41,17 @@ namespace Refraction.Logic.Level
         public void Init()
         {
             EventBus<RequestNextDoor>.Subscribe(OnRequestNextLevel);
-            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
+
+            EventBus<WorldPolarityChanged>.Publish(new(_world));
         }
 
         public void Dispose()
         {
             EventBus<RequestNextDoor>.Unsubscribe(OnRequestNextLevel);
-            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
             _reverses.Clear();
-            _world = WorldPolarity.White;
+            _world = _initialWorld;
             _loading = false;
         }
 
@@ -59,9 +64,9 @@ namespace Refraction.Logic.Level
             reverse.Apply(_world);
         }
 
-        private void OnWorldReversed(WorldReversed evt)
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
         {
-            _world = _world == WorldPolarity.White ? WorldPolarity.Black : WorldPolarity.White;
+            _world = evt.World;
 
             for (int i = 0; i < _reverses.Count; i++)
             {

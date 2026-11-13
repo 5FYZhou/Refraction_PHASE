@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5773945756375441653}
   - component: {fileID: 7306576185757568404}
   - component: {fileID: 7311733317528722596}
+  - component: {fileID: 8075081264287732892}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: Virtual Camera
@@ -27,8 +28,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6727009049613130246}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00000008033914, y: -0.000000051134474, z: -4.305196e-15, w: 1}
-  m_LocalPosition: {x: 14.400001, y: 6.1199985, z: -10}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -90,6 +91,29 @@ MonoBehaviour:
   m_Damping: 0.5
   m_MaxWindowSize: -1
   m_Padding: 0
+--- !u!114 &8075081264287732892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6727009049613130246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00b2d199b96b516448144ab30fb26aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ApplyAfter: 2
+  m_ChannelMask: 1
+  m_Gain: 1
+  m_Use2DDistance: 0
+  m_UseCameraSpace: 1
+  m_ReactionSettings:
+    m_SecondaryNoise: {fileID: 0}
+    m_AmplitudeGain: 1
+    m_FrequencyGain: 1
+    m_Duration: 1
+    m_NoiseOffsets: {x: 0, y: 0, z: 0}
 --- !u!1 &6872639310019733343
 GameObject:
   m_ObjectHideFlags: 0

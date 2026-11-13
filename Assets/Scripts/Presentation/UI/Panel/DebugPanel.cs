@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using Refraction.Logic.Events;
+using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
 using TMPro;
 using UnityEngine;
@@ -67,19 +68,19 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerDebugSnapshot>.Subscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
-            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
         private void OnDisable()
         {
             EventBus<PlayerDebugSnapshot>.Unsubscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
-            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
-        private void OnWorldReversed(WorldReversed evt)
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
         {
-            _black = !_black;
+            _black = evt.World == WorldPolarity.Black;
             ApplyTextColor();
         }
 

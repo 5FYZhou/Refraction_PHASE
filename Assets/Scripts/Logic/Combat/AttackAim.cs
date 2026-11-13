@@ -23,6 +23,14 @@ namespace Refraction.Logic.Combat
             return new Vector2(x, 0f);
         }
 
+        public static BlackAttackKind Kind(float vertical)
+        {
+            if (vertical > VerticalThreshold) return BlackAttackKind.Up;
+            if (vertical < -VerticalThreshold) return BlackAttackKind.Down;
+
+            return BlackAttackKind.Ahead;
+        }
+
         /// <summary>后坐力：沿弹道反向读对应配置，再乘蹲姿倍率</summary>
         public static Vector2 RecoilSpeed(Vector2 direction, PlayerConfig config, float crouchProgress)
         {

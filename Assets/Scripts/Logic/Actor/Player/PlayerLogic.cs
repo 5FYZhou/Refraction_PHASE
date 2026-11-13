@@ -37,11 +37,11 @@ namespace Refraction.Logic.Actor
         private int _pendingEntryFace;
         private bool _hasPendingEntry;
 
-        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher) : base(motor, config)
+        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher, IBlackAttackView blackAttack = null) : base(motor, config)
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
-            _attackGroup = new(config, motor, launcher, _postureGroup);
+            _attackGroup = new(config, motor, launcher, _postureGroup, blackAttack);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
@@ -218,6 +218,8 @@ namespace Refraction.Logic.Actor
         }
 
         public void BindBulletLauncher(IBulletLauncher launcher) => _attackGroup.BindLauncher(launcher);
+
+        public void Dispose() => _attackGroup.Dispose();
 
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {

@@ -45,6 +45,7 @@ namespace Refraction.Presentation.Actor
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
         private IBulletLauncher _launcher;
+        private BlackAttackView _blackAttack;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -79,6 +80,8 @@ namespace Refraction.Presentation.Actor
         }
         private void OnDestroy()
         {
+            _logic?.Dispose();
+
             // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
@@ -111,7 +114,10 @@ namespace Refraction.Presentation.Actor
                 Mathf.Max(config.inputBufferTime, config.dashBufferTime),
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
-            _logic = new(moveMotor, config, _buffer, _launcher);
+
+            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnHitLanded());
+
+            _logic = new(moveMotor, config, _buffer, _launcher, _blackAttack);
 
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 

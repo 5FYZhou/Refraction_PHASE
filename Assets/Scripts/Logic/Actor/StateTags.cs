@@ -40,6 +40,9 @@ namespace Refraction.Logic.Actor
         None = 0,
         WhiteAttackPrepare,
         WhiteAttack,
-        WhiteAttackRecover
+        WhiteAttackRecover,
+        BlackAttackPrepare,
+        BlackAttack,
+        BlackAttackRecover
     }
 }
