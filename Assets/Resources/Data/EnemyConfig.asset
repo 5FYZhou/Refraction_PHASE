@@ -23,10 +23,15 @@ MonoBehaviour:
   enableGravity: 1
   maxFallSpeed: 20
   maxRiseSpeed: 20
-  fallGravity: 70
+  fallGravity: 140
   patrolSpeed: 1.5
   loseTargetTime: 1
   chaseStopDistance: 1
   contactDamage: 1
   contactInterval: 1
   contactKnockback: 18.5
+  bulletSpeed: 12
+  bulletDamage: 1
+  bulletKnockback: 0
+  fireInterval: 1
+  bulletMuzzle: {x: 1.6, y: 0}

@@ -47,7 +47,7 @@ namespace Refraction.Logic.Actor
         }
 
         /// <summary>丢目标超时即结束，回巡逻由 EnemyMoveGroup.Fallback 决定</summary>
-        public override bool IsDone(in LogicContext ctx) => !_owner.Alert;
+        public override bool IsDone(in LogicContext ctx) => !_owner.Alert || !_owner.ChaseAllowed;
 
         public override void Exit() { }
     }

@@ -15,8 +15,11 @@ namespace Refraction.Presentation.Combat
         private IHitLanded _hitSink;
         private Pool<Bullet> _pool;
 
-        public void Init(GameObject prefab, Transform owner, IHitLanded hitSink)
+        public void Init(GameObject prefab, Transform owner, IHitLanded hitSink, int maxSize = PoolSize, int prewarm = PrewarmCount)
         {
+            // 容器必须是根对象：MoveMotor 转身靠翻根节点 scale.x，挂在角色下面会把子弹位置镜像到另一侧
+            transform.SetParent(null, true);
+
             _prefab = prefab;
             _owner = owner;
             _hitSink = hitSink;
@@ -32,10 +35,10 @@ namespace Refraction.Presentation.Combat
                 onGet: Take,
                 onRelease: Put,
                 name: nameof(Bullet),
-                maxSize: PoolSize,
+                maxSize: Mathf.Max(1, maxSize),
                 overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
 
-            _pool.Prewarm(PrewarmCount);
+            _pool.Prewarm(prewarm);
         }
 
         public IBulletView Create(BulletLogic system, int id)
@@ -53,6 +56,9 @@ namespace Refraction.Presentation.Combat
         private Bullet CreateBullet()
         {
             GameObject go = Instantiate(_prefab, transform);
+
+            // 预制体根节点带着自己的局部坐标，池里复用前先落回容器原点，出膛位置一律由 Apply 决定
+            go.transform.localPosition = Vector3.zero;
 
             Bullet bullet = go.GetComponent<Bullet>();
             if (bullet == null) bullet = go.AddComponent<Bullet>();

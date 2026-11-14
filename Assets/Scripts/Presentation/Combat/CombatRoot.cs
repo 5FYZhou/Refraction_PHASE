@@ -26,6 +26,7 @@ namespace Refraction.Presentation.Combat
         private AfterimageLogic _afterimages;
         private AfterimageField _field;
         private BulletLogic _bullets;
+        private BulletField _bulletField;
         private LevelManager _levelMgr;
         private GameRoot _root;
 
@@ -39,6 +40,8 @@ namespace Refraction.Presentation.Combat
         {
             _levelMgr?.Dispose();
             _levelMgr = null;
+
+            if (_bulletField != null) Destroy(_bulletField.gameObject);
 
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
@@ -111,16 +114,15 @@ namespace Refraction.Presentation.Combat
             if (_bullets != null) return;
 
             GameObject host = new(nameof(BulletField));
-            host.transform.SetParent(transform, false);
 
             GameObject prefab = bulletPrefab != null
                 ? bulletPrefab
                 : Resources.Load<GameObject>(BulletPath);
 
-            BulletField field = host.AddComponent<BulletField>();
-            field.Init(prefab, playerController.transform, playerController.HitSink);
+            _bulletField = host.AddComponent<BulletField>();
+            _bulletField.Init(prefab, playerController.transform, playerController.HitSink);
 
-            _bullets = new BulletLogic(field);
+            _bullets = new BulletLogic(_bulletField);
 
             playerController.BindBulletLauncher(_bullets);
         }

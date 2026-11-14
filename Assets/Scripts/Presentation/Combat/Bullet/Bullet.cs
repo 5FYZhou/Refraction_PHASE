@@ -38,6 +38,7 @@ namespace Refraction.Presentation.Combat
             _owner = owner;
             _hitSink = hitSink;
             _hit = false;
+            _bound = false;
             _damage = system.DamageOf(id);
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();

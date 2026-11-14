@@ -3,6 +3,8 @@ using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
+using Refraction.Logic.Level;
+using Refraction.Presentation.Combat;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
@@ -32,11 +34,18 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 patrolSize;
 
+        [Tooltip("敌人子弹的预制体：看见玩家时从这里出一发。留空 = 这只敌人不开火，只巡逻与追击。")]
+        [SerializeField]
+        private GameObject bulletPrefab;
+
         private const string DetectChildName = "DetectCollider";
+        private const int EnemyBulletPoolSize = 4;
 
         private GameRoot _root;
         private bool _attached;
         private EnemyLogic _logic;
+        private BulletLogic _bullets;
+        private BulletField _bulletField;
 
         private PlayerController _target;
         private Transform _targetTransform;
@@ -60,6 +69,10 @@ namespace Refraction.Presentation.Actor
 
         private void OnDestroy()
         {
+            _logic?.Dispose();
+
+            if (_bulletField != null) Destroy(_bulletField.gameObject);
+
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
         
@@ -70,12 +83,18 @@ namespace Refraction.Presentation.Actor
             Require.Assigned(moveMotor, nameof(EnemyController), nameof(moveMotor));
             Require.Assigned(config, nameof(EnemyController), nameof(config));
 
-            _logic = new EnemyLogic(moveMotor, config, OpenAI);
+            _root ??= GameRoot.Instance;
+
+            WorldPolarity world = _root != null ? _root.World : WorldPolarity.White;
+
+            _logic = new EnemyLogic(moveMotor, config, OpenAI, world);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
             var attackBox = transform.GetComponentInChildren<AttackBox>();
             if (attackBox != null) attackBox.SetAttack(_logic);
+
+            AttachBullets();
 
             _attached = true;
         }
@@ -96,8 +115,23 @@ namespace Refraction.Presentation.Actor
 
             _logic.FixedTick(context, Sense(), SamplePatrolArea());
 
+            _bullets?.Tick(deltaTime);
+
             // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
             if (!_logic.IsAlive) Destroy(gameObject);
+        }
+
+        private void AttachBullets()
+        {
+            if (bulletPrefab == null) return;
+
+            GameObject host = new(nameof(BulletField));
+
+            _bulletField = host.AddComponent<BulletField>();
+            _bulletField.Init(bulletPrefab, transform, null, EnemyBulletPoolSize, 1);
+
+            _bullets = new BulletLogic(_bulletField);
+            _logic.BindLauncher(_bullets);
         }
 
         /// <summary>目标被销毁（换场景、死亡）后引用会变成伪 null，这里一律收成"看不见"，逻辑层不必再判空</summary>
