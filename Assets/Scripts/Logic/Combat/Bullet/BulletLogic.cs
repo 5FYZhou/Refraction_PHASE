@@ -60,7 +60,11 @@ namespace Refraction.Logic.Combat
                 Speed = spawn.Speed,
                 TransferSpeed = spawn.TransferSpeed,
                 State = BulletState.Flying,
-                Damage = new Damage(spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.KnockbackSpeed)
+                Damage = new Damage(
+                    spawn.Damage,
+                    PlayerOwned ? DamageSource.PlayerBullet : DamageSource.EnemyBullet,
+                    spawn.Direction,
+                    spawn.KnockbackSpeed)
             };
 
             _live.Add(shot);

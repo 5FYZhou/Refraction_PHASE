@@ -46,7 +46,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 chaseOffset;
 
-        [Tooltip("追击框尺寸（单位）：玩家出框即脱战，只有宽度参与判定。\n宽度留 0 = 无界，玩家在场就一直追。通常要比巡逻框大，追出去一段再回头。")]
+        [Tooltip("追击框尺寸（单位）：玩家 x 或 y 出框即脱战。\n宽度留 0 = 无界，玩家在场就一直追；高度留 0 = 只判横向。通常要比巡逻框大，追出去一段再回头。")]
         [SerializeField]
         private Vector2 chaseSize = new(20f, 6f);
 
@@ -130,7 +130,7 @@ namespace Refraction.Presentation.Actor
 
         public E_SecondStateTag CurrentTag => _logic != null ? _logic.CurrentTag : E_SecondStateTag.None;
 
-        /// <summary>调试面板右侧栏：一行极性/状态，一行视线与领地及两个框的 x 中心（只有 x 参与判定）</summary>
+        /// <summary>调试面板右侧栏：一行极性/状态，一行视线与领地及两个框的中心</summary>
         public void AppendDebug(StringBuilder builder)
         {
             if (_logic == null) return;
@@ -140,12 +140,25 @@ namespace Refraction.Presentation.Actor
                    .Append(" ").Append(_logic.CurrentTag.ToString())
                    .Append("\n视").Append(_logic.Visible ? "有" : "无")
                    .Append(" 领").Append(_logic.Alert ? "有" : "无")
-                   .Append(" 巡x ").Append(CenterX(_logic.PatrolArea))
-                   .Append(" 追x ").Append(CenterX(_logic.ChaseArea));
+                   .Append(" 巡");
+
+            AppendCenter(builder, _logic.PatrolArea);
+
+            builder.Append(" 追");
+
+            AppendCenter(builder, _logic.ChaseArea);
         }
 
-        private static string CenterX(in E_SecondArea area) =>
-            area.HasBounds ? area.Center.x.ToString("F2") : "无";
+        private static void AppendCenter(StringBuilder builder, in E_SecondArea area)
+        {
+            if (!area.HasBounds)
+            {
+                builder.Append(" 无");
+                return;
+            }
+
+            builder.Append(area.Center.x.ToString("F2")).Append(",").Append(area.Center.y.ToString("F2"));
+        }
 
         public void FixedTick(float deltaTime)
         {
@@ -263,7 +276,7 @@ namespace Refraction.Presentation.Actor
 
             Vector2 center = (Vector2)transform.position + offset;
 
-            return new E_SecondArea(true, center, size.x * 0.5f);
+            return new E_SecondArea(true, center, size * 0.5f);
         }
 
 #if UNITY_EDITOR
@@ -283,8 +296,8 @@ namespace Refraction.Presentation.Actor
             // 跑起来画逻辑真正在用的那份快照：框钉在世界上，只有 Recenter 会成对平移巡逻框与追击框
             if (Application.isPlaying && _root != null)
             {
-                DrawArea(_logic != null ? _logic.PatrolArea : _patrolArea, patrolSize.y, patrol);
-                DrawArea(_logic != null ? _logic.ChaseArea : _chaseArea, chaseSize.y, chase);
+                DrawArea(_logic != null ? _logic.PatrolArea : _patrolArea, patrol);
+                DrawArea(_logic != null ? _logic.ChaseArea : _chaseArea, chase);
                 return;
             }
 
@@ -292,20 +305,22 @@ namespace Refraction.Presentation.Actor
             DrawBox(chaseOffset, chaseSize, chase);
         }
 
-        private static void DrawArea(in E_SecondArea area, float height, Color color)
+        private static void DrawArea(in E_SecondArea area, Color color)
         {
-            if (!area.HasBounds || height <= 0f) return;
+            if (!area.HasBounds) return;
 
             Gizmos.color = color;
-            Gizmos.DrawWireCube(new Vector3(area.Center.x, area.Center.y, 0f), new Vector2(area.HalfWidth * 2f, height));
+            Gizmos.DrawWireCube(
+                new Vector3(area.Center.x, area.Center.y, 0f),
+                new Vector2(area.HalfSize.x * 2f, Mathf.Max(area.HalfSize.y * 2f, 0.2f)));
         }
 
         private void DrawBox(Vector2 offset, Vector2 size, Color color)
         {
-            if (size.x <= 0f || size.y <= 0f) return;
+            if (size.x <= 0f) return;
 
             Gizmos.color = color;
-            Gizmos.DrawWireCube(transform.position + (Vector3)offset, size);
+            Gizmos.DrawWireCube(transform.position + (Vector3)offset, new Vector2(size.x, Mathf.Max(size.y, 0.2f)));
         }
 #endif
     }

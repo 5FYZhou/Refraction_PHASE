@@ -6,7 +6,7 @@ namespace Refraction.Logic.Combat
     {
         Default = 0,
 
-        Bullet = 1,
+        PlayerBullet = 1,
 
         /// <summary>接触伤害，敌人贴身时触发</summary>
         Contact = 2,
@@ -16,6 +16,8 @@ namespace Refraction.Logic.Combat
         Fall = 4,
 
         Melee = 5,
+
+        EnemyBullet = 6,
     }
 
     public readonly struct Damage

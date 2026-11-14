@@ -175,6 +175,11 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackAttackHitRecoilDown = 20f;
 
+        [Header("受击")]
+        [Tooltip("破坏力：敌人子弹打到玩家时扣的血量（点）。\n敌人只知道开了火，不知道玩家的数值——敌弹自带的伤害在这里一律被顶掉。0 表示敌弹不扣血。")]
+        [Min(0f)]
+        public float destruction = 1f;
+
         [Header("打击感 · 顿帧")]
         [Tooltip("黑攻击命中敌人的顿帧时长（秒）：命中当帧整个游戏冻结，到点自动恢复。\n只有黑攻击走这条，子弹命中不顿帧；0 表示不顿帧。")]
         [Min(0f)]

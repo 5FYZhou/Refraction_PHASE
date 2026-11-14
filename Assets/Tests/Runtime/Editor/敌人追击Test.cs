@@ -29,8 +29,8 @@ namespace Refraction.Tests
             _logic = new E_SecondLogic(
                 _motor,
                 _config,
-                new E_SecondArea(true, Vector2.zero, 2f),
-                new E_SecondArea(true, Vector2.zero, 10f),
+                new E_SecondArea(true, Vector2.zero, new Vector2(2f, 2f)),
+                new E_SecondArea(true, Vector2.zero, new Vector2(10f, 3f)),
                 false);
         }
 
@@ -78,6 +78,19 @@ namespace Refraction.Tests
             推进(self, new Vector2(12f, 0f), false);
 
             Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "玩家出框即脱战，身体在巡逻框外就飞回去");
+        }
+
+        [Test]
+        public void 玩家纵向出追击框_追击也结束()
+        {
+            Vector2 self = new(5f, 0f);
+
+            推进(self, new Vector2(7f, 2f), false);
+            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "x、y 都还在框里，先追起来");
+
+            推进(self, new Vector2(7f, 5f), false);
+
+            Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "玩家往上飞出框同样算脱战");
         }
 
         [Test]

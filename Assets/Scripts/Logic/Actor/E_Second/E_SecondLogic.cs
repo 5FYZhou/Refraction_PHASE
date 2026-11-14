@@ -59,8 +59,8 @@ namespace Refraction.Logic.Actor
         /// <summary>视线：DetectCollider 触发器里有玩家</summary>
         public bool Visible => _target.Known && _target.Visible;
 
-        /// <summary>领地：玩家还在追击框里；框宽 ≤ 0 时无界</summary>
-        public bool Alert => _target.Known && _chaseArea.Contains(_target.Pos.x);
+        /// <summary>领地：玩家还在追击框里（x、y 都要在框内）；框宽 ≤ 0 时无界</summary>
+        public bool Alert => _target.Known && _chaseArea.Contains(_target.Pos);
 
         /// <summary>表现层唯一入口：写入本帧玩家位置，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in E_SecondTargetInfo target)
@@ -87,9 +87,9 @@ namespace Refraction.Logic.Actor
         {
             Vector2 delta = center - _patrolArea.Center;
 
-            _patrolArea = new E_SecondArea(true, center, _patrolArea.HalfWidth);
+            _patrolArea = new E_SecondArea(true, center, _patrolArea.HalfSize);
 
-            if (_chaseArea.HasBounds) _chaseArea = new E_SecondArea(true, _chaseArea.Center + delta, _chaseArea.HalfWidth);
+            if (_chaseArea.HasBounds) _chaseArea = new E_SecondArea(true, _chaseArea.Center + delta, _chaseArea.HalfSize);
         }
 
         /// <summary>后摇上浮的随机距离，落在 [riseMin, riseMax]</summary>

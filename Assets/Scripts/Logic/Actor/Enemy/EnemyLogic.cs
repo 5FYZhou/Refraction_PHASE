@@ -83,8 +83,9 @@ namespace Refraction.Logic.Actor
         /// <summary>站桩：伤害值抹成 0、血量不动，但受击表现与命中反馈照常，所以照样算命中</summary>
         public override bool TakeDamage(in Damage damage)
         {
-            // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
+            // 敌人之间会挤在一起，接触伤害与敌弹都只对玩家生效，否则怪物会互相打死
             if (damage.Source == DamageSource.Contact) return false;
+            if (damage.Source == DamageSource.EnemyBullet) return false;
 
             if (_aiEnabled) return base.TakeDamage(in damage);
 

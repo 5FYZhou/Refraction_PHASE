@@ -47,6 +47,7 @@ namespace Refraction.Presentation.Actor
         private Spawn _checkpoint;
         private IBulletLauncher _launcher;
         private BlackAttackView _blackAttack;
+        private Collider2D _hurt;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -128,8 +129,8 @@ namespace Refraction.Presentation.Actor
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
 
-            Collider2D hurt = hurtBox != null ? hurtBox.GetComponent<Collider2D>() : null;
-            _blackAttack.BindRebound(() => _launcher, hurt);
+            _hurt = hurtBox != null ? hurtBox.GetComponent<Collider2D>() : null;
+            _blackAttack.BindRebound(() => _launcher, _hurt);
 
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
             if (spawnT != null && _checkpoint == null)

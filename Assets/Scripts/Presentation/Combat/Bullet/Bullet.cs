@@ -10,9 +10,16 @@ namespace Refraction.Presentation.Combat
     public sealed class Bullet : MonoBehaviour, IAttacker, IBulletView, IHitLanded
     {
         private const string BoundTag = "Bound";
+        private const int DefaultLayer = 0;
+        private const int GroundLayer = 6;
+        private const int PlayerLayer = 7;
         private const int EnemyLayer = 8;
 
         private static readonly List<Bullet> LiveList = new();
+
+        private static readonly int PlayerBulletMask = (1 << DefaultLayer) | (1 << PlayerLayer);
+
+        private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << GroundLayer) | (1 << EnemyLayer);
 
         private BulletField _home;
         private BulletLogic _system;
@@ -28,6 +35,8 @@ namespace Refraction.Presentation.Combat
         private int _id = -1;
         private int _segFrom = -1;
         private int _segTo = -1;
+        private Collider2D _hurtOther;
+        private HurtBox _hurtBox;
         private bool _bound;
         private bool _hit;
 
@@ -65,6 +74,8 @@ namespace Refraction.Presentation.Combat
 
             if (_colliders == null) _colliders = GetComponents<Collider2D>();
 
+            ApplyHitMask();
+
             if (_attackBox == null) _attackBox = GetComponent<AttackBox>();
 
             if (_attackBox != null)
@@ -72,6 +83,28 @@ namespace Refraction.Presentation.Combat
                 _attackBox.SetAttack(this);
                 _attackBox.SetOwnerRoot(owner);
             }
+        }
+
+        // 预制体上的 ExcludeLayers 会被覆盖
+        private void ApplyHitMask()
+        {
+            if (_colliders == null) return;
+
+            int mask = _damage.Source == DamageSource.PlayerBullet ? PlayerBulletMask : EnemyBulletMask;
+
+            for (int i = 0; i < _colliders.Length; i++) _colliders[i].excludeLayers = mask;
+        }
+
+        private int HitLayer => _damage.Source == DamageSource.PlayerBullet ? EnemyLayer : PlayerLayer;
+
+        private HurtBox HurtBoxOf(Collider2D other)
+        {
+            if (other == _hurtOther) return _hurtBox;
+
+            _hurtOther = other;
+            _hurtBox = other.GetComponent<HurtBox>();
+
+            return _hurtBox;
         }
 
         public void Apply(in BulletPose pose)
@@ -121,6 +154,8 @@ namespace Refraction.Presentation.Combat
             _owner = null;
             _hitSink = null;
             _id = -1;
+            _hurtOther = null;
+            _hurtBox = null;
             _bound = false;
             _state = BulletState.Flying;
             _velocity = Vector2.zero;
@@ -149,12 +184,10 @@ namespace Refraction.Presentation.Combat
             }
         }
 
-        // 分流：真正的判定全在逻辑层
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other == null || _system == null) return;
 
-            // Bound 是地图边界，飞出才销毁
             if (other.CompareTag(BoundTag)) return;
 
             if (_owner != null && (other.transform == _owner || other.transform.IsChildOf(_owner))) return;
@@ -170,8 +203,17 @@ namespace Refraction.Presentation.Combat
                 return;
             }
 
-            // 敌人由 AttackBox 结算，先 Kill 会吞掉这一枪
-            if (_attackBox != null && other.gameObject.layer == EnemyLayer) return;
+            // 敌弹打中就收，无敌窗挡掉也收
+            HurtBox hurt = HurtBoxOf(other);
+
+            if (!PlayerOwned && hurt != null && hurt.Attackable != null)
+            {
+                hurt.Attackable.TakeDamage(_damage);
+                OnHitLanded();
+                return;
+            }
+
+            if (_attackBox != null && other.gameObject.layer == HitLayer) return;
 
             _system.Kill(_id);
         }

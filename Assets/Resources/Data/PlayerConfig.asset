@@ -66,6 +66,7 @@ MonoBehaviour:
   blackAttackHitRecoilAhead: 10
   blackAttackHitRecoilUp: 10
   blackAttackHitRecoilDown: 20
+  destruction: 1
   blackAttackHitStopTime: 0.1
   contactHitStopTime: 0.1
   maxPolarity: 180

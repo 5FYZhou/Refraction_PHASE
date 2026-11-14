@@ -31,7 +31,7 @@ namespace Refraction.Tests
             _config.riseMax = 1f;
 
             _motor = new FakeMotor();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, 6f), default, true);
+            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
         }
 
         [TearDown]

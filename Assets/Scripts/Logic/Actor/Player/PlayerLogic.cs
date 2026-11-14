@@ -292,12 +292,17 @@ namespace Refraction.Logic.Actor
 
         public override bool TakeDamage(in Damage d)
         {
-            if (d.Source == DamageSource.Bullet) return false;
-            if (!base.TakeDamage(in d)) return false;
+            if (d.Source == DamageSource.PlayerBullet) return false;
+
+            Damage hit = d.Source == DamageSource.EnemyBullet
+                ? new Damage(_config.destruction, d.Source, d.Direction, d.KnockbackSpeed)
+                : d;
+
+            if (!base.TakeDamage(in hit)) return false;
 
             Announce();
 
-            if (d.Source == DamageSource.Contact) EventBus<HitStopRequested>.Publish(new(_config.contactHitStopTime));
+            if (hit.Source == DamageSource.Contact) EventBus<HitStopRequested>.Publish(new(_config.contactHitStopTime));
 
             return true;
         }

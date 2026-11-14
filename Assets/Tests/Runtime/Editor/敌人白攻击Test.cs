@@ -31,7 +31,7 @@ namespace Refraction.Tests
             _config.whiteChaseRadius = Radius;
 
             _motor = new FakeMotor();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, 6f), default, false);
+            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, false);
         }
 
         [TearDown]
@@ -119,7 +119,7 @@ namespace Refraction.Tests
         public void 黑前摇_不跟着走()
         {
             _logic.Dispose();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, 6f), default, true);
+            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
 
             到(E_SecondVisual.Windup, new Vector2(10f, 0f));
 

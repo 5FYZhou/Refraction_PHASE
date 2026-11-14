@@ -32,11 +32,14 @@ MonoBehaviour:
   riseMin: 1
   riseMax: 3
   riseSpeed: 5
+  whiteChaseSpeed: 4
+  whiteChaseRadius: 5
   whiteWindupTime: 0.4
   whiteRecoverTime: 0.5
   bulletSpeed: 12
   bulletDamage: 1
   bulletKnockback: 6
-  muzzle: {x: 1, y: 0}
+  muzzle: {x: 0, y: 0}
   contactDamage: 1
+  contactInterval: 1
   contactKnockback: 8

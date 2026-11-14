@@ -71,9 +71,6 @@ namespace Refraction.Data
         [Min(0f)]
         public float bulletKnockback = 6f;
 
-        [Tooltip("枪口相对敌人的偏移（单位，局部）：x 分量会随朝向镜像。")]
-        public Vector2 muzzle = new(1f, 0f);
-
         [Header("接触伤害")]
         [Tooltip("冲刺撞到玩家造成的伤害点数：接触盒碰到玩家就结算一次，之后由 contactInterval 决定多久再来一次。")]
         [Min(0f)]

@@ -50,7 +50,7 @@ namespace Refraction.Logic.Actor
         {
             if (_owner.Alert) return E_SecondStateTag.Chase;
 
-            return _owner.PatrolArea.Contains(ctx.WorldInfo.Pos.x) ? E_SecondStateTag.Patrol : E_SecondStateTag.Return;
+            return _owner.PatrolArea.ContainsX(ctx.WorldInfo.Pos.x) ? E_SecondStateTag.Patrol : E_SecondStateTag.Return;
         }
 
         protected override bool TryDecidePreempt(in LogicContext ctx, out E_SecondStateTag target)

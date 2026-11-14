@@ -38,7 +38,7 @@ namespace Refraction.Data
         [Min(0f)]
         public float bulletSpeed = 12f;
 
-        [Tooltip("敌人子弹的伤害点数：目前只随子弹下发，玩家侧的受击结算还没接（打上去只掉子弹，不掉血）。")]
+        [Tooltip("敌人子弹的伤害点数：只写进子弹自己的 Damage，打玩家时会被玩家配置里的「破坏力」顶掉，这里填多少都不影响玩家掉血。")]
         [Min(0f)]
         public float bulletDamage = 1f;
 

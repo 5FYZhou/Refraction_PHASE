@@ -194,10 +194,7 @@ namespace Refraction.Logic.Actor
         /// <summary>枪口相对身体，x 分量随朝向镜像：往左射时不能从背后冒出来</summary>
         private void FireWhite(Vector2 pos)
         {
-            int sign = _lockedDir.x < 0f ? -1 : 1;
-            Vector2 muzzle = pos + new Vector2(_config.muzzle.x * sign, _config.muzzle.y);
-
-            _owner.FireWhite(muzzle, _lockedDir);
+            _owner.FireWhite(pos, _lockedDir);
         }
     }
 }
