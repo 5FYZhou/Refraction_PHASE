@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:yousandi.cn,2023:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -55,28 +55,28 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  blackAttackPrepareTime: 0.02
+  blackAttackPrepareTime: 0.03
   blackAttackTime: 0.3
   blackAttackRecoverTime: 0.05
-  blackAttackDamage: 20
-  blackAttackKnockback: 4
-  blackAttackMissRecoilAhead: 3
-  blackAttackMissRecoilUp: 3
+  blackAttackDamage: 15
+  blackAttackKnockback: 2.5
+  blackAttackMissRecoilAhead: 2
+  blackAttackMissRecoilUp: 0
   blackAttackMissRecoilDown: 0
-  blackAttackHitRecoilAhead: 10
-  blackAttackHitRecoilUp: 10
-  blackAttackHitRecoilDown: 20
-  blackAttackHitStopTime: 0.1
-  contactHitStopTime: 0.1
+  blackAttackHitRecoilAhead: 5
+  blackAttackHitRecoilUp: 0
+  blackAttackHitRecoilDown: 0
+  blackAttackHitStopTime: 0.055
+  contactHitStopTime: 0.035
   maxPolarity: 180
   polarityPerHit: 20
   chargePrepareTime: 0.5
   chargeCooldown: 0.5
-  maxAfterimages: 5
+  maxAfterimages: 3
   afterimageDuration: 40
   afterimageLinkDamage: 30
   afterimageLinkThickness: 0.25
-  afterimageLinkSenseRadius: 10
+  afterimageLinkSenseRadius: 25
   afterimageAlpha: 0.35
-  afterimageLinkColor: {r: 0.9329341, g: 0.93710685, b: 0.82807237, a: 0.50980395}
-  bulletTransferSpeed: 45
+  afterimageLinkColor: {r: 0.9559748, g: 0.95017225, b: 0.730509, a: 0.50980395}
+  bulletTransferSpeed: 80
