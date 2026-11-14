@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>攻击盒：碰到受击盒就按 IAttacker 的数值结算</summary>
+    /// <summary>攻击盒：碰到受击盒就按 IAttacker 结算</summary>
     public sealed class AttackBox : MonoBehaviour
     {
         public IAttacker Attacker { get; private set; }
@@ -13,10 +13,15 @@ namespace Refraction.Presentation.Actor
         private Collider2D _cachedOther;
         private HurtBox _cachedBox;
 
+        // 盒摘到场景根后 transform.root 只剩自己
+        private Transform _selfRoot;
+
         private void Awake()
         {
             Collider2D c = GetComponent<Collider2D>();
             if (c != null) c.isTrigger = true;
+
+            _selfRoot = transform.root;
         }
 
         private void OnTriggerEnter2D(Collider2D other) => TryHit(other, false);
@@ -27,20 +32,21 @@ namespace Refraction.Presentation.Actor
         {
             if (Attacker == null || other == null) return;
 
-            // 攻击盒多半就罩在自己身体外面，不排自己会当场自伤
-            if (other.transform.root == transform.root) return;
+            // 排除自己
+            Transform self = _selfRoot != null ? _selfRoot : transform.root;
+            if (other.transform.root == self) return;
 
             HurtBox target = TargetOf(other);
             if (target == null) return;
 
-            // 间隔在攻击者身上：被无敌窗挡掉的那次不消耗间隔
+            // 间隔在攻击者身上，被无敌窗挡掉时不消耗
             IIntervalAttacker interval = Attacker as IIntervalAttacker;
             if (repeat && interval == null) return;
             if (interval != null && !interval.ReadyToHit(Time.fixedTime)) return;
 
             Damage damage = Attacker.ProduceDamage();
 
-            // 接触伤害的方向按几何现算：用攻击者朝向会把人往怀里推
+            // 方向按几何现算，用攻击者朝向会把人往怀里推
             if (damage.Source == DamageSource.Contact || damage.Direction.sqrMagnitude <= 0f)
             {
                 Vector2 away = (Vector2)other.bounds.center - (Vector2)transform.position;

@@ -27,14 +27,18 @@ namespace Refraction.Presentation.Combat
         private readonly AttackBox _ahead;
         private readonly AttackBox _up;
         private readonly AttackBox _down;
+        private readonly Anchor _aheadHome;
+        private readonly Anchor _upHome;
+        private readonly Anchor _downHome;
         private readonly PlayerConfig _config;
         private readonly Func<int> _face;
         private readonly Action _onHitLanded;
 
         private BlackAttackKind _kind;
         private Action _onHit;
+        private int _swingFace = 1;
 
-        /// <summary>root 是玩家根节点，层级里按 BlackAttack/xxxCollider 找；face 命中时现取</summary>
+        /// <summary>root 是玩家根节点，层级里按 BlackAttack/xxxCollider 找；朝向开打那一帧取定</summary>
         public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null)
         {
             _config = config;
@@ -44,6 +48,10 @@ namespace Refraction.Presentation.Combat
             _ahead = Find(root, AheadPath);
             _up = Find(root, UpPath);
             _down = Find(root, DownPath);
+
+            _aheadHome = new(_ahead);
+            _upHome = new(_up);
+            _downHome = new(_down);
 
             // 攻击盒把结算委托给 Attacker，三只盒共用同一份伤害与方向
             if (_ahead != null) _ahead.SetAttack(this);
@@ -57,20 +65,34 @@ namespace Refraction.Presentation.Combat
             End();
         }
 
+        /// <summary>点亮那一帧把盒从玩家身上摘下来冻在世界里，之后玩家走开判定也不跟着走，直到 End 才装回去</summary>
         public void Begin(BlackAttackKind kind)
         {
             _kind = kind;
             End();
 
             AttackBox box = BoxOf(kind);
-            if (box != null) box.gameObject.SetActive(true);
+            if (box == null) return;
+
+            _swingFace = _face != null ? _face() : 1;
+
+            box.transform.SetParent(null, true);
+            box.gameObject.SetActive(true);
         }
 
         public void End()
         {
-            SetActive(_ahead, false);
-            SetActive(_up, false);
-            SetActive(_down, false);
+            Close(_ahead, _aheadHome);
+            Close(_up, _upHome);
+            Close(_down, _downHome);
+        }
+
+        private static void Close(AttackBox box, in Anchor home)
+        {
+            if (box == null) return;
+
+            SetActive(box, false);
+            home.Restore(box);
         }
 
         /// <summary>逻辑侧命中钩子：盒真碰到受击盒才给反冲力，不是每次挥空气都推自己一把</summary>
@@ -81,7 +103,7 @@ namespace Refraction.Presentation.Combat
             // AttackBox 每次接触都会先取伤害再结算；扣血失败的（无敌窗、站桩靶子）也算砍到了实体
             _onHit?.Invoke();
 
-            int face = _face != null ? _face() : 1;
+            int face = _swingFace;
             float x = face < 0 ? -1f : 1f;
 
             Vector2 direction = _kind switch
@@ -109,6 +131,34 @@ namespace Refraction.Presentation.Combat
         private static void SetActive(AttackBox box, bool active)
         {
             if (box != null && box.gameObject.activeSelf != active) box.gameObject.SetActive(active);
+        }
+
+        /// <summary>盒在预制体里的原样：摘出去冻住之后靠这份数据装回 BlackAttack 下，下一次攻击再按新站位重新摘</summary>
+        private readonly struct Anchor
+        {
+            private readonly Transform _parent;
+            private readonly Vector3 _position;
+            private readonly Quaternion _rotation;
+            private readonly Vector3 _scale;
+
+            public Anchor(AttackBox box)
+            {
+                _parent = box != null ? box.transform.parent : null;
+                _position = box != null ? box.transform.localPosition : Vector3.zero;
+                _rotation = box != null ? box.transform.localRotation : Quaternion.identity;
+                _scale = box != null ? box.transform.localScale : Vector3.one;
+            }
+
+            public void Restore(AttackBox box)
+            {
+                if (box == null || _parent == null) return;
+
+                Transform t = box.transform;
+                t.SetParent(_parent, false);
+                t.localPosition = _position;
+                t.localRotation = _rotation;
+                t.localScale = _scale;
+            }
         }
 
         /// <summary>把盒的真实碰撞形状画成半透明网格：网格顶点在盒的局部空间，子物体随盒一起显隐</summary>
