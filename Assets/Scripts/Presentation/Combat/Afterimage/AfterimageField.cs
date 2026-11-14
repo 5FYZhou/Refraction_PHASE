@@ -2,6 +2,7 @@
 using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
+using Refraction.Logic.Events;
 using Refraction.Presentation.Actor;
 using UnityEngine;
 
@@ -380,7 +381,10 @@ namespace Refraction.Presentation.Combat
                 if (box == null || box.Attackable == null) continue;
                 if (!_hitBoxes.Add(box)) continue;
 
-                box.Attackable.TakeDamage(new Damage(_config.afterimageLinkDamage, DamageSource.AfterimageLink));
+                Damage damage = new(_config.afterimageLinkDamage, DamageSource.AfterimageLink);
+                if (!box.Attackable.TakeDamage(in damage)) continue;
+
+                EventBus<AfterimageLinkHit>.Publish(new(hit.bounds.center, _config.afterimageLinkDamage));
             }
         }
 

@@ -11,7 +11,7 @@ namespace Refraction.Logic.Combat
         /// <summary>冲刺起手时请求落影；返回 true 表示真的落了，调用方据此起冷却</summary>
         bool TrySpawn(Vector2 pos, float now, int facing);
 
-        /// <summary>清空残影与待释放状态，重生与跨场景用</summary>
+        /// <summary>清空残影与待释放状态：重生与掉虚空都不清，只在需要整批作废时显式调用</summary>
         void Clear();
     }
 }

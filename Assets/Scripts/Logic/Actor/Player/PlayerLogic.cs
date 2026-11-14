@@ -47,6 +47,7 @@ namespace Refraction.Logic.Actor
             _buffer = buffer;
             _config = config;
             _polarity = new(config.maxPolarity);
+            EventBus<AfterimageLinkHit>.Subscribe(OnAfterimageLinkHit);
         }
 
         /// <summary>还没踩过地（出生就在空中）时为 false</summary>
@@ -74,18 +75,22 @@ namespace Refraction.Logic.Actor
 
         public int MaxPolarity => _polarity.Max;
 
-        public void OnHitLanded()
-        {
-            int before = _polarity.Value;
-            _polarity.Add(_config.polarityPerHit);
-
-            if (_polarity.Value != before) AnnouncePolarity();
-        }
+        public void OnHitLanded() => AddPolarity(_config.polarityPerHit);
 
         public void OnBlackAttackHitLanded()
         {
             OnHitLanded();
             EventBus<HitStopRequested>.Publish(new(_config.blackAttackHitStopTime));
+        }
+
+        private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
+
+        private void AddPolarity(int amount)
+        {
+            int before = _polarity.Value;
+            _polarity.Add(amount);
+
+            if (_polarity.Value != before) AnnouncePolarity();
         }
 
         public void AnnouncePolarity()
@@ -112,6 +117,8 @@ namespace Refraction.Logic.Actor
         public ConditionStateTag ConditionTag => Conditions.Current;
 
         public bool IsInvulnerable => Conditions.IsInvulnerable;
+
+        public bool IsDashInvulnerable => Conditions.IsDashInvulnerable;
 
         public Vector2 HurtVelocity => Conditions.HurtVelocity;
 
@@ -160,6 +167,7 @@ namespace Refraction.Logic.Actor
             {
                 _chargeCooldown.MarkUsed(now, _config.chargeCooldown);
                 _chargePhase = ChargePhase.None;
+                Conditions.BeginDashInvulnerable(_config.dashInvulnerableTime);
                 return;
             }
 
@@ -209,8 +217,16 @@ namespace Refraction.Logic.Actor
 
         public void SpawnTo(Vector2 pos)
         {
-            _motor.SpawnAt(pos, Vector2.zero);
             _afterimages?.Clear();
+            Place(pos);
+        }
+
+        // 掉虚空不算重生：人回来，残影留在原地
+        public void FallBackTo(Vector2 pos) => Place(pos);
+
+        private void Place(Vector2 pos)
+        {
+            _motor.SpawnAt(pos, Vector2.zero);
 
             _chargePhase = ChargePhase.None;
             _chargeEnterTime = 0f;
@@ -225,7 +241,11 @@ namespace Refraction.Logic.Actor
 
         public void BindBulletLauncher(IBulletLauncher launcher) => _attackGroup.BindLauncher(launcher);
 
-        public void Dispose() => _attackGroup.Dispose();
+        public void Dispose()
+        {
+            EventBus<AfterimageLinkHit>.Unsubscribe(OnAfterimageLinkHit);
+            _attackGroup.Dispose();
+        }
 
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
         {
@@ -239,11 +259,17 @@ namespace Refraction.Logic.Actor
         public bool InterruptCrouch(in LogicContext ctx) => _postureGroup.InterruptToStand(ctx);
 
         /// <summary>回到最近踩地点；没记下过返回 false（调用方自行处理），且不清空记录，连续掉落仍回同一点</summary>
-        public bool RespawnToLastGrounded()
+        public bool RespawnToLastGrounded() => ToLastGrounded(true);
+
+        public bool FallBackToLastGrounded() => ToLastGrounded(false);
+
+        private bool ToLastGrounded(bool clearAfterimages)
         {
             if (!_hasGroundedPos) return false;
 
-            SpawnTo(_lastGroundedPos);
+            if (clearAfterimages) SpawnTo(_lastGroundedPos);
+            else FallBackTo(_lastGroundedPos);
+
             return true;
         }
 

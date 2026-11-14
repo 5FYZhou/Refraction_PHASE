@@ -64,6 +64,19 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public readonly struct AfterimageLinkHit
+    {
+        public readonly Vector2 Pos;
+
+        public readonly float Damage;
+
+        public AfterimageLinkHit(Vector2 pos, float damage)
+        {
+            Pos = pos;
+            Damage = damage;
+        }
+    }
+
     public readonly struct RequestPlayerPosChange
     {
         public readonly DoorEntry Entry;

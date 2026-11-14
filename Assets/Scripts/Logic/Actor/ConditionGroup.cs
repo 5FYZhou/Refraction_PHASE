@@ -17,6 +17,7 @@ namespace Refraction.Logic.Actor
         private bool _hasPending;
         private float _now;
         private float _invulnerableUntil;
+        private float _dashInvulnerableUntil;
 
         public ConditionGroup(IMoveMotor motor, CharacterConfig config)
         {
@@ -39,6 +40,16 @@ namespace Refraction.Logic.Actor
 
         public bool IsInvulnerable => _now < _invulnerableUntil;
 
+        /// <summary>冲刺无敌：独立于受击无敌窗，表现层按它换固定透明度</summary>
+        public bool IsDashInvulnerable => _now < _dashInvulnerableUntil;
+
+        public void BeginDashInvulnerable(float duration)
+        {
+            if (duration <= 0f) return;
+
+            _dashInvulnerableUntil = _now + duration;
+        }
+
         /// 受伤期接管速度（方向 × 速率），非受伤态为零
         public Vector2 HurtVelocity => _hurt.ForcedVelocity;
 
@@ -57,6 +68,7 @@ namespace Refraction.Logic.Actor
         public void ClearHurt()
         {
             _invulnerableUntil = 0f;
+            _dashInvulnerableUntil = 0f;
             _hasPending = false;
             ChangeState(ConditionStateTag.Normal, default);
         }

@@ -193,6 +193,10 @@ namespace Refraction.Data
         [Min(0)]
         public int polarityPerHit = 5;
 
+        [Tooltip("折跃连线每命中一个目标获得的极性值（点）：与子弹的 polarityPerHit 分开配。\n子弹穿一段线会打中线上所有目标，每个目标各算一次。")]
+        [Min(0)]
+        public int afterimageLinkPolarity = 2;
+
         [Header("充能 · 残影")]
         [Tooltip("充能前摇时长（秒）：按一下充能键开始蓄力，走满进入蓄满态（玩家变橙）。\n0 表示按下当帧就蓄满。")]
         [Min(0f)]
@@ -201,6 +205,10 @@ namespace Refraction.Data
         [Tooltip("充能冷却（秒）：从冲刺落影那一刻起算，不是从按键起算。\n冷却期间按充能键不响应；0 表示落影后立刻能再蓄。")]
         [Min(0f)]
         public float chargeCooldown = 1.5f;
+
+        [Tooltip("充能冲刺的无敌时长（秒）：从落影那一刻起算，这段时间内不吃任何伤害、也不进受伤态。\n只对真正落了影的那次冲刺生效；0 表示不给无敌。")]
+        [Min(0f)]
+        public float dashInvulnerableTime = 0.15f;
 
         [Tooltip("场上残影的最大个数：超过上限时新残影会顶掉最早留下的那一枚，而不是拒绝放置。")]
         [Min(1)]

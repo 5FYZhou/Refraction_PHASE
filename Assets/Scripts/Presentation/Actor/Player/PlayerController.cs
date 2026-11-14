@@ -17,6 +17,7 @@ namespace Refraction.Presentation.Actor
     {
         private const float BlinkHz = 5f;
         private const float BlinkMinAlpha = 0.3f;
+        private const float DashInvulnerableAlpha = 100f / 255f;
 
         public int Order => SceneOrder.Player;
 
@@ -225,7 +226,7 @@ namespace Refraction.Presentation.Actor
                     _logic.TakeFallDamage();
 
                     if (!_logic.IsAlive) HandleDeath();
-                    else _logic.RespawnToLastGrounded();
+                    else _logic.FallBackToLastGrounded();
                 }
             }
 
@@ -276,7 +277,12 @@ namespace Refraction.Presentation.Actor
         {
             float alpha = _viewBaseColor.a;
 
-            if (_logic.IsInvulnerable)
+            if (_logic.IsDashInvulnerable)
+            {
+                _blinkElapsed = 0f;
+                alpha = DashInvulnerableAlpha;
+            }
+            else if (_logic.IsInvulnerable)
             {
                 _blinkElapsed += deltaTime;
                 if (Mathf.Repeat(_blinkElapsed * BlinkHz, 1f) < 0.5f) alpha = BlinkMinAlpha * _viewBaseColor.a;

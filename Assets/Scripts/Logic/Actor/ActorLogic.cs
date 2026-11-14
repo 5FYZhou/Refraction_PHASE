@@ -37,7 +37,7 @@ namespace Refraction.Logic.Actor
         public virtual bool TakeDamage(in Damage damage)
         {
             if (!IsAlive) return false;
-            if (Conditions.IsInvulnerable) return false;
+            if (Conditions.IsInvulnerable || Conditions.IsDashInvulnerable) return false;
 
             int amount = Mathf.Max(0, Mathf.RoundToInt(damage.Amount));
             if (amount <= 0 && !damage.HasKnockback) return false;
