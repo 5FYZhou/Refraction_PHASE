@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>敌人组合根：只做装配与转发</summary>
-    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked
+    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IDetectSink
     {
         public int Order => SceneOrder.World;
 
@@ -53,6 +53,7 @@ namespace Refraction.Presentation.Actor
         private bool _hasPatrolBounds;
         private float _patrolMinX;
         private float _patrolMaxX;
+        private float _patrolCenterY;
 
         private void Awake()
         {
@@ -130,7 +131,7 @@ namespace Refraction.Presentation.Actor
             _bulletField = host.AddComponent<BulletField>();
             _bulletField.Init(bulletPrefab, transform, null, EnemyBulletPoolSize, 1);
 
-            _bullets = new BulletLogic(_bulletField);
+            _bullets = new BulletLogic(_bulletField, false);
             _logic.BindLauncher(_bullets);
         }
 
@@ -163,27 +164,9 @@ namespace Refraction.Presentation.Actor
             _targetTransform = null;
         }
 
-        /// <summary>触发器消息只送到碰撞体所在的 GameObject，就地补一个转发器</summary>
         private void CacheDetectZone()
         {
-            Transform detect = transform.Find(DetectChildName);
-            if (detect == null)
-            {
-                Debug.LogWarning($"[EnemyController] 找不到 {DetectChildName} 子物体：这只会一直巡逻，看不到玩家。");
-                return;
-            }
-
-            Collider2D zone = detect.GetComponent<Collider2D>();
-            if (zone == null || !zone.isTrigger)
-            {
-                Debug.LogWarning($"[EnemyController] {DetectChildName} 上没有触发器碰撞体（Is Trigger 未勾选）：侦测不到玩家。");
-                return;
-            }
-
-            EnemyDetectZone forwarder = detect.GetComponent<EnemyDetectZone>();
-            if (forwarder == null) forwarder = detect.gameObject.AddComponent<EnemyDetectZone>();
-
-            forwarder.Init(this);
+            DetectZoneBinder.Bind(transform, DetectChildName, nameof(EnemyController), this);
         }
 
         /// <summary>只快照一次：每帧拿局部偏移重算，等于框跟着敌人跑</summary>
@@ -195,6 +178,7 @@ namespace Refraction.Presentation.Actor
             float centerX = transform.position.x + patrolOffset.x;
             float half = patrolSize.x * 0.5f;
 
+            _patrolCenterY = transform.position.y + patrolOffset.y;
             _patrolMinX = centerX - half;
             _patrolMaxX = centerX + half;
         }
@@ -211,9 +195,22 @@ namespace Refraction.Presentation.Actor
 
         private void OnDrawGizmosSelected()
         {
+            Gizmos.color = new Color(0.35f, 1f, 0.45f, 0.9f);
+
+            // 跑起来画逻辑用的那份快照：框钉在世界上，敌人自己怎么走都不动
+            if (Application.isPlaying && _root != null)
+            {
+                if (!_hasPatrolBounds) return;
+
+                Gizmos.DrawWireCube(
+                    new Vector3((_patrolMinX + _patrolMaxX) * 0.5f, _patrolCenterY, 0f),
+                    new Vector2(_patrolMaxX - _patrolMinX, patrolSize.y));
+
+                return;
+            }
+
             if (patrolSize.x <= 0f || patrolSize.y <= 0f) return;
 
-            Gizmos.color = new Color(0.35f, 1f, 0.45f, 0.9f);
             Gizmos.DrawWireCube(transform.position + (Vector3)patrolOffset, patrolSize);
         }
 #endif

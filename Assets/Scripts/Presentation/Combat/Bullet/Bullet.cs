@@ -67,7 +67,11 @@ namespace Refraction.Presentation.Combat
 
             if (_attackBox == null) _attackBox = GetComponent<AttackBox>();
 
-            if (_attackBox != null) _attackBox.SetAttack(this);
+            if (_attackBox != null)
+            {
+                _attackBox.SetAttack(this);
+                _attackBox.SetOwnerRoot(owner);
+            }
         }
 
         public void Apply(in BulletPose pose)
@@ -127,7 +131,11 @@ namespace Refraction.Presentation.Combat
             LiveList.Remove(this);
 
             // 摘攻击者：同帧未派发的受击盒回调别再结算
-            if (_attackBox != null) _attackBox.SetAttack(null);
+            if (_attackBox != null)
+            {
+                _attackBox.SetAttack(null);
+                _attackBox.SetOwnerRoot(null);
+            }
 
             if (_rb != null)
             {

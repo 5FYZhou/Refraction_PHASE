@@ -82,7 +82,7 @@ namespace Refraction.Tests
         private static LogicContext Ctx(float now)
         {
             InputSnapshot input = new(Vector2.zero, false, false, false, false, false, false);
-            WorldInfo world = new(true, false, 1, Vector2.zero, 1, Vector2.zero);
+            WorldInfo world = new(true, false, Vector2.zero, 1, Vector2.zero);
 
             return new LogicContext(input, world, new GameTime(now, Dt));
         }

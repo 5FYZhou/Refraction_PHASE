@@ -10,11 +10,15 @@ namespace Refraction.Presentation.Actor
 
         public void SetAttack(in IAttacker attack) { Attacker = attack; }
 
+        public void SetOwnerRoot(Transform owner) { _ownerRoot = owner; }
+
         private Collider2D _cachedOther;
         private HurtBox _cachedBox;
 
         // 盒摘到场景根后 transform.root 只剩自己
         private Transform _selfRoot;
+
+        private Transform _ownerRoot;
 
         private void Awake()
         {
@@ -35,6 +39,8 @@ namespace Refraction.Presentation.Actor
             // 排除自己
             Transform self = _selfRoot != null ? _selfRoot : transform.root;
             if (other.transform.root == self) return;
+
+            if (_ownerRoot != null && other.transform.IsChildOf(_ownerRoot)) return;
 
             HurtBox target = TargetOf(other);
             if (target == null) return;

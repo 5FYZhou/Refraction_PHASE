@@ -51,7 +51,7 @@ namespace Refraction.Tests
 
         private static LogicContext Ctx(float now, int face = 1)
         {
-            WorldInfo world = new(true, false, 0, Vector2.zero, face, EnemyPos);
+            WorldInfo world = new(true, false, Vector2.zero, face, EnemyPos);
 
             return new LogicContext(default, world, new GameTime(now, Dt));
         }
