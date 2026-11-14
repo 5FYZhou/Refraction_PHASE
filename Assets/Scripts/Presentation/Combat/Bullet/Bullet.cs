@@ -1,5 +1,6 @@
 ﻿using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
@@ -11,6 +12,8 @@ namespace Refraction.Presentation.Combat
         private const string BoundTag = "Bound";
         private const int EnemyLayer = 8;
 
+        private static readonly List<Bullet> LiveList = new();
+
         private BulletField _home;
         private BulletLogic _system;
         private AfterimageField _afterimage;
@@ -21,6 +24,7 @@ namespace Refraction.Presentation.Combat
         private Collider2D[] _colliders;
         private Damage _damage;
         private BulletState _state;
+        private Vector2 _velocity;
         private int _id = -1;
         private int _segFrom = -1;
         private int _segTo = -1;
@@ -28,6 +32,12 @@ namespace Refraction.Presentation.Combat
         private bool _hit;
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
+
+        public bool PlayerOwned { get; private set; }
+
+        public static int LiveCount => LiveList.Count;
+
+        public static Bullet LiveAt(int index) => LiveList[index];
 
         /// <summary>造出来时调一次：抓刚体、碰撞体、伤害与命中回调</summary>
         public void Bind(BulletField home, BulletLogic system, int id, Transform owner, IHitLanded hitSink)
@@ -40,6 +50,9 @@ namespace Refraction.Presentation.Combat
             _hit = false;
             _bound = false;
             _damage = system.DamageOf(id);
+            PlayerOwned = system.PlayerOwned;
+
+            if (!LiveList.Contains(this)) LiveList.Add(this);
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             if (_rb == null) _rb = gameObject.AddComponent<Rigidbody2D>();
@@ -73,7 +86,9 @@ namespace Refraction.Presentation.Combat
                 for (int i = 0; i < _colliders.Length; i++) _colliders[i].enabled = !transporting;
 
                 _rb.bodyType = transporting ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
-                _rb.velocity = transporting ? Vector2.zero : pose.Dir * pose.Speed;
+
+                _velocity = transporting ? Vector2.zero : pose.Dir * pose.Speed;
+                _rb.velocity = _velocity;
             }
 
             if (pose.State == BulletState.Transporting) _rb.position = pose.Pos;
@@ -104,8 +119,12 @@ namespace Refraction.Presentation.Combat
             _id = -1;
             _bound = false;
             _state = BulletState.Flying;
+            _velocity = Vector2.zero;
             _segFrom = -1;
             _segTo = -1;
+            PlayerOwned = false;
+
+            LiveList.Remove(this);
 
             // 摘攻击者：同帧未派发的受击盒回调别再结算
             if (_attackBox != null) _attackBox.SetAttack(null);
@@ -163,6 +182,8 @@ namespace Refraction.Presentation.Combat
         {
             SyncSegment(-1, -1);
 
+            LiveList.Remove(this);
+
             _system?.Forget(_id);
         }
 
@@ -176,6 +197,29 @@ namespace Refraction.Presentation.Combat
             _segTo = to;
 
             if (_afterimage != null && from >= 0) _afterimage.BeginTraverse(from, to);
+        }
+
+        public bool TryReflect(IBulletLauncher launcher, float damage, float knockback, float transferSpeed)
+        {
+            if (launcher == null || _system == null) return false;
+            if (_state != BulletState.Flying) return false;
+
+            Vector2 velocity = _velocity;
+
+            if (velocity.sqrMagnitude < 1e-6f) return false;
+
+            launcher.Launch(new BulletSpawn(
+                Position,
+                -velocity.normalized,
+                velocity.magnitude,
+                damage,
+                knockback,
+                transferSpeed)
+                );
+
+            _system.Kill(_id);
+
+            return true;
         }
 
         public Damage ProduceDamage() => _damage;

@@ -128,6 +128,9 @@ namespace Refraction.Presentation.Actor
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
 
+            Collider2D hurt = hurtBox != null ? hurtBox.GetComponent<Collider2D>() : null;
+            _blackAttack.BindRebound(() => _launcher, hurt);
+
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
             if (spawnT != null && _checkpoint == null)
             {
@@ -194,6 +197,8 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
             _logic.FixedTick(context);
+
+            _blackAttack?.ReboundTick();
 
             EventBus<PlayerDebugSnapshot>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,

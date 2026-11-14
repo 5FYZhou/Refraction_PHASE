@@ -36,9 +36,13 @@ namespace Refraction.Logic.Combat
 
         private int _nextId;
 
-        public BulletLogic(IBulletViewFactory factory)
+        /// <summary>true = 玩家这一套。弹反要把敌弹换成玩家子弹，视图靠它认自己属于哪边</summary>
+        public bool PlayerOwned { get; }
+
+        public BulletLogic(IBulletViewFactory factory, bool playerOwned)
         {
             _factory = factory;
+            PlayerOwned = playerOwned;
         }
 
         public int Count => _live.Count;

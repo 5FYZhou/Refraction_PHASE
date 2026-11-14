@@ -122,7 +122,7 @@ namespace Refraction.Presentation.Combat
             _bulletField = host.AddComponent<BulletField>();
             _bulletField.Init(prefab, playerController.transform, playerController.HitSink);
 
-            _bullets = new BulletLogic(_bulletField);
+            _bullets = new BulletLogic(_bulletField, true);
 
             playerController.BindBulletLauncher(_bullets);
         }

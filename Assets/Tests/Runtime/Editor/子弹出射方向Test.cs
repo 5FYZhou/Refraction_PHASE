@@ -47,7 +47,7 @@ namespace Refraction.Tests
 
             _afterimages = new AfterimageLogic(_config);
             _factory = new 假工厂();
-            _bullets = new BulletLogic(_factory);
+            _bullets = new BulletLogic(_factory, false);
         }
 
         [TearDown]
