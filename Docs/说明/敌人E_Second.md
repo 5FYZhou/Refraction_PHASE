@@ -121,7 +121,7 @@
 ## 九、预制体接线（本次只写了脚本）
 
 - 根节点：`Rigidbody2D`（Dynamic）+ `E_SecondMotor` + `E_SecondController` + 身体碰撞体 + `HurtBox` + `AttackBox`。
-- `E_SecondMotor` 的 `config` 与 `E_SecondController` 的 `config` 指同一份 `E_SecondConfig` 资产（需要自己在 `Resources/Data` 下新建）。
+- `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data` 下新建），装配时注入给 `E_SecondMotor`。
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
 - `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）。

@@ -24,7 +24,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private float _spawnY = -10f;
 
-        [Tooltip("玩家参数资产。应与 PlayerMotor 上引用的是同一份配置。")]
+        [Tooltip("玩家参数资产。装配时同时注入 PlayerMotor，移动/重力/生命读的是这一份。")]
         [SerializeField]
         private PlayerConfig config;
 
@@ -113,6 +113,8 @@ namespace Refraction.Presentation.Actor
 
             Require.Assigned(moveMotor, nameof(PlayerController), nameof(moveMotor));
             Require.Assigned(config, nameof(PlayerController), nameof(config));
+
+            moveMotor.BindConfig(config);
 
             _inputProvider = _root.Input;
             _buffer = new(
