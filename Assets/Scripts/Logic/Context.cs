@@ -42,20 +42,16 @@ namespace Refraction.Logic
 
         public readonly bool TouchingWall;
 
-        /// <summary>墙面所在方向：-1 在左，1 在右</summary>
-        public readonly int WallSide;
-
         public readonly Vector2 FrameStartVelocity;
         public readonly int Face;
         public readonly Vector2 Pos;
 
         public readonly bool LedgeAhead;
 
-        public WorldInfo(bool grounded, bool touchingWall, int wallSide, Vector2 velocity, int face, Vector2 pos, bool ledgeAhead = false)
+        public WorldInfo(bool grounded, bool touchingWall, Vector2 velocity, int face, Vector2 pos, bool ledgeAhead = false)
         {
             Grounded = grounded;
             TouchingWall = touchingWall;
-            WallSide = wallSide;
             FrameStartVelocity = velocity;
             Face = face;
             Pos = pos;

@@ -31,6 +31,7 @@ namespace Refraction.Logic.Actor
             target = EmptyTag;
 
             if (Current != EnemyStateTag.Patrol || !_owner.TargetVisible) return false;
+            if (!_owner.ChaseAllowed) return false;
 
             target = EnemyStateTag.Chase;
             return true;

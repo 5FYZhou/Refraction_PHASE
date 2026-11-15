@@ -32,5 +32,25 @@ namespace Refraction.Data
         [Tooltip("接触伤害的击退初速度（单位/秒）：0 表示不击退。\n滑多远还要乘上玩家自己的 KnockbackDecay（位移 = 本值² / (2 × 阻尼)）。")]
         [Min(0f)]
         public float contactKnockback = 10f;
+
+        [Header("开火")]
+        [Tooltip("敌人子弹的飞行速度（单位/秒）。0 表示这只敌人不开火。")]
+        [Min(0f)]
+        public float bulletSpeed = 12f;
+
+        [Tooltip("敌人子弹的伤害点数：只写进子弹自己的 Damage，打玩家时会被玩家配置里的「破坏力」顶掉，这里填多少都不影响玩家掉血。")]
+        [Min(0f)]
+        public float bulletDamage = 1f;
+
+        [Tooltip("敌人子弹的击退初速度（单位/秒）：0 表示不击退。滑多远由玩家自己的 KnockbackDecay 决定。")]
+        [Min(0f)]
+        public float bulletKnockback = 0f;
+
+        [Tooltip("两次开火的最小间隔（秒）：玩家出去再进来不会连着吃两发。\n一次进入视野只开一枪，间隔只用来拦住反复进出。")]
+        [Min(0f)]
+        public float fireInterval = 1f;
+
+        [Tooltip("枪口相对敌人中心的偏移（单位）：x 取绝对值后朝玩家一侧，y 向上。\n要大于「身体半径 + 子弹半宽」，否则出膛那一帧子弹就压在自己的受击盒里。")]
+        public Vector2 bulletMuzzle = new(1.6f, 0f);
     }
 }

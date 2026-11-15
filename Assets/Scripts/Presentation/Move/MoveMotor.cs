@@ -98,7 +98,7 @@ namespace Refraction.Presentation
             bool touchingWall = SampleWall(facing);
             bool ledgeAhead = SampleLedge(facing);
 
-            return new WorldInfo(grounded, touchingWall, facing, _rb.velocity, facing, _rb.position, ledgeAhead);
+            return new WorldInfo(grounded, touchingWall, _rb.velocity, facing, _rb.position, ledgeAhead);
         }
 
         /// <summary>探朝向那一侧的悬崖，默认没有：只有不想走下平台的角色才实现</summary>

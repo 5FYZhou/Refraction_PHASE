@@ -37,7 +37,7 @@ namespace Refraction.Tests
         private static LogicContext Ctx(float vertical, float now = 0f, int face = 1)
         {
             InputSnapshot input = new(new Vector2(0f, vertical), false, false, false, false, true, false);
-            WorldInfo world = new(true, false, 0, Vector2.zero, face, Vector2.zero);
+            WorldInfo world = new(true, false, Vector2.zero, face, Vector2.zero);
 
             return new LogicContext(input, world, new GameTime(now, Dt));
         }
@@ -359,7 +359,14 @@ namespace Refraction.Tests
                 Down = Box(Black, "DownCollider");
             }
 
-            public void Dispose() => Object.DestroyImmediate(Root);
+            public void Dispose()
+            {
+                // 点亮时盒会被摘成根物体，销毁玩家带不走它们
+                Object.DestroyImmediate(Ahead);
+                Object.DestroyImmediate(Up);
+                Object.DestroyImmediate(Down);
+                Object.DestroyImmediate(Root);
+            }
 
             private static GameObject Child(GameObject parent, string name)
             {

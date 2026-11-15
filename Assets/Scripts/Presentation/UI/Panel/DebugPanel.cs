@@ -138,13 +138,26 @@ namespace Refraction.Presentation.UI
             for (int i = 0; i < roots.Count; i++)
             {
                 EnemyController enemy = roots[i] as EnemyController;
-                if (enemy == null || !enemy.AIEnabled) continue;
+
+                if (enemy != null)
+                {
+                    if (!enemy.AIEnabled) continue;
+
+                    any = true;
+
+                    _enemyBuilder.Append("\n").Append(enemy.name)
+                                 .Append(" 目标").Append(enemy.HasTarget ? "有" : "无")
+                                 .Append(" ").Append(enemy.CurrentTag.ToString());
+
+                    continue;
+                }
+
+                E_SecondController flyer = roots[i] as E_SecondController;
+
+                if (flyer == null || !flyer.Attached) continue;
 
                 any = true;
-
-                _enemyBuilder.Append("\n").Append(enemy.name)
-                             .Append("目标\n").Append(enemy.HasTarget ? "有" : "无")
-                             .Append("").Append(enemy.CurrentTag.ToString());
+                flyer.AppendDebug(_enemyBuilder);
             }
 
             if (!any) _enemyBuilder.Append(" 无");

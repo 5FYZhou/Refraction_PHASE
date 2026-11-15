@@ -36,9 +36,13 @@ namespace Refraction.Logic.Combat
 
         private int _nextId;
 
-        public BulletLogic(IBulletViewFactory factory)
+        /// <summary>true = 玩家这一套。弹反要把敌弹换成玩家子弹，视图靠它认自己属于哪边</summary>
+        public bool PlayerOwned { get; }
+
+        public BulletLogic(IBulletViewFactory factory, bool playerOwned)
         {
             _factory = factory;
+            PlayerOwned = playerOwned;
         }
 
         public int Count => _live.Count;
@@ -56,7 +60,11 @@ namespace Refraction.Logic.Combat
                 Speed = spawn.Speed,
                 TransferSpeed = spawn.TransferSpeed,
                 State = BulletState.Flying,
-                Damage = new Damage(spawn.Damage, DamageSource.Bullet, spawn.Direction, spawn.KnockbackSpeed)
+                Damage = new Damage(
+                    spawn.Damage,
+                    PlayerOwned ? DamageSource.PlayerBullet : DamageSource.EnemyBullet,
+                    spawn.Direction,
+                    spawn.KnockbackSpeed)
             };
 
             _live.Add(shot);
@@ -176,10 +184,13 @@ namespace Refraction.Logic.Combat
             if (shot.Step < shot.Plan.Count) BeginSegment(shot, shot.Plan[shot.Node], shot.Plan[shot.Step]);
         }
 
-        /// <summary>出射：水平按残影朝向，垂直沿用进入方向；出射一次就永久作废，防止回飞后再被接管</summary>
+        /// <summary>出射：顺着残影飞进来的按残影朝向出，逆着飞进来的反向出；出射一次就永久作废，防止回飞后再被接管</summary>
         private void Leave(Shot shot)
         {
             int facing = shot.Plan.Count > shot.Node ? shot.Plan[shot.Node].Facing : 1;
+
+            // 判据取入口那枚：子弹顶着残影飞进来时出射也要顶着走，否则等于被弹回原路
+            if (shot.Plan.Count > 0 && shot.EnterDir.x * shot.Plan[0].Facing < 0f) facing = -facing;
 
             Vector2 dir = new(facing < 0 ? -1f : 1f, shot.EnterDir.y);
             if (dir.sqrMagnitude < DirEps) dir = new(facing < 0 ? -1f : 1f, 0f);

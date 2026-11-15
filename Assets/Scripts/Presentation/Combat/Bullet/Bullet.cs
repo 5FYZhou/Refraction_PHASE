@@ -1,5 +1,6 @@
 ﻿using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
@@ -9,7 +10,16 @@ namespace Refraction.Presentation.Combat
     public sealed class Bullet : MonoBehaviour, IAttacker, IBulletView, IHitLanded
     {
         private const string BoundTag = "Bound";
+        private const int DefaultLayer = 0;
+        private const int GroundLayer = 6;
+        private const int PlayerLayer = 7;
         private const int EnemyLayer = 8;
+
+        private static readonly List<Bullet> LiveList = new();
+
+        private static readonly int PlayerBulletMask = (1 << DefaultLayer) | (1 << PlayerLayer);
+
+        private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << GroundLayer) | (1 << EnemyLayer);
 
         private BulletField _home;
         private BulletLogic _system;
@@ -21,13 +31,22 @@ namespace Refraction.Presentation.Combat
         private Collider2D[] _colliders;
         private Damage _damage;
         private BulletState _state;
+        private Vector2 _velocity;
         private int _id = -1;
         private int _segFrom = -1;
         private int _segTo = -1;
+        private Collider2D _hurtOther;
+        private HurtBox _hurtBox;
         private bool _bound;
         private bool _hit;
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
+
+        public bool PlayerOwned { get; private set; }
+
+        public static int LiveCount => LiveList.Count;
+
+        public static Bullet LiveAt(int index) => LiveList[index];
 
         /// <summary>造出来时调一次：抓刚体、碰撞体、伤害与命中回调</summary>
         public void Bind(BulletField home, BulletLogic system, int id, Transform owner, IHitLanded hitSink)
@@ -38,7 +57,11 @@ namespace Refraction.Presentation.Combat
             _owner = owner;
             _hitSink = hitSink;
             _hit = false;
+            _bound = false;
             _damage = system.DamageOf(id);
+            PlayerOwned = system.PlayerOwned;
+
+            if (!LiveList.Contains(this)) LiveList.Add(this);
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             if (_rb == null) _rb = gameObject.AddComponent<Rigidbody2D>();
@@ -51,9 +74,37 @@ namespace Refraction.Presentation.Combat
 
             if (_colliders == null) _colliders = GetComponents<Collider2D>();
 
+            ApplyHitMask();
+
             if (_attackBox == null) _attackBox = GetComponent<AttackBox>();
 
-            if (_attackBox != null) _attackBox.SetAttack(this);
+            if (_attackBox != null)
+            {
+                _attackBox.SetAttack(this);
+                _attackBox.SetOwnerRoot(owner);
+            }
+        }
+
+        // 预制体上的 ExcludeLayers 会被覆盖
+        private void ApplyHitMask()
+        {
+            if (_colliders == null) return;
+
+            int mask = _damage.Source == DamageSource.PlayerBullet ? PlayerBulletMask : EnemyBulletMask;
+
+            for (int i = 0; i < _colliders.Length; i++) _colliders[i].excludeLayers = mask;
+        }
+
+        private int HitLayer => _damage.Source == DamageSource.PlayerBullet ? EnemyLayer : PlayerLayer;
+
+        private HurtBox HurtBoxOf(Collider2D other)
+        {
+            if (other == _hurtOther) return _hurtBox;
+
+            _hurtOther = other;
+            _hurtBox = other.GetComponent<HurtBox>();
+
+            return _hurtBox;
         }
 
         public void Apply(in BulletPose pose)
@@ -72,7 +123,9 @@ namespace Refraction.Presentation.Combat
                 for (int i = 0; i < _colliders.Length; i++) _colliders[i].enabled = !transporting;
 
                 _rb.bodyType = transporting ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
-                _rb.velocity = transporting ? Vector2.zero : pose.Dir * pose.Speed;
+
+                _velocity = transporting ? Vector2.zero : pose.Dir * pose.Speed;
+                _rb.velocity = _velocity;
             }
 
             if (pose.State == BulletState.Transporting) _rb.position = pose.Pos;
@@ -101,13 +154,23 @@ namespace Refraction.Presentation.Combat
             _owner = null;
             _hitSink = null;
             _id = -1;
+            _hurtOther = null;
+            _hurtBox = null;
             _bound = false;
             _state = BulletState.Flying;
+            _velocity = Vector2.zero;
             _segFrom = -1;
             _segTo = -1;
+            PlayerOwned = false;
+
+            LiveList.Remove(this);
 
             // 摘攻击者：同帧未派发的受击盒回调别再结算
-            if (_attackBox != null) _attackBox.SetAttack(null);
+            if (_attackBox != null)
+            {
+                _attackBox.SetAttack(null);
+                _attackBox.SetOwnerRoot(null);
+            }
 
             if (_rb != null)
             {
@@ -121,12 +184,10 @@ namespace Refraction.Presentation.Combat
             }
         }
 
-        // 分流：真正的判定全在逻辑层
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other == null || _system == null) return;
 
-            // Bound 是地图边界，飞出才销毁
             if (other.CompareTag(BoundTag)) return;
 
             if (_owner != null && (other.transform == _owner || other.transform.IsChildOf(_owner))) return;
@@ -142,8 +203,17 @@ namespace Refraction.Presentation.Combat
                 return;
             }
 
-            // 敌人由 AttackBox 结算，先 Kill 会吞掉这一枪
-            if (_attackBox != null && other.gameObject.layer == EnemyLayer) return;
+            // 敌弹打中就收，无敌窗挡掉也收
+            HurtBox hurt = HurtBoxOf(other);
+
+            if (!PlayerOwned && hurt != null && hurt.Attackable != null)
+            {
+                hurt.Attackable.TakeDamage(_damage);
+                OnHitLanded();
+                return;
+            }
+
+            if (_attackBox != null && other.gameObject.layer == HitLayer) return;
 
             _system.Kill(_id);
         }
@@ -162,6 +232,8 @@ namespace Refraction.Presentation.Combat
         {
             SyncSegment(-1, -1);
 
+            LiveList.Remove(this);
+
             _system?.Forget(_id);
         }
 
@@ -175,6 +247,29 @@ namespace Refraction.Presentation.Combat
             _segTo = to;
 
             if (_afterimage != null && from >= 0) _afterimage.BeginTraverse(from, to);
+        }
+
+        public bool TryReflect(IBulletLauncher launcher, float damage, float knockback, float transferSpeed)
+        {
+            if (launcher == null || _system == null) return false;
+            if (_state != BulletState.Flying) return false;
+
+            Vector2 velocity = _velocity;
+
+            if (velocity.sqrMagnitude < 1e-6f) return false;
+
+            launcher.Launch(new BulletSpawn(
+                Position,
+                -velocity.normalized,
+                velocity.magnitude,
+                damage,
+                knockback,
+                transferSpeed)
+                );
+
+            _system.Kill(_id);
+
+            return true;
         }
 
         public Damage ProduceDamage() => _damage;

@@ -1,6 +1,8 @@
 ﻿using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
+using Refraction.Logic.Events;
+using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 using UnityEngine;
 
@@ -13,6 +15,7 @@ namespace Refraction.Logic.Actor
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
         private readonly Cooldown _contactCooldown = new();
+        private readonly Cooldown _fireCooldown = new();
         private readonly bool _aiEnabled;
         private readonly IMoveMotor _motor;
 
@@ -20,18 +23,28 @@ namespace Refraction.Logic.Actor
         private EnemyPatrolArea _patrolArea;
         private Vector2 _lastTargetPos;
         private float _lostTime;
+        private IBulletLauncher _launcher;
+        private bool _black;
+        private bool _visibleLast;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled) : base(motor, config)
+        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White) : base(motor, config)
         {
             _config = config;
             _aiEnabled = aiEnabled;
             _motor = motor;
+            _black = world == WorldPolarity.Black;
             _moveGroup = new EnemyMoveGroup(this, motor, config);
+
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
+
+        public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
         public bool TargetVisible => _target.Visible;
+
+        public bool ChaseAllowed => !_black;
 
         /// <summary>最后一次看到玩家的位置：看不见之后仍有效，追踪靠它继续往那边走</summary>
         public Vector2 TargetPos => _lastTargetPos;
@@ -50,6 +63,8 @@ namespace Refraction.Logic.Actor
             FixedTick(ctx);
         }
 
+        public void BindLauncher(IBulletLauncher launcher) => _launcher = launcher;
+
         protected override void OnFixedTick(in LogicContext ctx)
         {
             if (!_aiEnabled)
@@ -60,6 +75,7 @@ namespace Refraction.Logic.Actor
             }
 
             UpdateTarget(in ctx);
+            TryFire(in ctx);
 
             _moveGroup.Tick(in ctx);
         }
@@ -67,8 +83,9 @@ namespace Refraction.Logic.Actor
         /// <summary>站桩：伤害值抹成 0、血量不动，但受击表现与命中反馈照常，所以照样算命中</summary>
         public override bool TakeDamage(in Damage damage)
         {
-            // 敌人之间会挤在一起，接触伤害只对玩家生效，否则巡逻时两只怪互相打死
+            // 敌人之间会挤在一起，接触伤害与敌弹都只对玩家生效，否则怪物会互相打死
             if (damage.Source == DamageSource.Contact) return false;
+            if (damage.Source == DamageSource.EnemyBullet) return false;
 
             if (_aiEnabled) return base.TakeDamage(in damage);
 
@@ -109,5 +126,38 @@ namespace Refraction.Logic.Actor
 
             _lostTime += ctx.GameTime.deltaTime;
         }
+
+        private void TryFire(in LogicContext ctx)
+        {
+            bool visible = _target.Visible;
+            bool entered = visible && !_visibleLast;
+
+            _visibleLast = visible;
+
+            if (!entered || _launcher == null) return;
+            if (_config.bulletSpeed <= 0f) return;
+            if (!_fireCooldown.CanUse(ctx.GameTime.now)) return;
+
+            Vector2 origin = ctx.WorldInfo.Pos;
+            float dx = _lastTargetPos.x - origin.x;
+
+            // 平射：方向只取横向
+            int sign = Mathf.Abs(dx) > 0.01f
+                ? (dx > 0f ? 1 : -1)
+                : (ctx.WorldInfo.Face >= 0 ? 1 : -1);
+
+            Vector2 muzzle = origin + new Vector2(sign * Mathf.Abs(_config.bulletMuzzle.x), _config.bulletMuzzle.y);
+
+            _launcher.Launch(new BulletSpawn(
+                muzzle,
+                new Vector2(sign, 0f),
+                _config.bulletSpeed,
+                _config.bulletDamage,
+                _config.bulletKnockback));
+
+            _fireCooldown.MarkUsed(ctx.GameTime.now, _config.fireInterval);
+        }
+
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = evt.World == WorldPolarity.Black;
     }
 }

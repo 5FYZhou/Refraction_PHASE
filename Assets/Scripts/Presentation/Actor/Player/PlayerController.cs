@@ -17,6 +17,7 @@ namespace Refraction.Presentation.Actor
     {
         private const float BlinkHz = 5f;
         private const float BlinkMinAlpha = 0.3f;
+        private const float DashInvulnerableAlpha = 100f / 255f;
 
         public int Order => SceneOrder.Player;
 
@@ -46,6 +47,7 @@ namespace Refraction.Presentation.Actor
         private Spawn _checkpoint;
         private IBulletLauncher _launcher;
         private BlackAttackView _blackAttack;
+        private Collider2D _hurt;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -80,6 +82,9 @@ namespace Refraction.Presentation.Actor
         }
         private void OnDestroy()
         {
+            // 判定盒开打时被摘到场景根上，不先装回来会跟着玩家一起活着（残留在原地、引用已死的逻辑）
+            _blackAttack?.End();
+
             _logic?.Dispose();
 
             // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
@@ -123,6 +128,9 @@ namespace Refraction.Presentation.Actor
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
+
+            _hurt = hurtBox != null ? hurtBox.GetComponent<Collider2D>() : null;
+            _blackAttack.BindRebound(() => _launcher, _hurt);
 
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
             if (spawnT != null && _checkpoint == null)
@@ -191,6 +199,8 @@ namespace Refraction.Presentation.Actor
 
             _logic.FixedTick(context);
 
+            _blackAttack?.ReboundTick();
+
             EventBus<PlayerDebugSnapshot>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,
                 moveMotor.LedgerVelocity,
@@ -222,7 +232,7 @@ namespace Refraction.Presentation.Actor
                     _logic.TakeFallDamage();
 
                     if (!_logic.IsAlive) HandleDeath();
-                    else _logic.RespawnToLastGrounded();
+                    else _logic.FallBackToLastGrounded();
                 }
             }
 
@@ -273,7 +283,12 @@ namespace Refraction.Presentation.Actor
         {
             float alpha = _viewBaseColor.a;
 
-            if (_logic.IsInvulnerable)
+            if (_logic.IsDashInvulnerable)
+            {
+                _blinkElapsed = 0f;
+                alpha = DashInvulnerableAlpha;
+            }
+            else if (_logic.IsInvulnerable)
             {
                 _blinkElapsed += deltaTime;
                 if (Mathf.Repeat(_blinkElapsed * BlinkHz, 1f) < 0.5f) alpha = BlinkMinAlpha * _viewBaseColor.a;
