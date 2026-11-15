@@ -1241,7 +1241,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02b6b1e99e081564398f6a96c4e5fb9d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: 2ccb0524aff70d846b4c7ba02661fce2, type: 2}
+  config: {fileID: 11400000, guid: 6e2f913aba0c24a4f9162bdb135dbdb2, type: 2}
   moveMotor: {fileID: 58551293848153998}
   OpenAI: 1
   patrolOffset: {x: 0, y: 0}
@@ -1258,7 +1258,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d3bf76265ffa61147a57a6e3d1745107, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: 2ccb0524aff70d846b4c7ba02661fce2, type: 2}
+  config: {fileID: 11400000, guid: 6e2f913aba0c24a4f9162bdb135dbdb2, type: 2}
   bodyCollider: {fileID: 9161692448869622561}
   feetRef: {fileID: 533421093811800593}
   headRef: {fileID: 5891344537717970208}
