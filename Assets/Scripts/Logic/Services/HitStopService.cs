@@ -56,7 +56,6 @@ namespace Refraction.Logic.Service
             if (seconds > _remaining) _remaining = seconds;
 
             _pause.PushFreeze(this);
-            Debug.Log("request HitStop " +  seconds);
         }
 
         private void OnRequestHitStop(RequestHitStop evt) => Request(evt.seconds);
