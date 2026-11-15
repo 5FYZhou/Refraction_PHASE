@@ -35,6 +35,14 @@ namespace Refraction.Logic.Actor
             return new(true, new Vector2((lo + hi) * 0.5f, 0f), new Vector2((hi - lo) * 0.5f, 0f));
         }
 
+        /// <summary>按"起点 + 局部偏移 + 尺寸"快照成世界框：只算这一次，之后框不跟着敌人动</summary>
+        public static EnemyArea Snapshot(Vector2 origin, Vector2 offset, Vector2 size)
+        {
+            if (size.x <= 0.01f) return default;
+
+            return new EnemyArea(true, origin + offset, size * 0.5f);
+        }
+
         /// <summary>只看横向：巡逻是同一水平线上的往返，高度不影响掉头</summary>
         public bool ContainsX(float x) => !HasBounds || (x >= MinX && x <= MaxX);
 

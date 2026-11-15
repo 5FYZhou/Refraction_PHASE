@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按展示态与黑白给 View 换色</summary>
-    public sealed class E_SecondController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IDetectSink
+    public sealed class E_SecondController : MonoBehaviour, ISceneRoot, IPhysicsTicked
     {
         public int Order => SceneOrder.World;
 
@@ -47,15 +47,13 @@ namespace Refraction.Presentation.Actor
         private const string DetectChildName = "DetectCollider";
         private const int BulletPoolSize = 4;
 
+        private readonly EnemySight _sight = new(false);
+
         private GameRoot _root;
         private bool _attached;
         private E_SecondLogic _logic;
         private BulletLogic _bullets;
         private BulletField _bulletField;
-
-        private PlayerController _player;
-        private Transform _playerTransform;
-        private Collider2D _playerBody;
 
         private SpriteRenderer[] _viewRenderers;
         private EnemyVisual _visual = (EnemyVisual)(-1);
@@ -64,18 +62,16 @@ namespace Refraction.Presentation.Actor
         private EnemyArea _patrolArea;
         private EnemyArea _chaseArea;
 
-        private bool _inSight;
-
         private void Awake()
         {
             CacheView();
-            DetectZoneBinder.Bind(transform, DetectChildName, nameof(E_SecondController), this);
+            DetectZoneBinder.Bind(transform, DetectChildName, nameof(E_SecondController), _sight);
         }
 
         private void Start()
         {
-            _patrolArea = SnapshotArea(patrolOffset, patrolSize);
-            _chaseArea = SnapshotArea(chaseOffset, chaseSize);
+            _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
+            _chaseArea = EnemyArea.Snapshot(transform.position, chaseOffset, chaseSize);
 
             _root = GameRoot.Instance;
             _root.RegisterSceneRoot(this);
@@ -162,58 +158,13 @@ namespace Refraction.Presentation.Actor
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
-            _logic.FixedTick(context, Sense());
+            _logic.FixedTick(context, _sight.Sense());
 
             _bullets?.Tick(deltaTime);
 
             TickVisual();
 
             if (!_logic.IsAlive) Destroy(gameObject);
-        }
-
-        /// <summary>位置一直带着：脱战判定还要用；Visible 只由触发器进出决定</summary>
-        private EnemyTargetInfo Sense()
-        {
-            if (_player == null) return default;
-
-            Vector2 pos = _playerTransform.position;
-
-            if (_playerBody == null) return new EnemyTargetInfo(true, _inSight, pos, pos, Vector2.zero);
-
-            Bounds body = _playerBody.bounds;
-
-            return new EnemyTargetInfo(true, _inSight, pos, body.center, body.extents);
-        }
-
-        public void OnDetectEnter(Collider2D other)
-        {
-            if (other == null) return;
-
-            PlayerController player = other.GetComponentInParent<PlayerController>();
-            if (player == null) return;
-
-            _player = player;
-            _playerTransform = player.transform;
-            _playerBody = PlayerBody();
-            _inSight = true;
-        }
-
-        /// <summary>撞人判定要的是受击盒：玩家枢轴在脚下，拿枢轴算距离会把贴身判成没撞上</summary>
-        private Collider2D PlayerBody()
-        {
-            HurtBox hurtBox = _player.GetComponentInChildren<HurtBox>();
-            if (hurtBox == null) return null;
-
-            return hurtBox.GetComponent<Collider2D>();
-        }
-
-        /// <summary>出门只关视线，玩家引用留着：追击框的脱战判定要靠它继续取位置</summary>
-        public void OnDetectExit(Collider2D other)
-        {
-            if (_player == null || other == null) return;
-            if (!other.transform.IsChildOf(_player.transform)) return;
-
-            _inSight = false;
         }
 
         private void TickVisual()
@@ -253,16 +204,6 @@ namespace Refraction.Presentation.Actor
             _logic.BindLauncher(_bullets);
         }
 
-        /// <summary>只快照一次：每帧拿局部偏移重算，等于框跟着敌人跑</summary>
-        private EnemyArea SnapshotArea(Vector2 offset, Vector2 size)
-        {
-            if (size.x <= 0.01f) return default;
-
-            Vector2 center = (Vector2)transform.position + offset;
-
-            return new EnemyArea(true, center, size * 0.5f);
-        }
-
 #if UNITY_EDITOR
         private void Reset()
         {
@@ -274,37 +215,18 @@ namespace Refraction.Presentation.Actor
 
         private void OnDrawGizmosSelected()
         {
-            Color patrol = new(1f, 0.75f, 0.2f, 0.9f);
-            Color chase = new(1f, 0.4f, 0.4f, 0.9f);
-
-            // 跑起来画逻辑真正在用的那份快照：框钉在世界上，只有 Recenter 会成对平移巡逻框与追击框
             if (Application.isPlaying && _root != null)
             {
-                DrawArea(_logic != null ? _logic.PatrolArea : _patrolArea, patrol);
-                DrawArea(_logic != null ? _logic.ChaseArea : _chaseArea, chase);
-                return;
+                EnemyGizmos.DrawArea(_logic != null ? _logic.PatrolArea : _patrolArea, EnemyGizmos.Patrol);
+                EnemyGizmos.DrawArea(_logic != null ? _logic.ChaseArea : _chaseArea, EnemyGizmos.Chase);
+            }
+            else
+            {
+                EnemyGizmos.DrawZone(transform, patrolOffset, patrolSize, EnemyGizmos.Patrol);
+                EnemyGizmos.DrawZone(transform, chaseOffset, chaseSize, EnemyGizmos.Chase);
             }
 
-            DrawBox(patrolOffset, patrolSize, patrol);
-            DrawBox(chaseOffset, chaseSize, chase);
-        }
-
-        private static void DrawArea(in EnemyArea area, Color color)
-        {
-            if (!area.HasBounds) return;
-
-            Gizmos.color = color;
-            Gizmos.DrawWireCube(
-                new Vector3(area.Center.x, area.Center.y, 0f),
-                new Vector2(area.HalfSize.x * 2f, Mathf.Max(area.HalfSize.y * 2f, 0.2f)));
-        }
-
-        private void DrawBox(Vector2 offset, Vector2 size, Color color)
-        {
-            if (size.x <= 0f) return;
-
-            Gizmos.color = color;
-            Gizmos.DrawWireCube(transform.position + (Vector3)offset, new Vector2(size.x, Mathf.Max(size.y, 0.2f)));
+            EnemyGizmos.DrawSight(transform, DetectChildName);
         }
 #endif
     }

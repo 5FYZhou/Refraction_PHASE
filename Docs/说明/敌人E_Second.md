@@ -4,7 +4,7 @@
 > 表现层：`E_SecondController`（装配、喂玩家位置、换色）、`E_SecondMotor`（飞行执行器，只探墙）。
 > 数值全在 `E_SecondConfig` 资产里；颜色写在 `E_SecondController` 开头。
 
-这套逻辑与 `Enemy` 完全独立：不共用 `EnemyLogic` / `EnemyMoveGroup` / 任何 Enemy 状态，只共用 `ActorLogic`、`MoveMotor`、`StateGroup`、`BulletLogic` 这些框架件，以及探测触发器的转发器（`EnemyDetectZone` 认 `IDetectSink`，两个控制器都实现）。
+这套逻辑与 `Enemy` 完全独立：不共用 `EnemyLogic` / `EnemyMoveGroup` / 任何 Enemy 状态，只共用 `ActorLogic`、`MoveMotor`、`StateGroup`、`BulletLogic` 这些框架件，以及探测触发器的转发器（`EnemyDetectZone` 认 `IDetectSink`，三只敌人统一由 `EnemySight` 实现，控制器不再各自管视线）。
 
 ## 一、三种范围
 
@@ -126,7 +126,7 @@
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
 - `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）。
 - **必须有 `DetectCollider` 子物体**（带 Is Trigger 的碰撞体）：`E_SecondController` 在 Awake 里按名字找它并补挂转发器；找不到只警告，这只敌人会永远看不见玩家。
-- 两个框都在 controller 的 Inspector 上画：`patrolOffset / patrolSize` 是黄框，`chaseOffset / chaseSize` 是红框，`Reset()` 会给默认值（12×4 与 20×6）。
+- 两个框都在 controller 的 Inspector 上画（`EnemyGizmos` 统一绘制）：`patrolOffset / patrolSize` 是绿框，`chaseOffset / chaseSize` 是橙红框，`Reset()` 会给默认值（12×4 与 20×6）；另有一圈青色的 `DetectCollider` 视线范围框。
   - 运行中 gizmo 画的是逻辑里那份快照（`E_SecondLogic.PatrolArea` 与 `E_SecondLogic.ChaseArea`），钉在世界坐标上、不跟敌人走；只有 `Recenter` 成对平移两个框之后才会一起挪。没运行时画的才是 Inspector 参数框。
 - `E_SecondMotor` 的撞墙探针画出两个同心圆（`wallInnerRadius` / `wallOuterRadius`），两圈之间那圈就是撞墙判定区，见下一节。
 
