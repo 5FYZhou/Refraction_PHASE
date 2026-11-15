@@ -406,7 +406,7 @@ namespace Refraction.Generated
                 {
                     ""name"": """",
                     ""id"": ""f835703e-2156-446f-a6c6-a1e57af34909"",
-                    ""path"": ""<Keyboard>/s"",
+                    ""path"": ""<Keyboard>/shift"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
