@@ -140,7 +140,7 @@ namespace Refraction.Presentation.Actor
         {
             if (_target == null) return default;
 
-            return new EnemyTargetInfo(true, _targetTransform.position);
+            return new EnemyTargetInfo(true, true, _targetTransform.position);
         }
 
         /// <summary>探测触发器转发过来的进入：玩家的碰撞体可能挂在子物体上，往父级找（与 Door 同一套判法）</summary>

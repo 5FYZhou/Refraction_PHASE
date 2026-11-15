@@ -1,145 +1,79 @@
 ﻿using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
-using Refraction.Logic.Events;
 using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>敌人逻辑：持有索敌结果与丢目标计时，状态推进交给 EnemyMoveGroup</summary>
-    /// <remarks>索敌结果由表现层每物理帧注入</remarks>
-    public sealed class EnemyLogic : ActorLogic, IAttacker, IIntervalAttacker
+    /// <summary>地面敌人：白世界看见玩家就追并平射一发，黑世界只巡逻</summary>
+    public sealed class EnemyLogic : EnemyLogicBase
     {
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
-        private readonly Cooldown _contactCooldown = new();
         private readonly Cooldown _fireCooldown = new();
-        private readonly bool _aiEnabled;
-        private readonly IMoveMotor _motor;
 
-        private EnemyTargetInfo _target;
         private EnemyPatrolArea _patrolArea;
-        private Vector2 _lastTargetPos;
-        private float _lostTime;
-        private IBulletLauncher _launcher;
-        private bool _black;
         private bool _visibleLast;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White) : base(motor, config)
+        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White)
+            : base(motor, config, aiEnabled, world)
         {
             _config = config;
-            _aiEnabled = aiEnabled;
-            _motor = motor;
-            _black = world == WorldPolarity.Black;
             _moveGroup = new EnemyMoveGroup(this, motor, config);
-
-            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
-
-        public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        public bool TargetVisible => _target.Visible;
+        /// <summary>黑世界不追：转黑的当帧由 EnemyChaseState.IsDone 结束追击</summary>
+        public override bool ChaseAllowed => !Black;
 
-        public bool ChaseAllowed => !_black;
-
-        /// <summary>最后一次看到玩家的位置：看不见之后仍有效，追踪靠它继续往那边走</summary>
-        public Vector2 TargetPos => _lastTargetPos;
-
-        /// <summary>丢目标还没超时：两态共用同一个计时，谁也别自己再维护一份</summary>
-        public bool Alert => _target.Visible || _lostTime < _config.loseTargetTime;
-
-        /// <summary>本帧的巡逻范围：无界表示巡逻框宽度 ≤ 0，整平台随便走</summary>
+        /// <summary>本帧的巡逻范围：无界表示整平台随便走</summary>
         public EnemyPatrolArea PatrolArea => _patrolArea;
+
+        protected override float ContactDamage => _config.contactDamage;
+
+        protected override float ContactInterval => _config.contactInterval;
+
+        protected override float ContactKnockback => _config.contactKnockback;
+
+        protected override float LoseTargetTime => _config.loseTargetTime;
 
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyPatrolArea patrolArea)
         {
-            _target = target;
             _patrolArea = patrolArea;
+            SetSight(target.Known, target.Visible, target.Pos);
             FixedTick(ctx);
         }
 
-        public void BindLauncher(IBulletLauncher launcher) => _launcher = launcher;
-
-        protected override void OnFixedTick(in LogicContext ctx)
+        protected override void StopOnSpot(in LogicContext ctx)
         {
-            if (!_aiEnabled)
-            {
-                // 站桩：两态不推进，但横向速度必须刹住——刚体没有线性阻尼，被撞一下会一直滑
-                _motor.BrakeTowardsX();
-                return;
-            }
+            // 刚体没有线性阻尼，站桩时被撞一下会一直滑
+            Motor.BrakeTowardsX();
+        }
 
-            UpdateTarget(in ctx);
+        protected override void OnAiTick(in LogicContext ctx)
+        {
             TryFire(in ctx);
 
             _moveGroup.Tick(in ctx);
         }
 
-        /// <summary>站桩：伤害值抹成 0、血量不动，但受击表现与命中反馈照常，所以照样算命中</summary>
-        public override bool TakeDamage(in Damage damage)
-        {
-            // 敌人之间会挤在一起，接触伤害与敌弹都只对玩家生效，否则怪物会互相打死
-            if (damage.Source == DamageSource.Contact) return false;
-            if (damage.Source == DamageSource.EnemyBullet) return false;
-
-            if (_aiEnabled) return base.TakeDamage(in damage);
-
-            base.TakeDamage(new Damage(0f, damage.Source, damage.Direction, damage.KnockbackSpeed));
-
-            // 基类按「血量没掉」返回 false，这里改由无敌窗判定
-            return IsAlive && !Conditions.IsInvulnerable;
-        }
-
-        /// <summary>接触伤害</summary>
-        public Damage ProduceDamage()
-        {
-            if (_config == null) return default;
-
-            Vector2 dir = _aiEnabled ? Vector2.zero : new Vector2(_motor.FaceSign, 0f);
-
-            return new Damage(
-                _config.contactDamage,
-                DamageSource.Contact,
-                dir,
-                _config.contactKnockback);
-        }
-
-        public bool ReadyToHit(float now) => _contactCooldown.CanUse(now);
-
-        public void MarkHit(float now) => _contactCooldown.MarkUsed(now, _config.contactInterval);
-
-        protected override void OnTick(in LogicContext ctx) { }
-
-        private void UpdateTarget(in LogicContext ctx)
-        {
-            if (_target.Visible)
-            {
-                _lostTime = 0f;
-                _lastTargetPos = _target.Pos;
-                return;
-            }
-
-            _lostTime += ctx.GameTime.deltaTime;
-        }
-
         private void TryFire(in LogicContext ctx)
         {
-            bool visible = _target.Visible;
+            bool visible = Visible;
             bool entered = visible && !_visibleLast;
 
             _visibleLast = visible;
 
-            if (!entered || _launcher == null) return;
+            if (!entered || Launcher == null) return;
             if (_config.bulletSpeed <= 0f) return;
             if (!_fireCooldown.CanUse(ctx.GameTime.now)) return;
 
             Vector2 origin = ctx.WorldInfo.Pos;
-            float dx = _lastTargetPos.x - origin.x;
+            float dx = LastSeenPos.x - origin.x;
 
             // 平射：方向只取横向
             int sign = Mathf.Abs(dx) > 0.01f
@@ -148,7 +82,7 @@ namespace Refraction.Logic.Actor
 
             Vector2 muzzle = origin + new Vector2(sign * Mathf.Abs(_config.bulletMuzzle.x), _config.bulletMuzzle.y);
 
-            _launcher.Launch(new BulletSpawn(
+            Launcher.Launch(new BulletSpawn(
                 muzzle,
                 new Vector2(sign, 0f),
                 _config.bulletSpeed,
@@ -157,7 +91,5 @@ namespace Refraction.Logic.Actor
 
             _fireCooldown.MarkUsed(ctx.GameTime.now, _config.fireInterval);
         }
-
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = evt.World == WorldPolarity.Black;
     }
 }

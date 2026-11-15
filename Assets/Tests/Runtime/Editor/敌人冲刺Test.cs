@@ -56,7 +56,7 @@ namespace Refraction.Tests
                 WorldInfo world = new(false, wall, Vector2.zero, 1, SelfPos);
                 LogicContext ctx = new(default, world, new GameTime(_now, Dt));
 
-                _logic.FixedTick(ctx, new E_SecondTargetInfo(true, true, pos, center, half));
+                _logic.FixedTick(ctx, new EnemyTargetInfo(true, true, pos, center, half));
             }
         }
 

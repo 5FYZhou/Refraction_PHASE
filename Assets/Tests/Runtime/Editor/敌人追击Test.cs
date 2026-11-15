@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
@@ -49,7 +49,7 @@ namespace Refraction.Tests
             WorldInfo world = new(false, wall, Vector2.zero, 1, enemyPos);
             LogicContext ctx = new(default, world, new GameTime(_now, Dt));
 
-            _logic.FixedTick(ctx, new E_SecondTargetInfo(true, visible, playerPos, playerPos, new Vector2(0.45f, 0.9f)));
+            _logic.FixedTick(ctx, new EnemyTargetInfo(true, visible, playerPos, playerPos, new Vector2(0.45f, 0.9f)));
         }
 
         [Test]

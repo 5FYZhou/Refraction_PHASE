@@ -1,4 +1,5 @@
 ﻿using Refraction.Data;
+using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
@@ -30,7 +31,7 @@ namespace Refraction.Logic.Actor
         {
             target = EmptyTag;
 
-            if (Current != EnemyStateTag.Patrol || !_owner.TargetVisible) return false;
+            if (Current != EnemyStateTag.Patrol || !_owner.Visible) return false;
             if (!_owner.ChaseAllowed) return false;
 
             target = EnemyStateTag.Chase;

@@ -177,17 +177,17 @@ namespace Refraction.Presentation.Actor
         }
 
         /// <summary>位置一直带着：脱战判定还要用；Visible 只由触发器进出决定</summary>
-        private E_SecondTargetInfo Sense()
+        private EnemyTargetInfo Sense()
         {
             if (_player == null) return default;
 
             Vector2 pos = _playerTransform.position;
 
-            if (_playerBody == null) return new E_SecondTargetInfo(true, _inSight, pos, pos, Vector2.zero);
+            if (_playerBody == null) return new EnemyTargetInfo(true, _inSight, pos, pos, Vector2.zero);
 
             Bounds body = _playerBody.bounds;
 
-            return new E_SecondTargetInfo(true, _inSight, pos, body.center, body.extents);
+            return new EnemyTargetInfo(true, _inSight, pos, body.center, body.extents);
         }
 
         public void OnDetectEnter(Collider2D other)

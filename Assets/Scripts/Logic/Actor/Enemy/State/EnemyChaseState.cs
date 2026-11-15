@@ -26,7 +26,7 @@ namespace Refraction.Logic.Actor
         public override void Tick(in LogicContext ctx)
         {
             // 看得见之后用最后已知位置：玩家刚出范围时仍往那边走，不会拐去原点
-            float dx = _owner.TargetPos.x - ctx.WorldInfo.Pos.x;
+            float dx = _owner.LastSeenPos.x - ctx.WorldInfo.Pos.x;
 
             if (Mathf.Abs(dx) <= _config.chaseStopDistance)
             {

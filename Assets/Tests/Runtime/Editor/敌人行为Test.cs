@@ -58,7 +58,7 @@ namespace Refraction.Tests
 
         private BulletSpawn Tick(float now, bool visible, Vector2 targetPos, int face = 1)
         {
-            _logic.FixedTick(Ctx(now, face), new EnemyTargetInfo(visible, targetPos), default);
+            _logic.FixedTick(Ctx(now, face), new EnemyTargetInfo(true, visible, targetPos), default);
 
             return _launcher.Last;
         }
@@ -141,7 +141,7 @@ namespace Refraction.Tests
             EnemyLogic standstill = new(_motor, _config, false);
             standstill.BindLauncher(_launcher);
 
-            standstill.FixedTick(Ctx(0f), new EnemyTargetInfo(true, TargetRight), default);
+            standstill.FixedTick(Ctx(0f), new EnemyTargetInfo(true, true, TargetRight), default);
 
             Assert.AreEqual(0, _launcher.Count, "AI 关掉的站桩靶子不该开火");
 
@@ -163,8 +163,8 @@ namespace Refraction.Tests
             EnemyLogic black = new(_motor, _config, true, WorldPolarity.Black);
             black.BindLauncher(_launcher);
 
-            black.FixedTick(Ctx(0f), new EnemyTargetInfo(true, TargetRight), default);
-            black.FixedTick(Ctx(Dt), new EnemyTargetInfo(true, TargetRight), default);
+            black.FixedTick(Ctx(0f), new EnemyTargetInfo(true, true, TargetRight), default);
+            black.FixedTick(Ctx(Dt), new EnemyTargetInfo(true, true, TargetRight), default);
 
             Assert.IsFalse(black.ChaseAllowed, "开局就是黑世界");
             Assert.AreEqual(EnemyStateTag.Patrol, black.CurrentTag, "黑世界看见玩家也只能继续巡逻");
