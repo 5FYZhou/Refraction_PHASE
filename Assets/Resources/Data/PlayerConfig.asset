@@ -41,11 +41,11 @@ MonoBehaviour:
   inputBufferTime: 0.12
   crouchPrepareTime: 0.12
   crouchHeightRatio: 0.5
-  crouchMoveSpeedScale: 0.65
-  crouchRecoilScale: 0.44
-  crouchAllowJump: 1
-  crouchAllowDash: 1
-  crouchGroundGrace: 0.23
+  crouchMoveSpeedScale: 0.45
+  crouchRecoilScale: 0
+  crouchAllowJump: 0
+  crouchAllowDash: 0
+  crouchGroundGrace: 0.13
   bulletDamage: 20
   attackCooldown: 0.4
   bulletSpeed: 18
@@ -55,9 +55,9 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  blackAttackPrepareTime: 0.03
-  blackAttackTime: 0.3
-  blackAttackRecoverTime: 0.05
+  blackAttackPrepareTime: 0.01
+  blackAttackTime: 0.15
+  blackAttackRecoverTime: 0.25
   blackAttackDamage: 15
   blackAttackKnockback: 2.5
   blackAttackMissRecoilAhead: 2
