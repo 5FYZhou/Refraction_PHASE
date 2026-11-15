@@ -47,9 +47,9 @@ namespace Refraction.Tests
         [Test]
         public void 突进盒下画出紫色实时范围()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
-            Transform range = _scene.DashAhead.transform.Find("Range");
+            Transform range = _scene.DashUp.transform.Find("Range");
 
             Assert.IsNotNull(range, "突进盒下要有紫色实时范围");
             MeshRenderer mr = range.GetComponent<MeshRenderer>();
@@ -61,7 +61,7 @@ namespace Refraction.Tests
         [Test]
         public void 突进画出绿色扫掠面_结束就清掉()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
             GameObject sweep = GameObject.Find("DashSweep");
             Assert.IsNotNull(sweep, "突进开始要把扫过的范围画出来");
@@ -70,9 +70,11 @@ namespace Refraction.Tests
             Assert.IsNotNull(mr, "扫掠面要有渲染器");
             Assert.Greater(VertexCount(sweep), 2, "凸包至少能拼出三角面");
 
-            float startX = _scene.DashAhead.transform.position.x;
+            float startX = _scene.DashUp.transform.position.x;
+            float startY = _scene.DashUp.transform.position.y;
 
             Assert.Greater(mr.bounds.max.x, startX + 1f, "扫掠面要沿突进方向延伸出去");
+            Assert.Greater(mr.bounds.max.y, startY + 1f, "斜上突进的扫掠面要往上走");
             Assert.Less(mr.sortingOrder, 30000, "绿色压在紫色实时范围下面");
 
             _view.End();
@@ -82,7 +84,7 @@ namespace Refraction.Tests
         [Test]
         public void 扫掠面画在起手位置_玩家跑开也不跟着动()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
             GameObject sweep = GameObject.Find("DashSweep");
             Bounds before = sweep.GetComponent<MeshRenderer>().bounds;
@@ -98,25 +100,25 @@ namespace Refraction.Tests
         [Test]
         public void 点亮突进_盒留在玩家层级里随人跑()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
-            Assert.IsTrue(_scene.DashAhead.activeSelf, "平推点亮 BlackDash/AheadCollider");
-            Assert.IsFalse(_scene.DashUp.activeSelf, "另外两路不开");
-            Assert.IsFalse(_scene.DashDown.activeSelf, "另外两路不开");
+            Assert.IsTrue(_scene.DashUp.activeSelf, "斜上点亮 BlackDash/UpCollider");
+            Assert.IsFalse(_scene.DashDown.activeSelf, "斜下那一路不开");
+            Assert.IsFalse(_scene.DashAhead.activeSelf, "平推已经不是突进，那一只永远不开");
 
             _scene.Root.transform.position = new Vector3(5f, 3f, 0f);
 
-            Assert.AreEqual(5f, _scene.DashAhead.transform.position.x, 1e-3f, "突进盒随玩家一起挪");
-            Assert.AreEqual(3f, _scene.DashAhead.transform.position.y, 1e-3f, "纵向也一样，不冻在世界里");
+            Assert.AreEqual(5f, _scene.DashUp.transform.position.x, 1e-3f, "突进盒随玩家一起挪");
+            Assert.AreEqual(3f, _scene.DashUp.transform.position.y, 1e-3f, "纵向也一样，不冻在世界里");
         }
 
         [Test]
         public void 结束_三只突进盒全关()
         {
-            _view.BeginDash(BlackAttackKind.Up);
+            _view.BeginDash(BlackAttackKind.Down);
             _view.End();
 
-            Assert.IsFalse(_scene.DashAhead.activeSelf, "收尾要关平推");
+            Assert.IsFalse(_scene.DashAhead.activeSelf, "收尾要关平推那只");
             Assert.IsFalse(_scene.DashUp.activeSelf, "收尾要关斜上");
             Assert.IsFalse(_scene.DashDown.activeSelf, "收尾要关斜下");
             Assert.AreEqual(_scene.Root.transform, _scene.DashUp.transform.root, "关掉之后仍挂在玩家下面");
@@ -125,7 +127,7 @@ namespace Refraction.Tests
         [Test]
         public void 突进伤害读自己那份配置()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
             Damage dmg = _view.ProduceDamage();
 
@@ -135,12 +137,12 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 突进命中不触发黑劈砍反冲()
+        public void 突进命中_回报一次_但不套劈砍反冲()
         {
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
             _view.ProduceDamage();
 
-            Assert.AreEqual(0, _swingHits, "反冲回调只属于黑劈砍，突进撞到人不推自己");
+            Assert.AreEqual(1, _swingHits, "突进撞到第一个目标回报一次，逻辑侧靠它提前结束本体");
         }
 
         [Test]
@@ -158,43 +160,66 @@ namespace Refraction.Tests
 
             Assert.AreEqual(-Diagonal, down.Direction.x, 1e-3f, "朝左斜下要往左");
             Assert.AreEqual(-Diagonal, down.Direction.y, 1e-3f, "朝左斜下要往下");
-
-            _view.BeginDash(BlackAttackKind.Ahead);
-            Damage ahead = _view.ProduceDamage();
-
-            Assert.AreEqual(-1f, ahead.Direction.x, 1e-3f, "平推纯横向");
-            Assert.AreEqual(0f, ahead.Direction.y, 1e-3f, "平推不带竖直分量");
         }
 
         [Test]
         public void 一次突进_同一个受击盒只结算一次()
         {
-            HitLedger ledger = _scene.DashAhead.GetComponent<AttackBox>().OnceLedger;
+            HitLedger ledger = _scene.DashUp.GetComponent<AttackBox>().OnceLedger;
 
-            Assert.AreSame(ledger, _scene.DashUp.GetComponent<AttackBox>().OnceLedger, "三只突进盒共用同一份账本");
             Assert.AreSame(ledger, _scene.DashDown.GetComponent<AttackBox>().OnceLedger, "三只突进盒共用同一份账本");
+            Assert.AreSame(ledger, _scene.DashAhead.GetComponent<AttackBox>().OnceLedger, "三只突进盒共用同一份账本");
 
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
             Assert.IsTrue(ledger.TryMark(_scene.Target), "第一次碰到受击盒放行");
             Assert.IsFalse(ledger.TryMark(_scene.Target), "同一段突进里再碰一次不放行");
-            Assert.IsFalse(_scene.DashUp.GetComponent<AttackBox>().OnceLedger.TryMark(_scene.Target), "换一只盒碰到同一个目标也不再结算");
+            Assert.IsFalse(_scene.DashDown.GetComponent<AttackBox>().OnceLedger.TryMark(_scene.Target), "换一只盒碰到同一个目标也不再结算");
             Assert.IsTrue(ledger.TryMark(_scene.Other), "换个受击盒照常结算，穿一排怪各吃一次");
         }
 
         [Test]
         public void 下一段突进重新记帐()
         {
-            HitLedger ledger = _scene.DashAhead.GetComponent<AttackBox>().OnceLedger;
+            HitLedger ledger = _scene.DashUp.GetComponent<AttackBox>().OnceLedger;
 
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
             Assert.IsTrue(ledger.TryMark(_scene.Target), "第一段先记一次");
             Assert.IsFalse(ledger.TryMark(_scene.Target), "第一段里不重复");
 
             _view.End();
-            _view.BeginDash(BlackAttackKind.Ahead);
+            _view.BeginDash(BlackAttackKind.Up);
 
             Assert.IsTrue(ledger.TryMark(_scene.Target), "第二段突进重新记帐，同一个敌人还能再吃一次");
+        }
+
+        [Test]
+        public void 普攻_同一个受击盒一次只结算一次()
+        {
+            HitLedger ledger = _scene.DashAhead.GetComponent<AttackBox>().OnceLedger;
+
+            _view.BeginFlat();
+
+            Assert.IsTrue(ledger.TryMark(_scene.Target), "普攻第一次碰到受击盒放行");
+            Assert.IsFalse(ledger.TryMark(_scene.Target), "同一次普攻里再碰不放行");
+            Assert.IsTrue(ledger.TryMark(_scene.Other), "换一只怪照常各吃一次");
+        }
+
+        [Test]
+        public void 普攻与突进之间_同一个目标可以再吃一次()
+        {
+            HitLedger ledger = _scene.DashUp.GetComponent<AttackBox>().OnceLedger;
+
+            _view.BeginFlat();
+            Assert.IsTrue(ledger.TryMark(_scene.Target), "普攻先记一次");
+
+            _view.End();
+            _view.BeginDash(BlackAttackKind.Up);
+            Assert.IsTrue(ledger.TryMark(_scene.Target), "换成突进重新记帐，同一个目标还能再吃一次");
+
+            _view.End();
+            _view.BeginDash(BlackAttackKind.Down);
+            Assert.IsTrue(ledger.TryMark(_scene.Target), "上突进换下突进同样重新记帐");
         }
 
         [Test]
@@ -255,6 +280,7 @@ namespace Refraction.Tests
                 Object.DestroyImmediate(Ahead);
                 Object.DestroyImmediate(Up);
                 Object.DestroyImmediate(Down);
+                Object.DestroyImmediate(DashAhead);
                 Object.DestroyImmediate(Enemy);
                 Object.DestroyImmediate(Other.gameObject);
                 Object.DestroyImmediate(Root);

@@ -21,6 +21,8 @@ namespace Refraction.Logic.Combat
     {
         void Begin(BlackAttackKind kind);
 
+        void BeginFlat();
+
         /// <summary>点亮突进盒与弹反盒，盒随玩家移动，每个受击盒只结算一次</summary>
         void BeginDash(BlackAttackKind kind);
 

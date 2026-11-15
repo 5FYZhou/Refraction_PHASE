@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:yousandi.cn,2023:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -66,26 +66,34 @@ MonoBehaviour:
   blackAttackHitRecoilAhead: 5
   blackAttackHitRecoilUp: 0
   blackAttackHitRecoilDown: 0
-  useBlackDash: 0
+  flatAttackPrepareTime: 0.01
+  flatAttackTime: 0.15
+  flatAttackRecoverTime: 0.25
+  flatAttackCooldown: 0.4
+  flatAttackDamage: 15
+  flatAttackKnockback: 2.5
+  flatAttackMissRecoil: 2
+  flatAttackHitRecoil: 5
+  useBlackDash: 1
   blackDashPrepareTime: 0.08
   blackDashRecoverTime: 0.1
   blackDashCooldown: 0.35
-  blackDashInvulnerableTime: 0.1
-  blackDashSpeedAhead: 22
   blackDashSpeedUp: 18
   blackDashSpeedDown: 20
-  blackDashTimeAhead: 0.2
   blackDashTimeUp: 0.18
   blackDashTimeDown: 0.2
   blackDashDamage: 15
   blackDashKnockback: 2.5
+  blackDashBounceSpeed: 14
   destruction: 1
   blackAttackHitStopTime: 0.055
   contactHitStopTime: 0.035
   maxPolarity: 180
   polarityPerHit: 20
+  afterimageLinkPolarity: 2
   chargePrepareTime: 0.5
   chargeCooldown: 0.5
+  dashInvulnerableTime: 0.15
   maxAfterimages: 3
   afterimageDuration: 40
   afterimageLinkDamage: 30

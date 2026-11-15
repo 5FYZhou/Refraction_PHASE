@@ -6,10 +6,11 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>黑攻击表现端：按判定方向点亮 Player/BlackAttack 下对应的攻击盒，命中回报给玩家</summary>
+    /// <summary>黑攻击表现端：按判定方向点亮攻击盒，命中回报给玩家</summary>
     /// <remarks>三只盒共用本对象做 IAttacker：没点亮的两只不产生触发，所以一次挥击每个目标只吃一次伤害，
     /// 不必再挂 IIntervalAttacker（那会让同一帧里的第二个目标被判成"间隔内"而漏掉）。
     /// 三只盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
+    /// 黑突进与普攻共用 BlackDash 下那三只盒：突进只认 Up / Down 并跟着玩家跑，普攻认 Ahead 并冻在原地。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
     /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹</remarks>
     public sealed class BlackAttackView : IBlackAttackView, IAttacker, IHitLanded
@@ -54,6 +55,7 @@ namespace Refraction.Presentation.Combat
         private readonly AttackBox _dashAhead;
         private readonly AttackBox _dashUp;
         private readonly AttackBox _dashDown;
+        private readonly Anchor _dashAheadHome;
         private readonly HitLedger _dashHits = new();
         private readonly PlayerConfig _config;
         private readonly Func<int> _face;
@@ -68,6 +70,7 @@ namespace Refraction.Presentation.Combat
         private Action _onHit;
         private int _swingFace = 1;
         private bool _dashMode;
+        private bool _flatMode;
         private GameObject _sweep;
         private Mesh _sweepMesh;
 
@@ -93,6 +96,7 @@ namespace Refraction.Presentation.Combat
             _dashAhead = Find(root, DashAheadPath);
             _dashUp = Find(root, DashUpPath);
             _dashDown = Find(root, DashDownPath);
+            _dashAheadHome = new(_dashAhead);
 
             BindDash(_dashAhead);
             BindDash(_dashUp);
@@ -135,6 +139,23 @@ namespace Refraction.Presentation.Combat
             OpenRebound(kind);
         }
 
+        /// <summary>普攻用：点亮 BlackDash 下那只正前方盒，跟黑劈砍一样摘下来冻在原地，数值走 flatAttack 那一套</summary>
+        public void BeginFlat()
+        {
+            End();
+
+            _kind = BlackAttackKind.Ahead;
+            _flatMode = true;
+            _swingFace = _face != null ? _face() : 1;
+
+            if (_dashAhead == null) return;
+
+            _dashHits.Clear();
+            _dashAhead.transform.SetParent(null, true);
+            SetActive(_dashAhead, true);
+            OpenRebound(BlackAttackKind.Ahead);
+        }
+
         /// <summary>黑突进用：点亮对应突进盒与弹反盒，突进盒不摘下来，整段跟着玩家跑</summary>
         public void BeginDash(BlackAttackKind kind)
         {
@@ -156,12 +177,13 @@ namespace Refraction.Presentation.Combat
             Close(_up, _upHome);
             Close(_down, _downHome);
 
-            SetActive(_dashAhead, false);
+            Close(_dashAhead, _dashAheadHome);
             SetActive(_dashUp, false);
             SetActive(_dashDown, false);
 
             ClearSweep();
             _dashMode = false;
+            _flatMode = false;
             _reboundActive = null;
 
             SetActive(_reboundAhead, false);
@@ -234,16 +256,23 @@ namespace Refraction.Presentation.Combat
                    && pos.y >= bounds.min.y && pos.y <= bounds.max.y;
         }
 
-        /// <summary>逻辑侧命中钩子：盒真碰到受击盒才给反冲力，不是每次挥空气都推自己一把</summary>
+        /// <summary>逻辑侧命中钩子：盒真碰到受击盒才回调（反冲 / 突进提前结束），不是每次挥空都算命中</summary>
         public void SetHitHandler(Action onHit) => _onHit = onHit;
 
         public Damage ProduceDamage()
         {
             if (_dashMode)
+            {
+                _onHit?.Invoke();
+
                 return new Damage(_config.blackDashDamage, DamageSource.Melee, DirectionOf(), _config.blackDashKnockback);
+            }
 
             // AttackBox 每次接触都会先取伤害再结算；扣血失败的（无敌窗、站桩靶子）也算砍到了实体
             _onHit?.Invoke();
+
+            if (_flatMode)
+                return new Damage(_config.flatAttackDamage, DamageSource.Melee, DirectionOf(), _config.flatAttackKnockback);
 
             return new Damage(_config.blackAttackDamage, DamageSource.Melee, DirectionOf(), _config.blackAttackKnockback);
         }
@@ -269,15 +298,9 @@ namespace Refraction.Presentation.Combat
             box.SetOnceLedger(_dashHits);
         }
 
+        /// <summary>突进只认斜上 / 斜下；Ahead 那只留给普攻，突进这一路不碰它</summary>
         private AttackBox DashBoxOf(BlackAttackKind kind)
-        {
-            switch (kind)
-            {
-                case BlackAttackKind.Up: return _dashUp;
-                case BlackAttackKind.Down: return _dashDown;
-                default: return _dashAhead;
-            }
-        }
+            => kind == BlackAttackKind.Down ? _dashDown : _dashUp;
 
         /// <summary>绿色扫掠面：把起手形状沿突进位移平移一份，取两组点的凸包，位置固定在世界里</summary>
         private void PaintSweep(BlackAttackKind kind)
@@ -321,14 +344,9 @@ namespace Refraction.Presentation.Combat
         }
 
         private float TravelOf(BlackAttackKind kind)
-        {
-            switch (kind)
-            {
-                case BlackAttackKind.Up: return _config.blackDashSpeedUp * _config.blackDashTimeUp;
-                case BlackAttackKind.Down: return _config.blackDashSpeedDown * _config.blackDashTimeDown;
-                default: return _config.blackDashSpeedAhead * _config.blackDashTimeAhead;
-            }
-        }
+            => kind == BlackAttackKind.Down
+                ? _config.blackDashSpeedDown * _config.blackDashTimeDown
+                : _config.blackDashSpeedUp * _config.blackDashTimeUp;
 
         private void ClearSweep()
         {

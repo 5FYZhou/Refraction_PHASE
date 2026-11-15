@@ -29,6 +29,8 @@ namespace Refraction.Tests
             _config.blackAttackHitRecoilAhead = 2f;
             _config.blackAttackHitRecoilUp = 10f;
             _config.blackAttackHitRecoilDown = 16f;
+            _config.flatAttackDamage = 11f;
+            _config.flatAttackKnockback = 6f;
         }
 
         [TearDown]
@@ -334,6 +336,40 @@ namespace Refraction.Tests
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "没扣到血也是砍在实体上，反冲不该缩回空挥那份");
         }
 
+        [Test]
+        public void 普攻_用黑突进的正前方盒_劈砍那三只不动()
+        {
+            using 层级场景 scene = new();
+            BlackAttackView view = new(scene.Root.transform, _config, () => 1);
+
+            view.BeginFlat();
+
+            Assert.IsTrue(scene.DashAhead.activeSelf, "普攻点亮 BlackDash/AheadCollider");
+            AssertAllOff(scene, "普攻不许碰黑劈砍那三只");
+            Assert.IsFalse(scene.DashUp.activeSelf, "突进的斜上盒跟着关");
+            Assert.IsFalse(scene.DashDown.activeSelf, "突进的斜下盒跟着关");
+            Assert.IsNull(scene.DashAhead.transform.parent, "普攻盒摘到根上冻住，玩家走开判定不跟着走");
+
+            view.End();
+
+            Assert.IsFalse(scene.DashAhead.activeSelf, "结束后普攻盒也关掉");
+            Assert.AreEqual("BlackDash", scene.DashAhead.transform.parent.name, "盒装回 BlackDash 下，下一次按新站位重摘");
+        }
+
+        [Test]
+        public void 普攻_伤害与击退走自己那一套()
+        {
+            using 层级场景 scene = new();
+            BlackAttackView view = new(scene.Root.transform, _config, () => 1);
+
+            view.BeginFlat();
+            Damage damage = view.ProduceDamage();
+
+            Assert.AreEqual(11f, damage.Amount, "普攻伤害取 flatAttackDamage，不再借黑劈砍那份");
+            Assert.AreEqual(6f, damage.KnockbackSpeed, "击退取 flatAttackKnockback");
+            Assert.AreEqual(1f, damage.Direction.x, 1e-4f, "普攻沿朝向");
+        }
+
         private static void AssertAllOff(层级场景 scene, string message, GameObject except = null)
         {
             if (scene.Ahead != except) Assert.IsFalse(scene.Ahead.activeSelf, $"{message}（AheadCollider 仍开着）");
@@ -350,6 +386,9 @@ namespace Refraction.Tests
             public readonly GameObject Up;
             public readonly GameObject Down;
             public readonly GameObject Dash;
+            public readonly GameObject DashAhead;
+            public readonly GameObject DashUp;
+            public readonly GameObject DashDown;
 
             public 层级场景()
             {
@@ -360,9 +399,9 @@ namespace Refraction.Tests
                 Down = Box(Black, "DownCollider");
 
                 Dash = Child(Root, "BlackDash");
-                Box(Dash, "AheadCollider");
-                Box(Dash, "UpCollider");
-                Box(Dash, "DownCollider");
+                DashAhead = Box(Dash, "AheadCollider");
+                DashUp = Box(Dash, "UpCollider");
+                DashDown = Box(Dash, "DownCollider");
             }
 
             public void Dispose()
@@ -371,6 +410,9 @@ namespace Refraction.Tests
                 Object.DestroyImmediate(Ahead);
                 Object.DestroyImmediate(Up);
                 Object.DestroyImmediate(Down);
+                Object.DestroyImmediate(DashAhead);
+                Object.DestroyImmediate(DashUp);
+                Object.DestroyImmediate(DashDown);
                 Object.DestroyImmediate(Root);
             }
 
@@ -440,6 +482,8 @@ namespace Refraction.Tests
             public System.Action OnHit;
 
             public void Begin(BlackAttackKind kind) => BeginKind = kind;
+
+            public void BeginFlat() => BeginKind = BlackAttackKind.Ahead;
 
             public void BeginDash(BlackAttackKind kind) => BeginKind = kind;
 

@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>黑突进前摇：每帧跟着竖直输入重选方向，计时 blackDashPrepareTime，走完把最后一次采到的方向交给 BlackDash</summary>
-    /// <remarks>移动组在这一段已被压住，所以这里自己踩刹车；被打断时 Direction 由 AttackGroup 在下次起手时清掉</remarks>
+    /// <summary>黑突进前摇：速度锁成 0、重力关掉，每帧只按斜向输入重选方向，走完把方向交给 BlackDash</summary>
+    /// <remarks>松开方向保留上一次的斜向：突进没有平推，平劈走普攻那条链</remarks>
     public sealed class BlackDashPrepareState : BaseState<AttackStateTag, LogicContext>
     {
         public override AttackStateTag Tag => AttackStateTag.BlackDashPrepare;
@@ -24,35 +24,38 @@ namespace Refraction.Logic.Actor
 
         public BlackAttackKind Kind { get; private set; }
 
-        /// <summary>前摇最后一帧定下的方向；零表示这一段没跑过（前摇时长为 0）</summary>
+        /// <summary>前摇最后一帧定下的方向</summary>
         public Vector2 Direction { get; private set; }
-
-        public void Clear()
-        {
-            Kind = BlackAttackKind.Ahead;
-            Direction = Vector2.zero;
-        }
 
         public override void Enter(in LogicContext ctx)
         {
             _enterTime = ctx.GameTime.now;
+
+            _motor?.SetGravityEnable(false);
+            _motor?.SnapVelocity(Vector2.zero);
+
             Sample(in ctx);
         }
 
         public override void Tick(in LogicContext ctx)
         {
             Sample(in ctx);
-            _motor?.BrakeTowardsX();
+            _motor?.SnapVelocity(Vector2.zero);
         }
 
         public override bool IsDone(in LogicContext ctx)
             => ctx.GameTime.now - _enterTime >= _config.blackDashPrepareTime;
 
-        public override void Exit() { }
+        /// <summary>前摇被打断时本体不会来接手，重力必须在这里还回去</summary>
+        public override void Exit() => _motor?.SetGravityEnable(true);
 
         private void Sample(in LogicContext ctx)
         {
-            Kind = AttackAim.Kind(ctx.InputSnapshot.Move.y);
+            BlackAttackKind kind = AttackAim.Kind(ctx.InputSnapshot.Move.y);
+
+            if (kind == BlackAttackKind.Ahead) return;
+
+            Kind = kind;
             Direction = AttackAim.Direction(ctx.WorldInfo.Face, ctx.InputSnapshot.Move.y);
         }
     }

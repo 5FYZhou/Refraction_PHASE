@@ -157,6 +157,7 @@ namespace Refraction.Logic.Actor
 
             MovementStateTag beforeMove = _moveGroup.CurrentTag;
             _moveGroup.Blocked = _attackGroup.BlocksMovement;
+            _moveGroup.ActionsBlocked = _attackGroup.BlocksActions;
             _moveGroup.Tick(in tick);
 
             bool dashStarted = beforeMove != MovementStateTag.Dash && _moveGroup.CurrentTag == MovementStateTag.Dash;
