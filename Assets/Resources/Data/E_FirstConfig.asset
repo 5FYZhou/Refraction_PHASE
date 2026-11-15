@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423009af617a90149a3d0cbe4ed4c290, type: 3}
+  m_Name: E_FirstConfig
+  m_EditorClassIdentifier: 
+  moveSpeed: 10
+  moveAcceleration: 50
+  moveDeceleration: 60
+  turnAcceleration: 80
+  externalDeceleration: 40
+  maxHealth: 3
+  invulnerableTime: 0.4
+  KnockbackDecay: 30
+  enableGravity: 1
+  maxFallSpeed: 20
+  maxRiseSpeed: 20
+  fallGravity: 70
+  patrolSpeed: 2
+  windupTime: 0.5
+  strikeTime: 0.15
+  recoverTime: 0.6
+  recoverChaseSpeed: 1.5
+  recoverChaseRadius: 1.5
+  bulletSpeed: 10
+  bulletDamage: 1
+  bulletKnockback: 5
+  bulletMuzzle: {x: 0.6, y: 0.2}
+  contactDamage: 1
+  contactInterval: 1
+  contactKnockback: 7
