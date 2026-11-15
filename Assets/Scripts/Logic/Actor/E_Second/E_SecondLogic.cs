@@ -15,14 +15,14 @@ namespace Refraction.Logic.Actor
         private readonly System.Random _rng = new();
 
         private EnemyTargetInfo _target;
-        private E_SecondArea _patrolArea;
-        private E_SecondArea _chaseArea;
+        private EnemyArea _patrolArea;
+        private EnemyArea _chaseArea;
 
         public E_SecondLogic(
             IMoveMotor motor,
             E_SecondConfig config,
-            in E_SecondArea patrolArea,
-            in E_SecondArea chaseArea,
+            in EnemyArea patrolArea,
+            in EnemyArea chaseArea,
             bool black,
             bool aiEnabled = true)
             : base(motor, config, aiEnabled, black ? WorldPolarity.Black : WorldPolarity.White)
@@ -33,15 +33,15 @@ namespace Refraction.Logic.Actor
             _moveGroup = new E_SecondMoveGroup(this, motor, config);
         }
 
-        public E_SecondStateTag CurrentTag => _moveGroup.Current;
+        public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        public E_SecondVisual Visual => _moveGroup.Visual;
+        public EnemyVisual Visual => _moveGroup.Visual;
 
         /// <summary>巡逻范围：也是返回态的落点</summary>
-        public E_SecondArea PatrolArea => _patrolArea;
+        public EnemyArea PatrolArea => _patrolArea;
 
         /// <summary>追击范围：玩家出框即脱战，随 Recenter 与巡逻框一起平移</summary>
-        public E_SecondArea ChaseArea => _chaseArea;
+        public EnemyArea ChaseArea => _chaseArea;
 
         /// <summary>领地：玩家还在追击框里（x、y 都要在框内）；框宽 ≤ 0 时无界</summary>
         public override bool Alert => TargetKnown && _chaseArea.Contains(TargetPos);
@@ -76,9 +76,9 @@ namespace Refraction.Logic.Actor
         {
             Vector2 delta = center - _patrolArea.Center;
 
-            _patrolArea = new E_SecondArea(true, center, _patrolArea.HalfSize);
+            _patrolArea = new EnemyArea(true, center, _patrolArea.HalfSize);
 
-            if (_chaseArea.HasBounds) _chaseArea = new E_SecondArea(true, _chaseArea.Center + delta, _chaseArea.HalfSize);
+            if (_chaseArea.HasBounds) _chaseArea = new EnemyArea(true, _chaseArea.Center + delta, _chaseArea.HalfSize);
         }
 
         /// <summary>后摇上浮的随机距离，落在 [riseMin, riseMax]</summary>

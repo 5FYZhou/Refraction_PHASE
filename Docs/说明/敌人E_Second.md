@@ -26,7 +26,7 @@
 3. `E_SecondLogic.FixedTick(ctx, target)` 写入本帧玩家位置与“在不在视线里”，然后走状态组。
 4. 状态组：先抢占，再判 `IsDone`，最后 Tick 当前状态。
 5. `ApplyGravity`（配置关掉重力，这里是空转）→ `Commit`。
-6. 表现层比对 `Visual`，变了就给 `View` 下所有 `SpriteRenderer` 上色。
+6. 表现层比对 `Visual` 与 `Black`，任一变化就给 `View` 下所有 `SpriteRenderer` 上色。
 
 ## 三、四态与切换
 
@@ -39,7 +39,7 @@
 | Fallback | 返回结束（到达 / 撞墙）| 同上 |
 | Fallback | 首帧 | 同上（还没发现过玩家时：框内巡逻、框外返回）|
 
-- **追击只有一条结束条件：玩家的 x 或 y 出了追击框**（`E_SecondChaseState.IsDone => !E_SecondLogic.Alert`，`Alert` 用 `E_SecondArea.Contains` 判二维）。触地、撞墙、被墙挡住原地不动都不算结束。
+- **追击只有一条结束条件：玩家的 x 或 y 出了追击框**（`E_SecondChaseState.IsDone => !E_SecondLogic.Alert`，`Alert` 用 `EnemyArea.Contains` 判二维）。触地、撞墙、被墙挡住原地不动都不算结束。
 - Fallback 也按这条判：只要玩家还在追击框里就回追击，所以攻击打完（看不见人）也不会就地放弃。
 - 攻击不被抢占：起手后一定走完前摇 + 攻击 + 后摇。
 - 攻击**没有冷却**：后摇结束只要还看得见就原地重进前摇（`E_SecondAttackState.EndRecover`）；看不见才置 `_done`，交给 Fallback。
@@ -105,18 +105,18 @@
 - `contactInterval = 0` 表示不设间隔：每个物理帧都试一次，实际节奏由玩家的无敌窗决定，不建议。
 - 伤害源是 `DamageSource.Contact`，`E_SecondLogic.TakeDamage` 直接丢弃这类伤害 —— 敌人之间挤在一起不会互相掉血。
 
-## 八、颜色（`E_SecondController` 开头的六个 static readonly）
+## 八、颜色（`EnemyVisualColors`，与敌人 1 共用一套）
 
-| 展示态 | 常量 | 颜色 |
+| 展示态 | 白 | 黑 |
 | --- | --- | --- |
-| 巡逻 | `PatrolColor` | 青 |
-| 追击 | `ChaseColor` | 橙 |
-| 返回 | `ReturnColor` | 紫 |
-| 前摇 | `WindupColor` | 红 |
-| 攻击 | `StrikeColor` | 白 |
-| 后摇 | `RecoverColor` | 灰 |
+| 巡逻 | 青绿 | 紫 |
+| 追击 | 橙 | 暗金 |
+| 返回 | 紫 | 深紫 |
+| 前摇 | 橙 | 暗红 |
+| 攻击 | 近白 | 深灰 |
+| 后摇 | 灰蓝 | 墨青 |
 
-只在该变的时候写一次（比对 `Visual`），不会每帧刷材质。`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
+只在该变的时候写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质。`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
 
 ## 九、预制体接线（本次只写了脚本）
 
@@ -172,7 +172,7 @@ E_Second 白 追击
 视有 领无 巡-3.20,0.00 追-3.20,0.00
 ```
 
-- 第一段：名字、极性（黑 / 白）、当前状态（`E_SecondStateTag`）。
+- 第一段：名字、极性（黑 / 白）、当前状态（`EnemyStateTag`）。
 - `视`：玩家在 `DetectCollider` 里；`领`：玩家还在追击框里（`Alert`，x、y 都要在框内）。
 - `巡` / `追`：两个框**中心的世界坐标 x,y**。撞墙安家后这两列会一起跳，用来确认 `Recenter` 有没有漏搬追击框；没启用框的那一栏显示「无」。
 - 巡逻框的高度不参与判定，那栏的 y 只是画框位置；追击框的 y 是真的会判出框。

@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
@@ -63,7 +63,7 @@ namespace Refraction.Tests
         {
             推进(3, 5f);
 
-            Assert.AreEqual(E_FirstStateTag.Attack, _logic.CurrentTag, "看得见玩家就一直待在攻击态");
+            Assert.AreEqual(EnemyStateTag.Attack, _logic.CurrentTag, "看得见玩家就一直待在攻击态");
             Assert.AreEqual(Speed, _motor.LastSetX, 0.001f, "距离大于半径，按固定速度朝玩家爬");
         }
 

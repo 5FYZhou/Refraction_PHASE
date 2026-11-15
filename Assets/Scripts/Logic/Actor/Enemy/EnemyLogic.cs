@@ -14,7 +14,7 @@ namespace Refraction.Logic.Actor
         private readonly EnemyMoveGroup _moveGroup;
         private readonly Cooldown _fireCooldown = new();
 
-        private EnemyPatrolArea _patrolArea;
+        private EnemyArea _patrolArea;
         private bool _visibleLast;
 
         public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White)
@@ -30,7 +30,7 @@ namespace Refraction.Logic.Actor
         public override bool ChaseAllowed => !Black;
 
         /// <summary>本帧的巡逻范围：无界表示整平台随便走</summary>
-        public EnemyPatrolArea PatrolArea => _patrolArea;
+        public EnemyArea PatrolArea => _patrolArea;
 
         protected override float ContactDamage => _config.contactDamage;
 
@@ -41,7 +41,7 @@ namespace Refraction.Logic.Actor
         protected override float LoseTargetTime => _config.loseTargetTime;
 
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>
-        public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyPatrolArea patrolArea)
+        public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyArea patrolArea)
         {
             _patrolArea = patrolArea;
             SetSight(target.Known, target.Visible, target.Pos);

@@ -4,6 +4,8 @@
     {
         None = 0,
         Patrol,
-        Chase
+        Chase,
+        Return,
+        Attack,
     }
 }

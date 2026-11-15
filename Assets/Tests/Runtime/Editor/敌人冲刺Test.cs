@@ -31,7 +31,7 @@ namespace Refraction.Tests
             _config.riseMax = 1f;
 
             _motor = new FakeMotor();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
+            _logic = new E_SecondLogic(_motor, _config, new EnemyArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
         }
 
         [TearDown]
@@ -65,8 +65,8 @@ namespace Refraction.Tests
         {
             推进(4);
 
-            Assert.AreEqual(E_SecondStateTag.Attack, _logic.CurrentTag, "看得见玩家就该进攻击");
-            Assert.AreEqual(E_SecondVisual.Strike, _logic.Visual, "前摇为零，第四帧已经在冲刺");
+            Assert.AreEqual(EnemyStateTag.Attack, _logic.CurrentTag, "看得见玩家就该进攻击");
+            Assert.AreEqual(EnemyVisual.Strike, _logic.Visual, "前摇为零，第四帧已经在冲刺");
             Assert.AreEqual(new Vector2(_config.blackDashSpeed, 0f), _motor.LastSnap, "冲刺速度朝玩家那一侧");
         }
 
@@ -77,8 +77,8 @@ namespace Refraction.Tests
 
             推进(1, wall: true);
 
-            Assert.AreEqual(E_SecondVisual.Recover, _logic.Visual, "撞到墙那一帧就进后摇");
-            Assert.AreEqual(E_SecondStateTag.Attack, _logic.CurrentTag, "后摇仍然算在攻击状态里");
+            Assert.AreEqual(EnemyVisual.Recover, _logic.Visual, "撞到墙那一帧就进后摇");
+            Assert.AreEqual(EnemyStateTag.Attack, _logic.CurrentTag, "后摇仍然算在攻击状态里");
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace Refraction.Tests
 
             推进(1, targetPos: new Vector2(0.3f, 0f), bodyCenter: new Vector2(0.3f, 0f));
 
-            Assert.AreEqual(E_SecondVisual.Recover, _logic.Visual, "身体与玩家受击盒相交就进后摇");
+            Assert.AreEqual(EnemyVisual.Recover, _logic.Visual, "身体与玩家受击盒相交就进后摇");
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace Refraction.Tests
 
             推进(3);
 
-            Assert.AreEqual(E_SecondVisual.Strike, _logic.Visual, "既没撞墙也没撞人，冲刺不结束");
+            Assert.AreEqual(EnemyVisual.Strike, _logic.Visual, "既没撞墙也没撞人，冲刺不结束");
         }
 
         [Test]
@@ -107,17 +107,17 @@ namespace Refraction.Tests
             冲起来();
 
             推进(40);
-            Assert.AreEqual(E_SecondVisual.Strike, _logic.Visual, "不到 blackDashMaxTime 仍在冲");
+            Assert.AreEqual(EnemyVisual.Strike, _logic.Visual, "不到 blackDashMaxTime 仍在冲");
 
             // 逐帧推：后摇一结束就会重进前摇，写死帧数会整段跨过 Recover
             int extra = 0;
-            while (_logic.Visual == E_SecondVisual.Strike && extra < 20)
+            while (_logic.Visual == EnemyVisual.Strike && extra < 20)
             {
                 推进(1);
                 extra++;
             }
 
-            Assert.AreEqual(E_SecondVisual.Recover, _logic.Visual, "越过上限后必须结束冲刺，不能一直飞");
+            Assert.AreEqual(EnemyVisual.Recover, _logic.Visual, "越过上限后必须结束冲刺，不能一直飞");
         }
 
         [Test]

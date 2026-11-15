@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>追击：朝玩家直线飞，贴到 chaseStopDistance 就悬停，始终面朝玩家</summary>
-    public sealed class E_SecondChaseState : BaseState<E_SecondStateTag, LogicContext>
+    public sealed class E_SecondChaseState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_SecondStateTag Tag => E_SecondStateTag.Chase;
+        public override EnemyStateTag Tag => EnemyStateTag.Chase;
 
         private const float FaceDeadZone = 0.05f;
 

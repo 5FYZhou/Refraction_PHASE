@@ -13,7 +13,7 @@ namespace Refraction.Logic.Actor
         private readonly E_FirstConfig _config;
         private readonly E_FirstMoveGroup _moveGroup;
 
-        private E_FirstArea _activeArea;
+        private EnemyArea _activeArea;
 
         public E_FirstLogic(IMoveMotor motor, E_FirstConfig config, bool aiEnabled, WorldPolarity world)
             : base(motor, config, aiEnabled, world)
@@ -22,12 +22,12 @@ namespace Refraction.Logic.Actor
             _moveGroup = new E_FirstMoveGroup(this, motor, config);
         }
 
-        public E_FirstStateTag CurrentTag => _moveGroup.Current;
+        public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        public E_FirstVisual Visual => _moveGroup.Visual;
+        public EnemyVisual Visual => _moveGroup.Visual;
 
         /// <summary>本帧生效的巡逻范围：无界表示没画框或已经跑出去了</summary>
-        public E_FirstArea PatrolArea => _activeArea;
+        public EnemyArea PatrolArea => _activeArea;
 
         /// <summary>白世界才动手：黑世界对玩家没有反应，一直巡逻</summary>
         public bool Hostile => !Black;
@@ -39,7 +39,7 @@ namespace Refraction.Logic.Actor
         protected override float ContactKnockback => _config.contactKnockback;
 
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>
-        public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in E_FirstArea patrolArea)
+        public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyArea patrolArea)
         {
             _activeArea = patrolArea.HasBounds && patrolArea.ContainsX(ctx.WorldInfo.Pos.x) ? patrolArea : default;
 

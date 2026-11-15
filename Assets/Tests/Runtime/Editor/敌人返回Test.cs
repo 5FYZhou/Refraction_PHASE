@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
@@ -27,8 +27,8 @@ namespace Refraction.Tests
             _logic = new E_SecondLogic(
                 _motor,
                 _config,
-                new E_SecondArea(true, Vector2.zero, new Vector2(2f, 2f)),
-                new E_SecondArea(true, Vector2.zero, new Vector2(10f, 3f)),
+                new EnemyArea(true, Vector2.zero, new Vector2(2f, 2f)),
+                new EnemyArea(true, Vector2.zero, new Vector2(10f, 3f)),
                 false);
         }
 
@@ -56,7 +56,7 @@ namespace Refraction.Tests
         {
             推进(new Vector2(5f, 0f), true);
 
-            Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "没玩家可追，身体又在巡逻框外，就该飞回去");
+            Assert.AreEqual(EnemyStateTag.Return, _logic.CurrentTag, "没玩家可追，身体又在巡逻框外，就该飞回去");
             Assert.AreEqual(5f, _logic.PatrolArea.Center.x, 0.001f, "撞墙那一刻就地立成新的巡逻中心");
             Assert.AreEqual(5f, _logic.ChaseArea.Center.x, 0.001f, "追击框按同一段位移跟着平移");
             Assert.AreEqual(2f, _logic.PatrolArea.HalfSize.x, 0.001f, "巡逻框只挪中心，宽度不变");
@@ -68,7 +68,7 @@ namespace Refraction.Tests
         {
             推进(new Vector2(5f, 0f), false);
 
-            Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "还没飞到框心，仍在返回态");
+            Assert.AreEqual(EnemyStateTag.Return, _logic.CurrentTag, "还没飞到框心，仍在返回态");
             Assert.AreEqual(0f, _logic.PatrolArea.Center.x, 0.001f, "没撞墙不重定位");
             Assert.AreEqual(0f, _logic.ChaseArea.Center.x, 0.001f, "追击框也不动");
         }

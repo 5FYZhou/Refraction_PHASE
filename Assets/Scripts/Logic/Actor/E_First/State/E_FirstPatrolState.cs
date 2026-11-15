@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>巡逻：只在踩地时沿 x 爬，到框边、贴墙或前头是悬崖就掉头</summary>
-    public sealed class E_FirstPatrolState : BaseState<E_FirstStateTag, LogicContext>
+    public sealed class E_FirstPatrolState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_FirstStateTag Tag => E_FirstStateTag.Patrol;
+        public override EnemyStateTag Tag => EnemyStateTag.Patrol;
 
         private readonly E_FirstLogic _owner;
         private readonly IMoveMotor _motor;

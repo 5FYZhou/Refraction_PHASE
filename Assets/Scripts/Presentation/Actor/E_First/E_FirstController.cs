@@ -12,16 +12,6 @@ namespace Refraction.Presentation.Actor
     /// <summary>毛毛虫 E_First 的组合根：装配、喂视线、按展示态与黑白给 View 换色</summary>
     public sealed class E_FirstController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IDetectSink
     {
-        private static readonly Color PatrolWhite = new(0.45f, 0.95f, 0.75f);
-        private static readonly Color WindupWhite = new(1f, 0.62f, 0.25f);
-        private static readonly Color StrikeWhite = new(1f, 1f, 0.92f);
-        private static readonly Color RecoverWhite = new(0.55f, 0.62f, 0.78f);
-
-        private static readonly Color PatrolBlack = new(0.55f, 0.4f, 0.78f);
-        private static readonly Color WindupBlack = new(0.78f, 0.3f, 0.32f);
-        private static readonly Color StrikeBlack = new(0.38f, 0.38f, 0.45f);
-        private static readonly Color RecoverBlack = new(0.3f, 0.48f, 0.52f);
-
         public int Order => SceneOrder.World;
 
         [Tooltip("敌人参数资产，运行时只读不改。")]
@@ -58,7 +48,7 @@ namespace Refraction.Presentation.Actor
         private Transform _playerTransform;
 
         private SpriteRenderer[] _viewRenderers;
-        private E_FirstVisual _visual = (E_FirstVisual)(-1);
+        private EnemyVisual _visual = (EnemyVisual)(-1);
         private bool _visualBlack;
 
         private bool _inSight;
@@ -113,12 +103,12 @@ namespace Refraction.Presentation.Actor
 
             _visual = _logic.Visual;
             _visualBlack = _logic.Black;
-            ApplyColor(ColorOf(_visual, _visualBlack));
+            ApplyColor(EnemyVisualColors.Of(_visual, _visualBlack));
 
             _attached = true;
         }
 
-        public E_FirstStateTag CurrentTag => _logic != null ? _logic.CurrentTag : E_FirstStateTag.None;
+        public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
 
         public void FixedTick(float deltaTime)
         {
@@ -167,31 +157,19 @@ namespace Refraction.Presentation.Actor
 
         private void TickVisual()
         {
-            E_FirstVisual visual = _logic.Visual;
+            EnemyVisual visual = _logic.Visual;
             bool black = _logic.Black;
 
             if (visual == _visual && black == _visualBlack) return;
 
             _visual = visual;
             _visualBlack = black;
-            ApplyColor(ColorOf(visual, black));
+            ApplyColor(EnemyVisualColors.Of(visual, black));
         }
 
         private void ApplyColor(Color color)
         {
             for (int i = 0; i < _viewRenderers.Length; i++) _viewRenderers[i].color = color;
-        }
-
-        private static Color ColorOf(E_FirstVisual visual, bool black)
-        {
-            switch (visual)
-            {
-                case E_FirstVisual.Patrol: return black ? PatrolBlack : PatrolWhite;
-                case E_FirstVisual.Windup: return black ? WindupBlack : WindupWhite;
-                case E_FirstVisual.Strike: return black ? StrikeBlack : StrikeWhite;
-            }
-
-            return black ? RecoverBlack : RecoverWhite;
         }
 
         private void CacheView()
@@ -228,8 +206,8 @@ namespace Refraction.Presentation.Actor
             _patrolMaxX = centerX + half;
         }
 
-        private E_FirstArea SamplePatrolArea()
-            => _hasPatrolBounds ? new E_FirstArea(true, _patrolMinX, _patrolMaxX) : default;
+        private EnemyArea SamplePatrolArea()
+            => _hasPatrolBounds ? EnemyArea.SpanX(_patrolMinX, _patrolMaxX) : default;
 
 #if UNITY_EDITOR
         private void Reset()

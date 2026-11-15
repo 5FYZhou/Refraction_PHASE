@@ -7,9 +7,9 @@ namespace Refraction.Logic.Actor
 {
     /// <summary>攻击：前摇 → 攻击 → 后摇三段自带计时；黑冲撞、白发子弹，都只看当前世界极性</summary>
     /// <remarks>无冷却：后摇结束只要还看得见就原地重进前摇，同状态再切会被状态机的幂等挡掉</remarks>
-    public sealed class E_SecondAttackState : BaseState<E_SecondStateTag, LogicContext>
+    public sealed class E_SecondAttackState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_SecondStateTag Tag => E_SecondStateTag.Attack;
+        public override EnemyStateTag Tag => EnemyStateTag.Attack;
 
         public E_SecondAttackPhase Phase => _phase;
 

@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>巡逻：在巡逻框的 x 区间里来回飞，只动 x 轴，越界或撞墙就掉头</summary>
-    public sealed class E_SecondPatrolState : BaseState<E_SecondStateTag, LogicContext>
+    public sealed class E_SecondPatrolState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_SecondStateTag Tag => E_SecondStateTag.Patrol;
+        public override EnemyStateTag Tag => EnemyStateTag.Patrol;
 
         private readonly E_SecondLogic _owner;
         private readonly IMoveMotor _motor;

@@ -31,7 +31,7 @@ namespace Refraction.Tests
             _config.whiteChaseRadius = Radius;
 
             _motor = new FakeMotor();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, false);
+            _logic = new E_SecondLogic(_motor, _config, new EnemyArea(true, SelfPos, new Vector2(6f, 3f)), default, false);
         }
 
         [TearDown]
@@ -56,7 +56,7 @@ namespace Refraction.Tests
         }
 
         /// <summary>一帧一帧推到指定展示态，停在那一帧上，最后写进去的速度才作数</summary>
-        private void 到(E_SecondVisual visual, Vector2 targetPos)
+        private void 到(EnemyVisual visual, Vector2 targetPos)
         {
             for (int i = 0; i < 40 && _logic.Visual != visual; i++) 推进(1, targetPos);
 
@@ -66,7 +66,7 @@ namespace Refraction.Tests
         [Test]
         public void 前摇_玩家在半径外_朝玩家飞()
         {
-            到(E_SecondVisual.Windup, new Vector2(10f, 0f));
+            到(EnemyVisual.Windup, new Vector2(10f, 0f));
 
             Assert.AreEqual(new Vector2(Speed, 0f), _motor.LastSnap, "距离 10 远大于半径 5，前摇就一边瞄一边靠过去");
         }
@@ -74,7 +74,7 @@ namespace Refraction.Tests
         [Test]
         public void 前摇_玩家在半径内_原地悬停()
         {
-            到(E_SecondVisual.Windup, new Vector2(2f, 0f));
+            到(EnemyVisual.Windup, new Vector2(2f, 0f));
 
             Assert.AreEqual(Vector2.zero, _motor.LastSnap, "已经进了 whiteChaseRadius，不再往里挤");
         }
@@ -82,7 +82,7 @@ namespace Refraction.Tests
         [Test]
         public void 前摇_玩家在正上方_竖直靠近()
         {
-            到(E_SecondVisual.Windup, new Vector2(0f, 10f));
+            到(EnemyVisual.Windup, new Vector2(0f, 10f));
 
             Assert.AreEqual(new Vector2(0f, Speed), _motor.LastSnap, "只按直线飞，不因为是正上方就只动 x");
         }
@@ -94,7 +94,7 @@ namespace Refraction.Tests
 
             Vector2 target = new(10f, 0f);
 
-            到(E_SecondVisual.Recover, target);
+            到(EnemyVisual.Recover, target);
 
             // 到() 停在"刚变成 Recover"那一帧，那一帧只切了阶段，速度要等 Recover 自己的 Tick 才写
             推进(1, target);
@@ -109,7 +109,7 @@ namespace Refraction.Tests
 
             Vector2 target = new(2f, 0f);
 
-            到(E_SecondVisual.Recover, target);
+            到(EnemyVisual.Recover, target);
             推进(1, target);
 
             Assert.AreEqual(Vector2.zero, _motor.LastSnap, "半径内不再移动，只等后摇计时走完");
@@ -119,9 +119,9 @@ namespace Refraction.Tests
         public void 黑前摇_不跟着走()
         {
             _logic.Dispose();
-            _logic = new E_SecondLogic(_motor, _config, new E_SecondArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
+            _logic = new E_SecondLogic(_motor, _config, new EnemyArea(true, SelfPos, new Vector2(6f, 3f)), default, true);
 
-            到(E_SecondVisual.Windup, new Vector2(10f, 0f));
+            到(EnemyVisual.Windup, new Vector2(10f, 0f));
 
             Assert.AreEqual(Vector2.zero, _motor.LastSnap, "黑前摇是蓄力，走位只在白色形态生效");
         }
@@ -131,7 +131,7 @@ namespace Refraction.Tests
         {
             _config.whiteChaseSpeed = 0f;
 
-            到(E_SecondVisual.Windup, new Vector2(10f, 0f));
+            到(EnemyVisual.Windup, new Vector2(10f, 0f));
 
             Assert.AreEqual(Vector2.zero, _motor.LastSnap, "whiteChaseSpeed = 0 等于关掉白走位");
         }

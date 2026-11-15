@@ -5,9 +5,9 @@ namespace Refraction.Logic.Actor
 {
     /// <summary>毛毛虫状态组：巡逻 / 射击；黑世界与看不见玩家都不起手</summary>
     /// <remarks>没有追击态，攻击走完一律回巡逻；要不要接着打由 E_FirstAttackState 内部决定</remarks>
-    public sealed class E_FirstMoveGroup : StateGroup<E_FirstStateTag, LogicContext>
+    public sealed class E_FirstMoveGroup : StateGroup<EnemyStateTag, LogicContext>
     {
-        protected override E_FirstStateTag EmptyTag => E_FirstStateTag.None;
+        protected override EnemyStateTag EmptyTag => EnemyStateTag.None;
 
         private readonly E_FirstLogic _owner;
         private readonly E_FirstAttackState _attack;
@@ -22,52 +22,52 @@ namespace Refraction.Logic.Actor
             RegisterState(_attack);
         }
 
-        public E_FirstStateTag Current =>
-            machine.CurrentState == null ? E_FirstStateTag.None : machine.CurrentState.Tag;
+        public EnemyStateTag Current =>
+            machine.CurrentState == null ? EnemyStateTag.None : machine.CurrentState.Tag;
 
-        public E_FirstVisual Visual
+        public EnemyVisual Visual
         {
             get
             {
                 switch (Current)
                 {
-                    case E_FirstStateTag.Patrol: return E_FirstVisual.Patrol;
-                    case E_FirstStateTag.Attack: return AttackVisual;
+                    case EnemyStateTag.Patrol: return EnemyVisual.Patrol;
+                    case EnemyStateTag.Attack: return AttackVisual;
                 }
 
-                return E_FirstVisual.Patrol;
+                return EnemyVisual.Patrol;
             }
         }
 
         public void Tick(in LogicContext ctx) => TickStates(ctx);
 
-        protected override E_FirstStateTag Fallback(in LogicContext ctx) => E_FirstStateTag.Patrol;
+        protected override EnemyStateTag Fallback(in LogicContext ctx) => EnemyStateTag.Patrol;
 
-        protected override bool TryDecidePreempt(in LogicContext ctx, out E_FirstStateTag target)
+        protected override bool TryDecidePreempt(in LogicContext ctx, out EnemyStateTag target)
         {
             target = EmptyTag;
 
             // 攻击不被抢占：起手后一定走完三段
-            if (Current == E_FirstStateTag.Attack) return false;
+            if (Current == EnemyStateTag.Attack) return false;
             if (!_owner.Hostile || !_owner.Visible) return false;
 
-            target = E_FirstStateTag.Attack;
+            target = EnemyStateTag.Attack;
             return true;
         }
 
-        protected override bool TryCommitPreempt(in LogicContext ctx, E_FirstStateTag target) => true;
+        protected override bool TryCommitPreempt(in LogicContext ctx, EnemyStateTag target) => true;
 
-        private E_FirstVisual AttackVisual
+        private EnemyVisual AttackVisual
         {
             get
             {
                 switch (_attack.Phase)
                 {
-                    case E_FirstAttackPhase.Windup: return E_FirstVisual.Windup;
-                    case E_FirstAttackPhase.Strike: return E_FirstVisual.Strike;
+                    case E_FirstAttackPhase.Windup: return EnemyVisual.Windup;
+                    case E_FirstAttackPhase.Strike: return EnemyVisual.Strike;
                 }
 
-                return E_FirstVisual.Recover;
+                return EnemyVisual.Recover;
             }
         }
     }

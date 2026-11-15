@@ -183,8 +183,8 @@ namespace Refraction.Presentation.Actor
             _patrolMaxX = centerX + half;
         }
 
-        private EnemyPatrolArea SamplePatrolArea()
-            => _hasPatrolBounds ? new EnemyPatrolArea(true, _patrolMinX, _patrolMaxX) : default;
+        private EnemyArea SamplePatrolArea()
+            => _hasPatrolBounds ? EnemyArea.SpanX(_patrolMinX, _patrolMaxX) : default;
 
 #if UNITY_EDITOR
         private void Reset()

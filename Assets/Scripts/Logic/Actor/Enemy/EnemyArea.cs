@@ -3,7 +3,7 @@
 namespace Refraction.Logic.Actor
 {
     /// <summary>活动范围框：世界坐标的中点与半尺寸；巡逻只用 x，追击 x / y 都判</summary>
-    public readonly struct E_SecondArea
+    public readonly struct EnemyArea
     {
         public readonly bool HasBounds;
 
@@ -11,7 +11,7 @@ namespace Refraction.Logic.Actor
 
         public readonly Vector2 HalfSize;
 
-        public E_SecondArea(bool hasBounds, Vector2 center, Vector2 halfSize)
+        public EnemyArea(bool hasBounds, Vector2 center, Vector2 halfSize)
         {
             HasBounds = hasBounds;
             Center = center;
@@ -25,6 +25,15 @@ namespace Refraction.Logic.Actor
         public float MinY => Center.y - HalfSize.y;
 
         public float MaxY => Center.y + HalfSize.y;
+
+        /// <summary>地面巡逻框：只给左右边界（顺序随意），半高留 0 表示纵向不参与判定</summary>
+        public static EnemyArea SpanX(float minX, float maxX)
+        {
+            float lo = Mathf.Min(minX, maxX);
+            float hi = Mathf.Max(minX, maxX);
+
+            return new(true, new Vector2((lo + hi) * 0.5f, 0f), new Vector2((hi - lo) * 0.5f, 0f));
+        }
 
         /// <summary>只看横向：巡逻是同一水平线上的往返，高度不影响掉头</summary>
         public bool ContainsX(float x) => !HasBounds || (x >= MinX && x <= MaxX);

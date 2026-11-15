@@ -29,8 +29,8 @@ namespace Refraction.Tests
             _logic = new E_SecondLogic(
                 _motor,
                 _config,
-                new E_SecondArea(true, Vector2.zero, new Vector2(2f, 2f)),
-                new E_SecondArea(true, Vector2.zero, new Vector2(10f, 3f)),
+                new EnemyArea(true, Vector2.zero, new Vector2(2f, 2f)),
+                new EnemyArea(true, Vector2.zero, new Vector2(10f, 3f)),
                 false);
         }
 
@@ -60,11 +60,11 @@ namespace Refraction.Tests
 
             推进(self, player, false);
 
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "玩家在追击框里就该一直追");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "玩家在追击框里就该一直追");
 
             for (int i = 0; i < 5; i++) 推进(self, player, false, true);
 
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "贴着地面 / 墙面飞不算脱战");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "贴着地面 / 墙面飞不算脱战");
         }
 
         [Test]
@@ -73,11 +73,11 @@ namespace Refraction.Tests
             Vector2 self = new(5f, 0f);
 
             推进(self, new Vector2(7f, 0f), false);
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "先进追击");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "先进追击");
 
             推进(self, new Vector2(12f, 0f), false);
 
-            Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "玩家出框即脱战，身体在巡逻框外就飞回去");
+            Assert.AreEqual(EnemyStateTag.Return, _logic.CurrentTag, "玩家出框即脱战，身体在巡逻框外就飞回去");
         }
 
         [Test]
@@ -86,11 +86,11 @@ namespace Refraction.Tests
             Vector2 self = new(5f, 0f);
 
             推进(self, new Vector2(7f, 2f), false);
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "x、y 都还在框里，先追起来");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "x、y 都还在框里，先追起来");
 
             推进(self, new Vector2(7f, 5f), false);
 
-            Assert.AreEqual(E_SecondStateTag.Return, _logic.CurrentTag, "玩家往上飞出框同样算脱战");
+            Assert.AreEqual(EnemyStateTag.Return, _logic.CurrentTag, "玩家往上飞出框同样算脱战");
         }
 
         [Test]
@@ -100,18 +100,18 @@ namespace Refraction.Tests
             Vector2 player = new(7f, 0f);
 
             推进(self, player, true);
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "看见玩家先进追击");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "看见玩家先进追击");
 
             推进(self, player, true);
-            Assert.AreEqual(E_SecondStateTag.Attack, _logic.CurrentTag, "追击中再看一眼就起手");
+            Assert.AreEqual(EnemyStateTag.Attack, _logic.CurrentTag, "追击中再看一眼就起手");
 
             推进(self, player, true);
             推进(self, player, false);
-            Assert.AreEqual(E_SecondStateTag.Attack, _logic.CurrentTag, "后摇走完才判要不要继续追");
+            Assert.AreEqual(EnemyStateTag.Attack, _logic.CurrentTag, "后摇走完才判要不要继续追");
 
             推进(self, player, false);
 
-            Assert.AreEqual(E_SecondStateTag.Chase, _logic.CurrentTag, "看不见但没出框，回到追击而不是放弃");
+            Assert.AreEqual(EnemyStateTag.Chase, _logic.CurrentTag, "看不见但没出框，回到追击而不是放弃");
         }
 
         private sealed class FakeMotor : IMoveMotor

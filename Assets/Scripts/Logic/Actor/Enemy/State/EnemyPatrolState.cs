@@ -47,7 +47,7 @@ namespace Refraction.Logic.Actor
             }
             else
             {
-                EnemyPatrolArea area = _owner.PatrolArea;
+                EnemyArea area = _owner.PatrolArea;
 
                 if (area.HasBounds && _dir > 0 && ctx.WorldInfo.Pos.x >= area.MaxX) _dir = -1;
                 else if (area.HasBounds && _dir < 0 && ctx.WorldInfo.Pos.x <= area.MinX) _dir = 1;

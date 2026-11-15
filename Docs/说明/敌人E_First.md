@@ -67,16 +67,18 @@
 
 ## 七、颜色
 
-`E_FirstController` 开头 8 个 `static readonly Color`（`Color` 不能是 C# `const`），按「展示态 × 世界极性」取：
+配色统一放在 `EnemyVisualColors`（`Logic/Actor/Enemy/EnemyVisual.cs` 里的静态类，`Color` 不能是 C# `const`，所以都是 `static readonly`），三只敌人共用，按「展示态 × 世界极性」取：
 
 | 展示态 | 白 | 黑 |
 | --- | --- | --- |
 | 巡逻 Patrol | `PatrolWhite` 青绿 | `PatrolBlack` 紫 |
+| 追击 Chase | `ChaseWhite` 橙 | `ChaseBlack` 暗金 |
+| 返回 Return | `ReturnWhite` 紫 | `ReturnBlack` 深紫 |
 | 前摇 Windup | `WindupWhite` 橙 | `WindupBlack` 暗红 |
 | 攻击 Strike | `StrikeWhite` 近白 | `StrikeBlack` 深灰 |
 | 后摇 Recover | `RecoverWhite` 灰蓝 | `RecoverBlack` 墨青 |
 
-换色作用于 `View` 下所有 `SpriteRenderer`（含未激活），只在展示态或极性变化时刷一次。黑世界永远不会进攻击，后三种黑色是留给手动调色的备用值。
+换色作用于 `View` 下所有 `SpriteRenderer`（含未激活），只在展示态或极性变化时刷一次。毛毛虫黑世界永远进不了攻击，所以它只用得上巡逻那两格；追击 / 返回只有飞行敌人会产出，攻击三段的黑色则被飞行敌人的黑突进吃掉。
 
 ## 八、预制体与配置（脚本之外要做的事）
 

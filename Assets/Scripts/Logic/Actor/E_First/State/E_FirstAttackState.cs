@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>射击：前摇立定瞄准，开火后仍站着，后摇才朝玩家爬；不设冷却，看得见就接着打</summary>
-    public sealed class E_FirstAttackState : BaseState<E_FirstStateTag, LogicContext>
+    public sealed class E_FirstAttackState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_FirstStateTag Tag => E_FirstStateTag.Attack;
+        public override EnemyStateTag Tag => EnemyStateTag.Attack;
 
         public E_FirstAttackPhase Phase => _phase;
 
@@ -159,7 +159,7 @@ namespace Refraction.Logic.Actor
 
         private bool OutsideArea(float x, int dir)
         {
-            E_FirstArea area = _owner.PatrolArea;
+            EnemyArea area = _owner.PatrolArea;
 
             if (!area.HasBounds) return false;
 

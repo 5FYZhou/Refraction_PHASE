@@ -10,16 +10,9 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按展示态给 View 换色</summary>
+    /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按展示态与黑白给 View 换色</summary>
     public sealed class E_SecondController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IDetectSink
     {
-        private static readonly Color PatrolColor = new(0.42f, 0.86f, 1f);
-        private static readonly Color ChaseColor = new(1f, 0.84f, 0.35f);
-        private static readonly Color ReturnColor = new(0.62f, 0.55f, 1f);
-        private static readonly Color WindupColor = new(1f, 0.42f, 0.42f);
-        private static readonly Color StrikeColor = new(1f, 1f, 1f);
-        private static readonly Color RecoverColor = new(0.5f, 0.5f, 0.5f);
-
         public int Order => SceneOrder.World;
 
         [Tooltip("敌人参数资产，运行时只读不改。")]
@@ -65,10 +58,11 @@ namespace Refraction.Presentation.Actor
         private Collider2D _playerBody;
 
         private SpriteRenderer[] _viewRenderers;
-        private E_SecondVisual _visual = (E_SecondVisual)(-1);
+        private EnemyVisual _visual = (EnemyVisual)(-1);
+        private bool _visualBlack;
 
-        private E_SecondArea _patrolArea;
-        private E_SecondArea _chaseArea;
+        private EnemyArea _patrolArea;
+        private EnemyArea _chaseArea;
 
         private bool _inSight;
 
@@ -117,7 +111,8 @@ namespace Refraction.Presentation.Actor
             AttachBullets();
 
             _visual = _logic.Visual;
-            ApplyColor(ColorOf(_visual));
+            _visualBlack = _logic.Black;
+            ApplyColor(EnemyVisualColors.Of(_visual, _visualBlack));
 
             _attached = true;
         }
@@ -128,7 +123,7 @@ namespace Refraction.Presentation.Actor
         /// <summary>只读给调试面板看状态与两个框，面板不反向写任何东西</summary>
         public E_SecondLogic Logic => _logic;
 
-        public E_SecondStateTag CurrentTag => _logic != null ? _logic.CurrentTag : E_SecondStateTag.None;
+        public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
 
         /// <summary>调试面板右侧栏：一行极性/状态，一行视线与领地及两个框的中心</summary>
         public void AppendDebug(StringBuilder builder)
@@ -149,7 +144,7 @@ namespace Refraction.Presentation.Actor
             AppendCenter(builder, _logic.ChaseArea);
         }
 
-        private static void AppendCenter(StringBuilder builder, in E_SecondArea area)
+        private static void AppendCenter(StringBuilder builder, in EnemyArea area)
         {
             if (!area.HasBounds)
             {
@@ -223,30 +218,19 @@ namespace Refraction.Presentation.Actor
 
         private void TickVisual()
         {
-            E_SecondVisual visual = _logic.Visual;
-            if (visual == _visual) return;
+            EnemyVisual visual = _logic.Visual;
+            bool black = _logic.Black;
+
+            if (visual == _visual && black == _visualBlack) return;
 
             _visual = visual;
-            ApplyColor(ColorOf(visual));
+            _visualBlack = black;
+            ApplyColor(EnemyVisualColors.Of(visual, black));
         }
 
         private void ApplyColor(Color color)
         {
             for (int i = 0; i < _viewRenderers.Length; i++) _viewRenderers[i].color = color;
-        }
-
-        private static Color ColorOf(E_SecondVisual visual)
-        {
-            switch (visual)
-            {
-                case E_SecondVisual.Patrol: return PatrolColor;
-                case E_SecondVisual.Chase: return ChaseColor;
-                case E_SecondVisual.Return: return ReturnColor;
-                case E_SecondVisual.Windup: return WindupColor;
-                case E_SecondVisual.Strike: return StrikeColor;
-            }
-
-            return RecoverColor;
         }
 
         private void CacheView()
@@ -270,13 +254,13 @@ namespace Refraction.Presentation.Actor
         }
 
         /// <summary>只快照一次：每帧拿局部偏移重算，等于框跟着敌人跑</summary>
-        private E_SecondArea SnapshotArea(Vector2 offset, Vector2 size)
+        private EnemyArea SnapshotArea(Vector2 offset, Vector2 size)
         {
             if (size.x <= 0.01f) return default;
 
             Vector2 center = (Vector2)transform.position + offset;
 
-            return new E_SecondArea(true, center, size * 0.5f);
+            return new EnemyArea(true, center, size * 0.5f);
         }
 
 #if UNITY_EDITOR
@@ -305,7 +289,7 @@ namespace Refraction.Presentation.Actor
             DrawBox(chaseOffset, chaseSize, chase);
         }
 
-        private static void DrawArea(in E_SecondArea area, Color color)
+        private static void DrawArea(in EnemyArea area, Color color)
         {
             if (!area.HasBounds) return;
 

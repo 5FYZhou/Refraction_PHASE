@@ -435,6 +435,8 @@ namespace Refraction.Tests
 
             public void Begin(BlackAttackKind kind) => BeginKind = kind;
 
+            public void BeginGuard(BlackAttackKind kind) => BeginKind = kind;
+
             public void End() => Ended = true;
 
             public void SetHitHandler(System.Action onHit) => OnHit = onHit;

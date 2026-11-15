@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>返回：朝巡逻框中心直线飞；半路撞墙就把当前位置立成新的中心，宽度不变</summary>
-    public sealed class E_SecondReturnState : BaseState<E_SecondStateTag, LogicContext>
+    public sealed class E_SecondReturnState : BaseState<EnemyStateTag, LogicContext>
     {
-        public override E_SecondStateTag Tag => E_SecondStateTag.Return;
+        public override EnemyStateTag Tag => EnemyStateTag.Return;
 
         private const float ArriveEps = 0.2f;
 
