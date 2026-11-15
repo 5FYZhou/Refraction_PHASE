@@ -15,7 +15,6 @@ namespace Refraction.Logic.Actor
         private readonly PlayerConfig _config;
         private readonly Cooldown _cooldown = new();
         private readonly WhiteAttackState _white;
-        private readonly BlackAttackState _blackState;
         private readonly FlatAttackState _flat;
         private readonly BlackDashPrepareState _dashPrepare;
         private readonly BlackDashState _dash;
@@ -33,10 +32,6 @@ namespace Refraction.Logic.Actor
             RegisterState(new WhiteAttackPrepareState(config));
             RegisterState(_white);
             RegisterState(new WhiteAttackRecoverState(config));
-            RegisterState(new BlackAttackPrepareState(config));
-            _blackState = new BlackAttackState(config, blackView, motor, posture);
-            RegisterState(_blackState);
-            RegisterState(new BlackAttackRecoverState(config));
 
             RegisterState(new FlatAttackPrepareState(config));
             _flat = new FlatAttackState(config, blackView, motor, posture);
@@ -83,8 +78,7 @@ namespace Refraction.Logic.Actor
 
         private void OnBlackHit()
         {
-            if (Current == AttackStateTag.BlackAttack) _blackState.NotifyHit();
-            else if (Current == AttackStateTag.FlatAttack) _flat.NotifyHit();
+            if (Current == AttackStateTag.FlatAttack) _flat.NotifyHit();
             else if (Current == AttackStateTag.BlackDash) _dash.NotifyHit();
         }
 
@@ -97,12 +91,6 @@ namespace Refraction.Logic.Actor
                 case AttackStateTag.WhiteAttack:
                     return _config.attackRecoverTime > 0f
                         ? AttackStateTag.WhiteAttackRecover
-                        : AttackStateTag.None;
-                case AttackStateTag.BlackAttackPrepare:
-                    return AttackStateTag.BlackAttack;
-                case AttackStateTag.BlackAttack:
-                    return _config.blackAttackRecoverTime > 0f
-                        ? AttackStateTag.BlackAttackRecover
                         : AttackStateTag.None;
                 case AttackStateTag.FlatAttackPrepare:
                     return AttackStateTag.FlatAttack;
@@ -159,8 +147,6 @@ namespace Refraction.Logic.Actor
         /// <summary>平劈走普攻；站在地上不给下突进</summary>
         private AttackStateTag BlackTarget(float vertical, bool grounded)
         {
-            if (!_config.useBlackDash) return BlackAttackTarget();
-
             BlackAttackKind kind = AttackAim.Kind(vertical);
 
             if (kind == BlackAttackKind.Ahead)
@@ -170,8 +156,5 @@ namespace Refraction.Logic.Actor
 
             return AttackStateTag.BlackDashPrepare;
         }
-
-        private AttackStateTag BlackAttackTarget()
-            => _config.blackAttackPrepareTime > 0f ? AttackStateTag.BlackAttackPrepare : AttackStateTag.BlackAttack;
     }
 }

@@ -27,7 +27,6 @@ namespace Refraction.Tests
         public void 建立攻击组()
         {
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
-            _config.useBlackDash = true;
             _config.blackDashPrepareTime = 0.1f;
             _config.blackDashRecoverTime = 0.1f;
             _config.blackDashCooldown = 0.5f;
@@ -35,9 +34,6 @@ namespace Refraction.Tests
             _config.blackDashSpeedDown = 30f;
             _config.blackDashTimeUp = 0.1f;
             _config.blackDashTimeDown = 0.1f;
-            _config.blackAttackPrepareTime = 0.1f;
-            _config.blackAttackTime = 0.1f;
-            _config.blackAttackRecoverTime = 0.1f;
             _config.flatAttackPrepareTime = 0.1f;
             _config.flatAttackTime = 0.1f;
             _config.flatAttackRecoverTime = 0.1f;
@@ -98,17 +94,6 @@ namespace Refraction.Tests
             走到(0f, -1f, true, grounded: false);
 
             Assert.AreEqual(AttackStateTag.BlackDashPrepare, _attack.Current, "按住下走斜下突进");
-        }
-
-        [Test]
-        public void 开关关闭_三个方向都还是黑劈砍()
-        {
-            _config.useBlackDash = false;
-
-            走到(0f, 1f, true);
-
-            Assert.AreEqual(AttackStateTag.BlackAttackPrepare, _attack.Current, "开关关掉就走原来那条劈砍链");
-            Assert.IsFalse(_attack.BlocksMovement, "劈砍不压移动");
         }
 
         [Test]
@@ -304,12 +289,6 @@ namespace Refraction.Tests
             public bool Began;
 
             public bool Ended;
-
-            public void Begin(BlackAttackKind kind)
-            {
-                Began = true;
-                FlatKind = kind;
-            }
 
             public void BeginFlat()
             {

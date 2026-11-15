@@ -2,7 +2,7 @@
 
 namespace Refraction.Logic.Combat
 {
-    /// <summary>黑攻击的三种判定：平推、斜上 45°、斜下 45°</summary>
+    /// <summary>黑形态的攻击方向：平推（普攻）、斜上 45°、斜下 45°（突进）</summary>
     /// <remarks>由开打那一帧的竖直输入决定，判定盒在表现层</remarks>
     public enum BlackAttackKind
     {
@@ -16,11 +16,9 @@ namespace Refraction.Logic.Combat
         Down = 2,
     }
 
-    /// <summary>黑攻击的表现端：开打时点亮对应方向的攻击盒，结束时全部关掉</summary>
+    /// <summary>黑形态近战的表现端：开打时点亮对应方向的攻击盒，结束时全部关掉</summary>
     public interface IBlackAttackView
     {
-        void Begin(BlackAttackKind kind);
-
         void BeginFlat();
 
         /// <summary>点亮突进盒与弹反盒，盒随玩家移动，每个受击盒只结算一次</summary>

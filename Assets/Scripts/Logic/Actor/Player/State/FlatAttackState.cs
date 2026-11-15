@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>普攻本体：黑形态的平劈，判定固定 Player/BlackDash/AheadCollider，时长 flatAttackTime</summary>
-    /// <remarks>数值与黑劈砍 / 黑突进各成一套（flatAttack*）；命中反冲要留到下一帧写——物理回调早过了 Commit，当场写会被 BeginStep 清掉</remarks>
+    /// <remarks>数值与黑突进各成一套（flatAttack*）；命中反冲要留到下一帧写——物理回调早过了 Commit，当场写会被 BeginStep 清掉</remarks>
     public sealed class FlatAttackState : BaseState<AttackStateTag, LogicContext>
     {
         public override AttackStateTag Tag => AttackStateTag.FlatAttack;

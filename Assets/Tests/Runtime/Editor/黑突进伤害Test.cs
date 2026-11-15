@@ -22,8 +22,8 @@ namespace Refraction.Tests
         public void 建立表现()
         {
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
-            _config.blackAttackDamage = 7f;
-            _config.blackAttackKnockback = 3f;
+            _config.flatAttackDamage = 7f;
+            _config.flatAttackKnockback = 3f;
             _config.blackDashDamage = 11f;
             _config.blackDashKnockback = 5f;
 
@@ -222,17 +222,6 @@ namespace Refraction.Tests
             Assert.IsTrue(ledger.TryMark(_scene.Target), "上突进换下突进同样重新记帐");
         }
 
-        [Test]
-        public void 黑劈砍点亮时_突进盒一只不开()
-        {
-            _view.Begin(BlackAttackKind.Up);
-
-            Assert.IsTrue(_scene.Up.activeSelf, "点亮黑劈砍的斜上判定");
-            Assert.IsFalse(_scene.DashAhead.activeSelf, "突进盒不跟着开");
-            Assert.IsFalse(_scene.DashUp.activeSelf, "突进盒不跟着开");
-            Assert.IsFalse(_scene.DashDown.activeSelf, "突进盒不跟着开");
-        }
-
         private static int VertexCount(GameObject go)
         {
             MeshFilter filter = go.GetComponent<MeshFilter>();
@@ -244,10 +233,6 @@ namespace Refraction.Tests
         private sealed class 突进场景 : System.IDisposable
         {
             public readonly GameObject Root;
-            public readonly GameObject Black;
-            public readonly GameObject Ahead;
-            public readonly GameObject Up;
-            public readonly GameObject Down;
             public readonly GameObject Dash;
             public readonly GameObject DashAhead;
             public readonly GameObject DashUp;
@@ -259,11 +244,6 @@ namespace Refraction.Tests
             public 突进场景()
             {
                 Root = new GameObject("Player");
-
-                Black = Child(Root, "BlackAttack");
-                Ahead = Box(Black, "AheadCollider");
-                Up = Box(Black, "UpCollider");
-                Down = Box(Black, "DownCollider");
 
                 Dash = Child(Root, "BlackDash");
                 DashAhead = Box(Dash, "AheadCollider");
@@ -277,9 +257,6 @@ namespace Refraction.Tests
 
             public void Dispose()
             {
-                Object.DestroyImmediate(Ahead);
-                Object.DestroyImmediate(Up);
-                Object.DestroyImmediate(Down);
                 Object.DestroyImmediate(DashAhead);
                 Object.DestroyImmediate(Enemy);
                 Object.DestroyImmediate(Other.gameObject);

@@ -122,7 +122,7 @@ namespace Refraction.Presentation.Actor
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
 
-            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnBlackAttackHitLanded());
+            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded());
 
             _logic = new(moveMotor, config, _buffer, _launcher, _blackAttack);
 

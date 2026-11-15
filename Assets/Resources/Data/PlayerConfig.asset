@@ -55,17 +55,6 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  blackAttackPrepareTime: 0.01
-  blackAttackTime: 0.15
-  blackAttackRecoverTime: 0.25
-  blackAttackDamage: 15
-  blackAttackKnockback: 2.5
-  blackAttackMissRecoilAhead: 2
-  blackAttackMissRecoilUp: 0
-  blackAttackMissRecoilDown: 0
-  blackAttackHitRecoilAhead: 5
-  blackAttackHitRecoilUp: 0
-  blackAttackHitRecoilDown: 0
   flatAttackPrepareTime: 0.01
   flatAttackTime: 0.15
   flatAttackRecoverTime: 0.25
@@ -74,7 +63,6 @@ MonoBehaviour:
   flatAttackKnockback: 2.5
   flatAttackMissRecoil: 2
   flatAttackHitRecoil: 5
-  useBlackDash: 1
   blackDashPrepareTime: 0.08
   blackDashRecoverTime: 0.1
   blackDashCooldown: 0.35
@@ -86,7 +74,7 @@ MonoBehaviour:
   blackDashKnockback: 2.5
   blackDashBounceSpeed: 14
   destruction: 1
-  blackAttackHitStopTime: 0.055
+  meleeHitStopTime: 0.055
   contactHitStopTime: 0.035
   maxPolarity: 180
   polarityPerHit: 20

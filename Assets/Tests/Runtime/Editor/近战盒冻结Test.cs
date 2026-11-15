@@ -7,14 +7,14 @@ using UnityEngine;
 
 namespace Refraction.Tests
 {
-    /// <summary>判定盒点亮后冻在开打那一刻的世界位置、不随玩家移动，攻击结束装回玩家层级、下一次按新站位重新初始化</summary>
-    public sealed class 黑攻击盒冻结Test
+    /// <summary>普攻判定盒点亮后冻在开打那一刻的世界位置、不随玩家移动，攻击结束装回玩家层级、下一次按新站位重新初始化</summary>
+    public sealed class 近战盒冻结Test
     {
         private const float Eps = 1e-3f;
 
         private PlayerConfig _config;
         private GameObject _root;
-        private GameObject _black;
+        private GameObject _dash;
         private GameObject _ahead;
         private GameObject _up;
         private GameObject _down;
@@ -26,11 +26,11 @@ namespace Refraction.Tests
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
 
             _root = new GameObject("Player");
-            _black = Child(_root, "BlackAttack");
+            _dash = Child(_root, "BlackDash");
 
-            _ahead = Box(_black, "AheadCollider", new Vector3(1f, 0f, 0f));
-            _up = Box(_black, "UpCollider", new Vector3(0f, 1f, 0f));
-            _down = Box(_black, "DownCollider", new Vector3(0f, -1f, 0f));
+            _ahead = Box(_dash, "AheadCollider", new Vector3(1f, 0f, 0f));
+            _up = Box(_dash, "UpCollider", new Vector3(0f, 1f, 0f));
+            _down = Box(_dash, "DownCollider", new Vector3(0f, -1f, 0f));
 
             _view = new(_root.transform, _config, () => 1);
         }
@@ -49,7 +49,7 @@ namespace Refraction.Tests
         [Test]
         public void 点亮后_盒脱开玩家并按开打位置冻住()
         {
-            _view.Begin(BlackAttackKind.Ahead);
+            _view.BeginFlat();
 
             Assert.IsNull(_ahead.transform.parent, "点亮那一帧盒就不再挂在玩家身上");
             Assert.IsTrue(_ahead.activeSelf, "点亮的那只开着");
@@ -64,24 +64,34 @@ namespace Refraction.Tests
         [Test]
         public void 只冻点亮的_另两只留在玩家身上且关着()
         {
-            _view.Begin(BlackAttackKind.Up);
+            _view.BeginFlat();
 
-            Assert.IsTrue(_up.activeSelf, "上劈点亮 UpCollider");
-            Assert.IsNull(_up.transform.parent, "点亮的盒脱开玩家");
-            Assert.AreEqual(_black.transform, _ahead.transform.parent, "没点亮的平推盒仍在玩家层级里");
-            Assert.IsFalse(_ahead.activeSelf, "平推盒关着");
+            Assert.IsTrue(_ahead.activeSelf, "普攻点亮 AheadCollider");
+            Assert.IsNull(_ahead.transform.parent, "点亮的盒脱开玩家");
+            Assert.AreEqual(_dash.transform, _up.transform.parent, "没点亮的斜上盒仍在玩家层级里");
+            Assert.IsFalse(_up.activeSelf, "斜上盒关着");
             Assert.IsFalse(_down.activeSelf, "斜下盒关着");
+        }
+
+        [Test]
+        public void 突进盒_不脱父级_整段跟着玩家跑()
+        {
+            _view.BeginDash(BlackAttackKind.Up);
+
+            Assert.IsTrue(_up.activeSelf, "上突进点亮 UpCollider");
+            Assert.AreEqual(_dash.transform, _up.transform.parent, "突进盒留在玩家身上，才会跟着冲出去");
+            Assert.AreEqual(_dash.transform, _ahead.transform.parent, "普攻盒没被点亮，仍挂在玩家层级里");
         }
 
         [Test]
         public void 结束后_关掉并装回玩家层级()
         {
-            _view.Begin(BlackAttackKind.Ahead);
+            _view.BeginFlat();
             _root.transform.position = new Vector3(5f, 3f, 0f);
             _view.End();
 
             Assert.IsFalse(_ahead.activeSelf, "攻击结束就关掉");
-            Assert.AreEqual(_black.transform, _ahead.transform.parent, "装回 BlackAttack 下面");
+            Assert.AreEqual(_dash.transform, _ahead.transform.parent, "装回 BlackDash 下面");
             Assert.AreEqual(1f, _ahead.transform.localPosition.x, Eps, "局部位置回到预制体那份");
             Assert.AreEqual(0f, _ahead.transform.localPosition.y, Eps, "局部纵向也回到预制体那份");
         }
@@ -90,13 +100,13 @@ namespace Refraction.Tests
         public void 下一次攻击_按玩家新站位重新冻结()
         {
             _root.transform.position = new Vector3(2f, 0f, 0f);
-            _view.Begin(BlackAttackKind.Ahead);
+            _view.BeginFlat();
 
             Assert.AreEqual(3f, _ahead.transform.position.x, Eps, "第一次攻击冻在 2 + 1");
 
             _view.End();
             _root.transform.position = new Vector3(6f, 4f, 0f);
-            _view.Begin(BlackAttackKind.Ahead);
+            _view.BeginFlat();
 
             Assert.AreEqual(7f, _ahead.transform.position.x, Eps, "第二次攻击按新站位重新初始化");
             Assert.AreEqual(4f, _ahead.transform.position.y, Eps, "纵向同样跟着玩家新位置");
@@ -105,7 +115,7 @@ namespace Refraction.Tests
         [Test]
         public void 冻住之后_玩家转身也不影响判定盒()
         {
-            _view.Begin(BlackAttackKind.Ahead);
+            _view.BeginFlat();
             Vector3 frozen = _ahead.transform.position;
 
             Vector3 scale = _root.transform.localScale;

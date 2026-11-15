@@ -6,19 +6,15 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>黑攻击表现端：按判定方向点亮攻击盒，命中回报给玩家</summary>
+    /// <summary>黑形态近战表现端：按方向点亮判定盒，命中回报给玩家</summary>
     /// <remarks>三只盒共用本对象做 IAttacker：没点亮的两只不产生触发，所以一次挥击每个目标只吃一次伤害，
     /// 不必再挂 IIntervalAttacker（那会让同一帧里的第二个目标被判成"间隔内"而漏掉）。
     /// 三只盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
-    /// 黑突进与普攻共用 BlackDash 下那三只盒：突进只认 Up / Down 并跟着玩家跑，普攻认 Ahead 并冻在原地。
+    /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down 并且整段跟着玩家跑。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
     /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹</remarks>
     public sealed class BlackAttackView : IBlackAttackView, IAttacker, IHitLanded
     {
-        private const string AheadPath = "BlackAttack/AheadCollider";
-        private const string UpPath = "BlackAttack/UpCollider";
-        private const string DownPath = "BlackAttack/DownCollider";
-
         private const string ReboundAheadPath = "BlackRebound/AheadCollider";
         private const string ReboundUpPath = "BlackRebound/UpCollider";
         private const string ReboundDownPath = "BlackRebound/DownCollider";
@@ -43,12 +39,6 @@ namespace Refraction.Presentation.Combat
         private static Material _reboundMaterial;
         private static Material _sweepMaterial;
 
-        private readonly AttackBox _ahead;
-        private readonly AttackBox _up;
-        private readonly AttackBox _down;
-        private readonly Anchor _aheadHome;
-        private readonly Anchor _upHome;
-        private readonly Anchor _downHome;
         private readonly Collider2D _reboundAhead;
         private readonly Collider2D _reboundUp;
         private readonly Collider2D _reboundDown;
@@ -70,24 +60,15 @@ namespace Refraction.Presentation.Combat
         private Action _onHit;
         private int _swingFace = 1;
         private bool _dashMode;
-        private bool _flatMode;
         private GameObject _sweep;
         private Mesh _sweepMesh;
 
-        /// <summary>root 是玩家根节点，层级里按 BlackAttack/xxxCollider 找；朝向开打那一帧取定</summary>
+        /// <summary>root 是玩家根节点，层级里按 BlackDash/xxxCollider 找；朝向开打那一帧取定</summary>
         public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null)
         {
             _config = config;
             _face = face;
             _onHitLanded = onHitLanded;
-
-            _ahead = Find(root, AheadPath);
-            _up = Find(root, UpPath);
-            _down = Find(root, DownPath);
-
-            _aheadHome = new(_ahead);
-            _upHome = new(_up);
-            _downHome = new(_down);
 
             _reboundAhead = FindRebound(root, ReboundAheadPath);
             _reboundUp = FindRebound(root, ReboundUpPath);
@@ -102,15 +83,6 @@ namespace Refraction.Presentation.Combat
             BindDash(_dashUp);
             BindDash(_dashDown);
 
-            // 攻击盒把结算委托给 Attacker，三只盒共用同一份伤害与方向
-            if (_ahead != null) _ahead.SetAttack(this);
-            if (_up != null) _up.SetAttack(this);
-            if (_down != null) _down.SetAttack(this);
-
-            Paint(_ahead);
-            Paint(_up);
-            Paint(_down);
-
             // 弹反盒同样按真实碰撞形状画，换成明黄；盒不点亮时子物体跟着隐藏，和攻击盒一致
             Paint(_reboundAhead, ReboundMaterial);
             Paint(_reboundUp, ReboundMaterial);
@@ -123,29 +95,12 @@ namespace Refraction.Presentation.Combat
             End();
         }
 
-        /// <summary>点亮那一帧把盒从玩家身上摘下来冻在世界里，之后玩家走开判定也不跟着走，直到 End 才装回去</summary>
-        public void Begin(BlackAttackKind kind)
-        {
-            _kind = kind;
-            End();
-
-            AttackBox box = BoxOf(kind);
-            if (box == null) return;
-
-            _swingFace = _face != null ? _face() : 1;
-
-            box.transform.SetParent(null, true);
-            box.gameObject.SetActive(true);
-            OpenRebound(kind);
-        }
-
-        /// <summary>普攻用：点亮 BlackDash 下那只正前方盒，跟黑劈砍一样摘下来冻在原地，数值走 flatAttack 那一套</summary>
+        /// <summary>普攻用：点亮 BlackDash 下的正前方盒，开打那一帧摘下来冻在原地，直到 End 才装回去</summary>
         public void BeginFlat()
         {
             End();
 
             _kind = BlackAttackKind.Ahead;
-            _flatMode = true;
             _swingFace = _face != null ? _face() : 1;
 
             if (_dashAhead == null) return;
@@ -173,17 +128,12 @@ namespace Refraction.Presentation.Combat
 
         public void End()
         {
-            Close(_ahead, _aheadHome);
-            Close(_up, _upHome);
-            Close(_down, _downHome);
-
             Close(_dashAhead, _dashAheadHome);
             SetActive(_dashUp, false);
             SetActive(_dashDown, false);
 
             ClearSweep();
             _dashMode = false;
-            _flatMode = false;
             _reboundActive = null;
 
             SetActive(_reboundAhead, false);
@@ -261,20 +211,12 @@ namespace Refraction.Presentation.Combat
 
         public Damage ProduceDamage()
         {
-            if (_dashMode)
-            {
-                _onHit?.Invoke();
-
-                return new Damage(_config.blackDashDamage, DamageSource.Melee, DirectionOf(), _config.blackDashKnockback);
-            }
-
             // AttackBox 每次接触都会先取伤害再结算；扣血失败的（无敌窗、站桩靶子）也算砍到了实体
             _onHit?.Invoke();
 
-            if (_flatMode)
-                return new Damage(_config.flatAttackDamage, DamageSource.Melee, DirectionOf(), _config.flatAttackKnockback);
-
-            return new Damage(_config.blackAttackDamage, DamageSource.Melee, DirectionOf(), _config.blackAttackKnockback);
+            return _dashMode
+                ? new Damage(_config.blackDashDamage, DamageSource.Melee, DirectionOf(), _config.blackDashKnockback)
+                : new Damage(_config.flatAttackDamage, DamageSource.Melee, DirectionOf(), _config.flatAttackKnockback);
         }
 
         private Vector2 DirectionOf()
@@ -428,22 +370,12 @@ namespace Refraction.Presentation.Combat
 
         public void OnHitLanded() => _onHitLanded?.Invoke();
 
-        private AttackBox BoxOf(BlackAttackKind kind)
-        {
-            switch (kind)
-            {
-                case BlackAttackKind.Up: return _up;
-                case BlackAttackKind.Down: return _down;
-                default: return _ahead;
-            }
-        }
-
         private static void SetActive(Component target, bool active)
         {
             if (target != null && target.gameObject.activeSelf != active) target.gameObject.SetActive(active);
         }
 
-        /// <summary>盒在预制体里的原样：摘出去冻住之后靠这份数据装回 BlackAttack 下，下一次攻击再按新站位重新摘</summary>
+        /// <summary>盒在预制体里的原样：摘出去冻住之后靠这份数据装回原父级，下一次攻击再按新站位重新摘</summary>
         private readonly struct Anchor
         {
             private readonly Transform _parent;

@@ -78,10 +78,10 @@ namespace Refraction.Logic.Actor
 
         public void OnHitLanded() => AddPolarity(_config.polarityPerHit);
 
-        public void OnBlackAttackHitLanded()
+        public void OnMeleeHitLanded()
         {
             OnHitLanded();
-            EventBus<RequestHitStop>.Publish(new(_config.blackAttackHitStopTime));
+            EventBus<RequestHitStop>.Publish(new(_config.meleeHitStopTime));
         }
 
         private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
