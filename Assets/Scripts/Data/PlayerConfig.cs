@@ -175,6 +175,58 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackAttackHitRecoilDown = 20f;
 
+        [Header("攻击 · 黑突进")]
+        [Tooltip("黑形态按攻击键走哪一套：勾上走黑突进，不勾走黑劈砍。\n两套互斥，同一时刻只存在一套；只和攻击抢位置，弹反不受影响。")]
+        public bool useBlackDash = false;
+
+        [Tooltip("黑突进前摇时长（秒）：按下攻击键到冲出去之间的等待，期间被打中会整段打断；突进方向在这段走完那一刻定死。\n0 表示按下当帧就冲，方向取当帧输入。")]
+        [Min(0f)]
+        public float blackDashPrepareTime = 0.12f;
+
+        [Tooltip("黑突进后摇时长（秒）：冲完到回到空闲之间的等待，期间重力已恢复、速度按移动规则自然减速，但不接受移动 / 跳跃 / 冲刺输入。\n0 表示冲完立刻恢复操作。")]
+        [Min(0f)]
+        public float blackDashRecoverTime = 0.15f;
+
+        [Tooltip("黑突进冷却（秒）：从冲出去那一刻起算。后摇里再按一次突进取消后摇接下一段，不受这条限制（否则连不起来）。")]
+        [Min(0f)]
+        public float blackDashCooldown = 0.6f;
+
+        [Tooltip("黑突进起手的无敌时长（秒）：从冲出去那一刻起算，这段时间内不吃伤害也不进受伤态（与冲刺无敌共用同一个窗口）。\n0 表示不给无敌。")]
+        [Min(0f)]
+        public float blackDashInvulnerableTime = 0.12f;
+
+        [Tooltip("平推突进的初速度（单位/秒）：沿朝向水平冲，竖直速度一并清零。\n0 表示原地不动，只剩无敌与后摇。")]
+        [Min(0f)]
+        public float blackDashSpeedAhead = 22f;
+
+        [Tooltip("斜上 45° 突进的初速度（单位/秒）：横向取朝向、竖直向上，两个分量各为 0.707 × 该值。")]
+        [Min(0f)]
+        public float blackDashSpeedUp = 18f;
+
+        [Tooltip("斜下 45° 突进的初速度（单位/秒）：横向取朝向、竖直向下，两个分量各为 0.707 × 该值。")]
+        [Min(0f)]
+        public float blackDashSpeedDown = 20f;
+
+        [Tooltip("平推突进的持续时间（秒）：这段时间内重力关闭、速度不变，时间到进后摇。\n速度 × 该值就是冲出去的距离。")]
+        [Min(0f)]
+        public float blackDashTimeAhead = 0.2f;
+
+        [Tooltip("斜上 45° 突进的持续时间（秒）：同样在结束时进后摇，之后按重力与移动减速自己落回来。")]
+        [Min(0f)]
+        public float blackDashTimeUp = 0.18f;
+
+        [Tooltip("斜下 45° 突进的持续时间（秒）：同样在结束时进后摇，撞到地面后由移动减速停住。")]
+        [Min(0f)]
+        public float blackDashTimeDown = 0.2f;
+
+        [Tooltip("黑突进的伤害点数：突进盒（平推/斜上/斜下）碰到怪物受击盒时按这个值扣血。\n一次突进里同一个受击盒只结算一次，穿过去也只扣一次；0 表示不造成伤害。")]
+        [Min(0f)]
+        public float blackDashDamage = 20f;
+
+        [Tooltip("黑突进的击退初速度（单位/秒）：方向沿突进方向（平推水平，斜上/斜下按 45°）。\n滑多远由目标自己的 KnockbackDecay 决定；0 表示不击退。")]
+        [Min(0f)]
+        public float blackDashKnockback = 4f;
+
         [Header("受击")]
         [Tooltip("破坏力：敌人子弹打到玩家时扣的血量（点）。\n敌人只知道开了火，不知道玩家的数值——敌弹自带的伤害在这里一律被顶掉。0 表示敌弹不扣血。")]
         [Min(0f)]

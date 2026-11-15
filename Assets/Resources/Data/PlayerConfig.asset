@@ -66,6 +66,19 @@ MonoBehaviour:
   blackAttackHitRecoilAhead: 5
   blackAttackHitRecoilUp: 0
   blackAttackHitRecoilDown: 0
+  useBlackDash: 0
+  blackDashPrepareTime: 0.08
+  blackDashRecoverTime: 0.1
+  blackDashCooldown: 0.35
+  blackDashInvulnerableTime: 0.1
+  blackDashSpeedAhead: 22
+  blackDashSpeedUp: 18
+  blackDashSpeedDown: 20
+  blackDashTimeAhead: 0.2
+  blackDashTimeUp: 0.18
+  blackDashTimeDown: 0.2
+  blackDashDamage: 15
+  blackDashKnockback: 2.5
   destruction: 1
   blackAttackHitStopTime: 0.055
   contactHitStopTime: 0.035

@@ -15,14 +15,14 @@ namespace Refraction.Logic.Actor
         private InputBuffer _buffer;
         private IPostureGate _posture;
         private DashState _dashState;
-        private Cooldown _dashCooldown = new(); 
+        private Cooldown _dashCooldown = new();
         private float _lastGroundedTime = float.NegativeInfinity;
         private bool _wasGrounded;
         private bool _coyoteConsumed;
         private int _airJumpsUsed;
         private int _airDashesUsed;
 
-        public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IPostureGate posture) 
+        public MoveGroup(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IPostureGate posture)
         {
             _motor = motor;
             _config = config;
@@ -45,7 +45,10 @@ namespace Refraction.Logic.Actor
         /// <summary>当前移动状态，门按它决定过门后的运动</summary>
         public MovementStateTag CurrentTag =>
             machine.CurrentState == null ? MovementStateTag.None : machine.CurrentState.Tag;
-         
+
+        /// <summary>黑突进期间由 PlayerLogic 每帧提交：压住整组，不判不写，解除后照常推进</summary>
+        public bool Blocked { get; set; }
+
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {
             // 离地按竖直速度分上升/下落（> 0 上升，≤ 0 下落）
@@ -60,6 +63,9 @@ namespace Refraction.Logic.Actor
 
         public void Tick(in LogicContext ctx)
         {
+            // 黑突进整段接管：这里连状态都不推进，跳跃与冲刺的抢占天然被挡掉
+            if (Blocked) return;
+
             bool grounded = ctx.WorldInfo.Grounded;
 
             if (grounded)

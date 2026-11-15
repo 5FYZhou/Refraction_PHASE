@@ -12,6 +12,12 @@ namespace Refraction.Presentation.Actor
 
         public void SetOwnerRoot(Transform owner) { _ownerRoot = owner; }
 
+        public void SetOnceLedger(HitLedger ledger) { _ledger = ledger; }
+
+        public HitLedger OnceLedger => _ledger;
+
+        private HitLedger _ledger;
+
         private Collider2D _cachedOther;
         private HurtBox _cachedBox;
 
@@ -49,6 +55,7 @@ namespace Refraction.Presentation.Actor
             IIntervalAttacker interval = Attacker as IIntervalAttacker;
             if (repeat && interval == null) return;
             if (interval != null && !interval.ReadyToHit(Time.fixedTime)) return;
+            if (_ledger != null && !_ledger.TryMark(target)) return;
 
             Damage damage = Attacker.ProduceDamage();
 

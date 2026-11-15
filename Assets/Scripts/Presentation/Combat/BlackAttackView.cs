@@ -22,7 +22,13 @@ namespace Refraction.Presentation.Combat
         private const string ReboundUpPath = "BlackRebound/UpCollider";
         private const string ReboundDownPath = "BlackRebound/DownCollider";
 
+        private const string DashAheadPath = "BlackDash/AheadCollider";
+        private const string DashUpPath = "BlackDash/UpCollider";
+        private const string DashDownPath = "BlackDash/DownCollider";
+
         private const string RangeName = "Range";
+
+        private const string SweepName = "DashSweep";
 
         private const float Diagonal = 0.70710678f;
 
@@ -30,8 +36,11 @@ namespace Refraction.Presentation.Combat
 
         private static readonly Color ReboundColor = new(1f, 0.92f, 0.02f, 0.35f);
 
+        private static readonly Color SweepColor = new(0.2f, 1f, 0.35f, 0.22f);
+
         private static Material _rangeMaterial;
         private static Material _reboundMaterial;
+        private static Material _sweepMaterial;
 
         private readonly AttackBox _ahead;
         private readonly AttackBox _up;
@@ -42,6 +51,10 @@ namespace Refraction.Presentation.Combat
         private readonly Collider2D _reboundAhead;
         private readonly Collider2D _reboundUp;
         private readonly Collider2D _reboundDown;
+        private readonly AttackBox _dashAhead;
+        private readonly AttackBox _dashUp;
+        private readonly AttackBox _dashDown;
+        private readonly HitLedger _dashHits = new();
         private readonly PlayerConfig _config;
         private readonly Func<int> _face;
         private readonly Action _onHitLanded;
@@ -54,6 +67,9 @@ namespace Refraction.Presentation.Combat
         private BlackAttackKind _kind;
         private Action _onHit;
         private int _swingFace = 1;
+        private bool _dashMode;
+        private GameObject _sweep;
+        private Mesh _sweepMesh;
 
         /// <summary>root 是玩家根节点，层级里按 BlackAttack/xxxCollider 找；朝向开打那一帧取定</summary>
         public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null)
@@ -74,6 +90,14 @@ namespace Refraction.Presentation.Combat
             _reboundUp = FindRebound(root, ReboundUpPath);
             _reboundDown = FindRebound(root, ReboundDownPath);
 
+            _dashAhead = Find(root, DashAheadPath);
+            _dashUp = Find(root, DashUpPath);
+            _dashDown = Find(root, DashDownPath);
+
+            BindDash(_dashAhead);
+            BindDash(_dashUp);
+            BindDash(_dashDown);
+
             // 攻击盒把结算委托给 Attacker，三只盒共用同一份伤害与方向
             if (_ahead != null) _ahead.SetAttack(this);
             if (_up != null) _up.SetAttack(this);
@@ -87,6 +111,10 @@ namespace Refraction.Presentation.Combat
             Paint(_reboundAhead, ReboundMaterial);
             Paint(_reboundUp, ReboundMaterial);
             Paint(_reboundDown, ReboundMaterial);
+
+            Paint(_dashAhead);
+            Paint(_dashUp);
+            Paint(_dashDown);
 
             End();
         }
@@ -107,12 +135,33 @@ namespace Refraction.Presentation.Combat
             OpenRebound(kind);
         }
 
+        /// <summary>黑突进用：点亮对应突进盒与弹反盒，突进盒不摘下来，整段跟着玩家跑</summary>
+        public void BeginDash(BlackAttackKind kind)
+        {
+            End();
+
+            _kind = kind;
+            _dashMode = true;
+            _swingFace = _face != null ? _face() : 1;
+
+            _dashHits.Clear();
+            SetActive(DashBoxOf(kind), true);
+            PaintSweep(kind);
+            OpenRebound(kind);
+        }
+
         public void End()
         {
             Close(_ahead, _aheadHome);
             Close(_up, _upHome);
             Close(_down, _downHome);
 
+            SetActive(_dashAhead, false);
+            SetActive(_dashUp, false);
+            SetActive(_dashDown, false);
+
+            ClearSweep();
+            _dashMode = false;
             _reboundActive = null;
 
             SetActive(_reboundAhead, false);
@@ -190,21 +239,174 @@ namespace Refraction.Presentation.Combat
 
         public Damage ProduceDamage()
         {
+            if (_dashMode)
+                return new Damage(_config.blackDashDamage, DamageSource.Melee, DirectionOf(), _config.blackDashKnockback);
+
             // AttackBox 每次接触都会先取伤害再结算；扣血失败的（无敌窗、站桩靶子）也算砍到了实体
             _onHit?.Invoke();
 
+            return new Damage(_config.blackAttackDamage, DamageSource.Melee, DirectionOf(), _config.blackAttackKnockback);
+        }
+
+        private Vector2 DirectionOf()
+        {
             int face = _swingFace;
             float x = face < 0 ? -1f : 1f;
 
-            Vector2 direction = _kind switch
+            return _kind switch
             {
                 BlackAttackKind.Up => new Vector2(x * Diagonal, Diagonal),
                 BlackAttackKind.Down => new Vector2(x * Diagonal, -Diagonal),
                 _ => new Vector2(x, 0f),
             };
-
-            return new Damage(_config.blackAttackDamage, DamageSource.Melee, direction, _config.blackAttackKnockback);
         }
+
+        private void BindDash(AttackBox box)
+        {
+            if (box == null) return;
+
+            box.SetAttack(this);
+            box.SetOnceLedger(_dashHits);
+        }
+
+        private AttackBox DashBoxOf(BlackAttackKind kind)
+        {
+            switch (kind)
+            {
+                case BlackAttackKind.Up: return _dashUp;
+                case BlackAttackKind.Down: return _dashDown;
+                default: return _dashAhead;
+            }
+        }
+
+        /// <summary>绿色扫掠面：把起手形状沿突进位移平移一份，取两组点的凸包，位置固定在世界里</summary>
+        private void PaintSweep(BlackAttackKind kind)
+        {
+            AttackBox box = DashBoxOf(kind);
+
+            if (box == null) return;
+
+            Collider2D col = box.GetComponent<Collider2D>();
+            Vector2[] path = col != null ? PathOf(col) : null;
+
+            if (path == null || path.Length < 3) return;
+
+            Vector2 travel = DirectionOf() * TravelOf(kind);
+            Vector3[] points = new Vector3[path.Length * 2];
+
+            for (int i = 0; i < path.Length; i++)
+            {
+                Vector3 start = box.transform.TransformPoint(path[i]);
+
+                points[i] = start;
+                points[i + path.Length] = start + (Vector3)travel;
+            }
+
+            Mesh mesh = HullMesh(points);
+
+            if (mesh == null) return;
+
+            mesh.hideFlags = HideFlags.HideAndDontSave;
+
+            GameObject go = new(SweepName) { hideFlags = HideFlags.DontSave };
+            go.transform.SetParent(null, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+
+            MeshRenderer mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = SweepMaterial;
+            mr.sortingOrder = 29999;
+
+            _sweep = go;
+            _sweepMesh = mesh;
+        }
+
+        private float TravelOf(BlackAttackKind kind)
+        {
+            switch (kind)
+            {
+                case BlackAttackKind.Up: return _config.blackDashSpeedUp * _config.blackDashTimeUp;
+                case BlackAttackKind.Down: return _config.blackDashSpeedDown * _config.blackDashTimeDown;
+                default: return _config.blackDashSpeedAhead * _config.blackDashTimeAhead;
+            }
+        }
+
+        private void ClearSweep()
+        {
+            if (_sweep != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(_sweep);
+                else UnityEngine.Object.DestroyImmediate(_sweep);
+            }
+
+            if (_sweepMesh != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(_sweepMesh);
+                else UnityEngine.Object.DestroyImmediate(_sweepMesh);
+            }
+
+            _sweep = null;
+            _sweepMesh = null;
+        }
+
+        private static Mesh HullMesh(Vector3[] points)
+        {
+            Vector2[] hull = Hull(points);
+
+            if (hull == null || hull.Length < 3) return null;
+
+            Vector3[] vertices = new Vector3[hull.Length];
+            int[] triangles = new int[(hull.Length - 2) * 3];
+
+            for (int i = 0; i < hull.Length; i++) vertices[i] = hull[i];
+
+            for (int i = 0; i < hull.Length - 2; i++)
+            {
+                triangles[i * 3] = 0;
+                triangles[i * 3 + 1] = i + 1;
+                triangles[i * 3 + 2] = i + 2;
+            }
+
+            Mesh mesh = new() { vertices = vertices, triangles = triangles };
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static Vector2[] Hull(Vector3[] points)
+        {
+            if (points == null || points.Length < 3) return null;
+
+            Vector2[] sorted = new Vector2[points.Length];
+
+            for (int i = 0; i < points.Length; i++) sorted[i] = points[i];
+
+            System.Array.Sort(sorted, ComparePoint);
+
+            Vector2[] hull = new Vector2[sorted.Length * 2];
+            int k = 0;
+
+            for (int i = 0; i < sorted.Length; i++)
+            {
+                while (k >= 2 && Cross(hull[k - 2], hull[k - 1], sorted[i]) <= 0f) k--;
+
+                hull[k++] = sorted[i];
+            }
+
+            for (int i = sorted.Length - 2, floor = k + 1; i >= 0; i--)
+            {
+                while (k >= floor && Cross(hull[k - 2], hull[k - 1], sorted[i]) <= 0f) k--;
+
+                hull[k++] = sorted[i];
+            }
+
+            System.Array.Resize(ref hull, k - 1);
+            return hull;
+        }
+
+        private static int ComparePoint(Vector2 a, Vector2 b)
+            => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y);
+
+        private static float Cross(Vector2 o, Vector2 a, Vector2 b)
+            => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
         public void OnHitLanded() => _onHitLanded?.Invoke();
 
@@ -333,6 +535,8 @@ namespace Refraction.Presentation.Combat
         private static Material RangeMaterial => MaterialOf(RangeColor, ref _rangeMaterial);
 
         private static Material ReboundMaterial => MaterialOf(ReboundColor, ref _reboundMaterial);
+
+        private static Material SweepMaterial => MaterialOf(SweepColor, ref _sweepMaterial);
 
         private static Material MaterialOf(Color color, ref Material cache)
         {

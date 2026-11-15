@@ -349,6 +349,7 @@ namespace Refraction.Tests
             public readonly GameObject Ahead;
             public readonly GameObject Up;
             public readonly GameObject Down;
+            public readonly GameObject Dash;
 
             public 层级场景()
             {
@@ -357,6 +358,11 @@ namespace Refraction.Tests
                 Ahead = Box(Black, "AheadCollider");
                 Up = Box(Black, "UpCollider");
                 Down = Box(Black, "DownCollider");
+
+                Dash = Child(Root, "BlackDash");
+                Box(Dash, "AheadCollider");
+                Box(Dash, "UpCollider");
+                Box(Dash, "DownCollider");
             }
 
             public void Dispose()
@@ -435,7 +441,7 @@ namespace Refraction.Tests
 
             public void Begin(BlackAttackKind kind) => BeginKind = kind;
 
-            public void BeginGuard(BlackAttackKind kind) => BeginKind = kind;
+            public void BeginDash(BlackAttackKind kind) => BeginKind = kind;
 
             public void End() => Ended = true;
 
