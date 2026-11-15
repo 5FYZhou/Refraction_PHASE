@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Events
 {
+    #region 请求
     public readonly struct RequestNextDoor
     {
         public readonly int nextLevel;
@@ -23,6 +24,45 @@ namespace Refraction.Logic.Events
             this.enterFace = enterFace;
         }
     }
+
+    public readonly struct RequestPlayerPosChange
+    {
+        public readonly DoorEntry Entry;
+
+        public readonly MovementStateTag EnterTag;
+
+        public readonly int EnterFace;
+
+        public RequestPlayerPosChange(DoorEntry entry, MovementStateTag enterTag, int enterFace)
+        {
+            this.Entry = entry;
+            this.EnterTag = enterTag;
+            this.EnterFace = enterFace;
+        }
+    }
+
+    public readonly struct RequestHitStop
+    {
+        public readonly float seconds;
+
+        public RequestHitStop(float seconds)
+        {
+            this.seconds = seconds;
+        }
+    }
+
+    public readonly struct RequestCameraShake
+    {
+        public readonly float force;
+
+        public RequestCameraShake(float force)
+        {
+            this.force = force;
+        }
+    }
+    #endregion
+
+    #region 事实
 
     public readonly struct PlayerHealthChanged
     {
@@ -77,39 +117,5 @@ namespace Refraction.Logic.Events
         }
     }
 
-    public readonly struct RequestPlayerPosChange
-    {
-        public readonly DoorEntry Entry;
-
-        public readonly MovementStateTag EnterTag;
-
-        public readonly int EnterFace;
-
-        public RequestPlayerPosChange(DoorEntry entry, MovementStateTag enterTag, int enterFace)
-        {
-            this.Entry = entry;
-            this.EnterTag = enterTag;
-            this.EnterFace = enterFace;
-        }
-    }
-
-    public readonly struct HitStopRequested
-    {
-        public readonly float seconds;
-
-        public HitStopRequested(float seconds)
-        {
-            this.seconds = seconds;
-        }
-    }
-
-    public readonly struct CameraShakeRequested
-    {
-        public readonly float force;
-
-        public CameraShakeRequested(float force)
-        {
-            this.force = force;
-        }
-    }
+    #endregion
 }

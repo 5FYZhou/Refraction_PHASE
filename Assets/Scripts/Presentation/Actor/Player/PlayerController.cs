@@ -203,7 +203,7 @@ namespace Refraction.Presentation.Actor
 
             _blackAttack?.ReboundTick();
 
-            EventBus<PlayerDebugSnapshot>.Publish(new(
+            EventBus<PlayerDebugSnapshotTaken>.Publish(new(
                 context.WorldInfo.FrameStartVelocity,
                 moveMotor.LedgerVelocity,
                 _logic.HurtVelocity,

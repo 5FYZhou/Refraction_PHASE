@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.CameraRig
 {
-    /// <summary>镜头震动：订阅 CameraShakeRequested，把强度原样交给 Cinemachine 冲量</summary>
+    /// <summary>镜头震动：订阅 RequestCameraShake，把强度原样交给 Cinemachine 冲量</summary>
     /// <remarks>震动只对挂了 CinemachineImpulseListener 的 Virtual Camera 生效，通道必须与那边的 ChannelMask 一致</remarks>
     public sealed class CameraController : MonoBehaviour, ISceneRoot
     {
@@ -23,9 +23,9 @@ namespace Refraction.Presentation.CameraRig
 
         private void Awake() => EnsureSource();
 
-        private void OnEnable() => EventBus<CameraShakeRequested>.Subscribe(OnShakeRequested);
+        private void OnEnable() => EventBus<RequestCameraShake>.Subscribe(OnRequestCameraShake);
 
-        private void OnDisable() => EventBus<CameraShakeRequested>.Unsubscribe(OnShakeRequested);
+        private void OnDisable() => EventBus<RequestCameraShake>.Unsubscribe(OnRequestCameraShake);
 
         private void Start()
         {
@@ -40,7 +40,7 @@ namespace Refraction.Presentation.CameraRig
 
         public void Attach() => EnsureSource();
 
-        private void OnShakeRequested(CameraShakeRequested evt)
+        private void OnRequestCameraShake(RequestCameraShake evt)
         {
             if (evt.force <= 0f) return;
 

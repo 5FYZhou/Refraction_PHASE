@@ -80,7 +80,7 @@ namespace Refraction.Logic.Actor
         public void OnBlackAttackHitLanded()
         {
             OnHitLanded();
-            EventBus<HitStopRequested>.Publish(new(_config.blackAttackHitStopTime));
+            EventBus<RequestHitStop>.Publish(new(_config.blackAttackHitStopTime));
         }
 
         private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
@@ -303,7 +303,7 @@ namespace Refraction.Logic.Actor
 
             Announce();
 
-            if (hit.Source == DamageSource.Contact) EventBus<HitStopRequested>.Publish(new(_config.contactHitStopTime));
+            if (hit.Source == DamageSource.Contact) EventBus<RequestHitStop>.Publish(new(_config.contactHitStopTime));
 
             return true;
         }

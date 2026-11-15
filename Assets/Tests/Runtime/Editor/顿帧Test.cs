@@ -31,7 +31,7 @@ namespace Refraction.Tests
         [Test]
         public void 事件请求_冻结并在时长走完后自动解冻()
         {
-            EventBus<HitStopRequested>.Publish(new(0.1f));
+            EventBus<RequestHitStop>.Publish(new(0.1f));
             Assert.AreEqual(0f, _clock.Scale, 1e-4f, "收到请求就该冻结");
 
             _hitStop.Tick(0f, 0.06f);
@@ -45,7 +45,7 @@ namespace Refraction.Tests
         [Test]
         public void 冻结期间_靠未缩放时长计时()
         {
-            EventBus<HitStopRequested>.Publish(new(0.1f));
+            EventBus<RequestHitStop>.Publish(new(0.1f));
 
             _hitStop.Tick(0f, 0.06f);
             Assert.IsTrue(_hitStop.IsActive, "缩放时长为 0 时未缩放时长照走，否则永远解不开");
@@ -57,10 +57,10 @@ namespace Refraction.Tests
         [Test]
         public void 后到的短请求_不截断正在走的长顿帧()
         {
-            EventBus<HitStopRequested>.Publish(new(0.2f));
+            EventBus<RequestHitStop>.Publish(new(0.2f));
             _hitStop.Tick(0f, 0.1f);
 
-            EventBus<HitStopRequested>.Publish(new(0.05f));
+            EventBus<RequestHitStop>.Publish(new(0.05f));
             _hitStop.Tick(0f, 0.06f);
             Assert.IsTrue(_hitStop.IsActive, "取剩余与新请求的较大者：若被改成覆盖，0.06 > 0.05 就已经解冻了");
 
@@ -73,8 +73,8 @@ namespace Refraction.Tests
         {
             int before = _clock.SetCalls;
 
-            EventBus<HitStopRequested>.Publish(new(0f));
-            EventBus<HitStopRequested>.Publish(new(-1f));
+            EventBus<RequestHitStop>.Publish(new(0f));
+            EventBus<RequestHitStop>.Publish(new(-1f));
 
             Assert.IsFalse(_hitStop.IsActive, "0 与负数都不冻结");
             Assert.AreEqual(before, _clock.SetCalls, "没请求就不该去动 timeScale");
@@ -87,7 +87,7 @@ namespace Refraction.Tests
             object menu = new();
             _pause.PushFreeze(menu);
 
-            EventBus<HitStopRequested>.Publish(new(0.05f));
+            EventBus<RequestHitStop>.Publish(new(0.05f));
             _hitStop.Tick(0f, 0.06f);
 
             Assert.IsTrue(_pause.IsPaused, "顿帧结束不代表菜单暂停结束");
@@ -102,7 +102,7 @@ namespace Refraction.Tests
         {
             _hitStop.Dispose();
 
-            EventBus<HitStopRequested>.Publish(new(0.1f));
+            EventBus<RequestHitStop>.Publish(new(0.1f));
 
             Assert.IsFalse(_hitStop.IsActive, "退订之后事件不该再生效，否则服务拆了还能冻住游戏");
             Assert.AreEqual(1f, _clock.Scale, 1e-4f, "不能留下冻结");
