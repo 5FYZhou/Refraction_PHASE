@@ -1,7 +1,6 @@
 ﻿using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
-using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
 using UnityEngine;
 
@@ -27,7 +26,6 @@ namespace Refraction.Presentation.Combat
         private AfterimageField _field;
         private BulletLogic _bullets;
         private BulletField _bulletField;
-        private LevelManager _levelMgr;
         private GameRoot _root;
 
         private void Start()
@@ -38,9 +36,6 @@ namespace Refraction.Presentation.Combat
 
         private void OnDestroy()
         {
-            _levelMgr?.Dispose();
-            _levelMgr = null;
-
             if (_bulletField != null) Destroy(_bulletField.gameObject);
 
             if (_root != null) _root.UnregisterSceneRoot(this);
@@ -49,8 +44,6 @@ namespace Refraction.Presentation.Combat
         public void Attach()
         {
             _root ??= GameRoot.Instance;
-
-            AttachLevel();
 
             Require.Assigned(playerController, nameof(CombatRoot), nameof(playerController));
 
@@ -74,27 +67,6 @@ namespace Refraction.Presentation.Combat
 
             _field = host.AddComponent<AfterimageField>();
             _field.Init(_afterimages, config, playerController.View, playerController.transform, prefab);
-        }
-
-        private void AttachLevel()
-        {
-            if (_levelMgr != null) return;
-
-            if (_root == null)
-            {
-                Debug.LogError("[CombatRoot] 没拿到 GameRoot，门推进与世界反转在本关都不会生效。");
-                return;
-            }
-
-            _levelMgr = new LevelManager(_root.LevelId, _root.DoorReader, _root.World, _root);
-            _levelMgr.Init();
-
-            MonoBehaviour[] all = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-
-            for (int i = 0; i < all.Length; i++)
-            {
-                if (all[i] is IReverse reverse) _levelMgr.RegisterReverse(reverse);
-            }
         }
 
         public void FixedTick(float deltaTime)

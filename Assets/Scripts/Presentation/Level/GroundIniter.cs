@@ -16,9 +16,27 @@ namespace Refraction.Presentation
 
         private readonly List<SpriteRenderer> _sprites = new();
 
+        private GameRoot _root;
+
         private void Awake()
         {
             Init();
+        }
+
+        private void Start()
+        {
+            Attach();
+        }
+
+        private void OnDestroy()
+        {
+            _root?.UnregisterReverse(this);
+        }
+
+        public void Attach()
+        {
+            _root ??= GameRoot.Instance;
+            _root?.RegisterReverse(this);
         }
 
         public void Init()

@@ -66,6 +66,13 @@ namespace Refraction.Logic.Level
             reverse.Apply(_world);
         }
 
+        public void RemoveReverse(IReverse reverse)
+        {
+            if (reverse == null) return;
+
+            _reverses.Remove(reverse);
+        }
+
         private void OnWorldPolarityChanged(WorldPolarityChanged evt)
         {
             _world = evt.World;

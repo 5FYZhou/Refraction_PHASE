@@ -20,6 +20,7 @@ namespace Refraction.Presentation
     {
         private readonly List<ISceneRoot> _sceneRoots = new();
         private readonly List<ISceneRoot> _pendingAttach = new();
+        private readonly List<IReverse> _pendingReverse = new();
         private readonly List<IService> _services = new();
         private readonly SceneContext _scenectx = new();
 
@@ -29,8 +30,10 @@ namespace Refraction.Presentation
         private ResMgr _resMgr;
         private PauseService _pauseService;
         private HitStopService _hitStopService;
+        private LevelManager _levelMgr;
 
         private bool _warnedNoLevel;
+        private bool _levelPending;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
@@ -94,8 +97,13 @@ namespace Refraction.Presentation
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
+            _pendingReverse.Clear();
             _scenectx.Reset();
             _doorReader = null;
+
+            _levelMgr?.Dispose();
+            _levelMgr = null;
+            _levelPending = false;
         }
 
         private void OnWorldReversed(WorldReversed evt)
@@ -117,6 +125,8 @@ namespace Refraction.Presentation
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
+
+            _levelPending = true;
         }
 
         public void RegisterService(IService service)
@@ -167,6 +177,27 @@ namespace Refraction.Presentation
 
             _sceneRoots.Remove(root);
             _pendingAttach.Remove(root);
+        }
+
+        public void RegisterReverse(IReverse reverse)
+        {
+            if (reverse == null) return;
+
+            if (_levelMgr != null && !_levelPending)
+            {
+                _levelMgr.RegisterReverse(reverse);
+                return;
+            }
+
+            if (!_pendingReverse.Contains(reverse)) _pendingReverse.Add(reverse);
+        }
+
+        public void UnregisterReverse(IReverse reverse)
+        {
+            if (reverse == null) return;
+
+            _pendingReverse.Remove(reverse);
+            _levelMgr?.RemoveReverse(reverse);
         }
 
         /// <summary>场景配置覆盖世界极性，要在其他场景根装配前调用，否则地面会先按上一关的颜色刷一次</summary>
@@ -259,12 +290,18 @@ namespace Refraction.Presentation
 
             int pendingDoorId = _scenectx.TakeNextDoor(out MovementStateTag pendingTag, out int pendingFace);
 
+            _levelMgr?.Dispose();
+            _levelMgr = null;
+            _pendingReverse.Clear();
+
             // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
             _doorReader = FindOrCreateDoorReader(scene);
 
             // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
             _scenectx.ClearEntry();
             if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, pendingTag, pendingFace);
+
+            _levelPending = true;
         }
 
         private void ResolveEntryPoint(Scene scene, int doorId, MovementStateTag enterTag, int enterFace)
@@ -311,6 +348,22 @@ namespace Refraction.Presentation
             }
 
             return null;
+        }
+
+        private void AttachLevel()
+        {
+            if (!_levelPending) return;
+            _levelPending = false;
+
+            _levelMgr = new LevelManager(LevelId, _doorReader, _scenectx.World, this);
+            _levelMgr.Init();
+
+            for (int i = 0; i < _pendingReverse.Count; i++)
+            {
+                _levelMgr.RegisterReverse(_pendingReverse[i]);
+            }
+
+            _pendingReverse.Clear();
         }
 
         /// <summary>把这一帧新注册的场景根按 Order 顺序 Attach 掉。Attach 里再注册的，下一帧继续。</summary>
@@ -363,6 +416,7 @@ namespace Refraction.Presentation
         private void Update()
         {
             AttachPending();
+            AttachLevel();
             _inputProvider?.Tick();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             TickSceneRootsRender(Time.deltaTime);
@@ -372,6 +426,7 @@ namespace Refraction.Presentation
         {
             // 先装配再驱动：场景根的第一帧就要能跑
             AttachPending();
+            AttachLevel();
             TickSceneRootsPhysics(Time.fixedDeltaTime);
         }
 
