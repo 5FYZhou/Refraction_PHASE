@@ -44,9 +44,6 @@ namespace Refraction.Data
         [Min(0f)]
         public float bulletKnockback = 5f;
 
-        [Tooltip("枪口相对身体的偏移：x 随朝向镜像，y 向上为正。子弹从这里出膛。")]
-        public Vector2 bulletMuzzle = new(0.6f, 0.2f);
-
         [Header("接触伤害")]
         [Tooltip("碰到玩家造成的伤害点数，多久再来一次由 contactInterval 决定。")]
         [Min(0f)]

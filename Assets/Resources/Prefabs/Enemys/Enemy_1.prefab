@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 7
   m_Component:
   - component: {fileID: 6868053385322709067}
-  - component: {fileID: 9161692448869622561}
   - component: {fileID: 629762719684354988}
   - component: {fileID: 6267328372798392623}
   m_Layer: 8
@@ -35,42 +34,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6580779660606322851}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!58 &9161692448869622561
-CircleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5805576137573717}
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 384
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeLayer: 0
-  m_Offset: {x: 0, y: 0}
-  m_Radius: 1
 --- !u!114 &629762719684354988
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -106,7 +69,7 @@ BoxCollider2D:
     m_Bits: 4294967295
   m_ForceReceiveLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 384
   m_ContactCaptureLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -245,7 +208,7 @@ Transform:
   m_GameObject: {fileID: 629518090022594654}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.324, z: 0}
+  m_LocalPosition: {x: 0, y: -0.28, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1173,8 +1136,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6580779660606322851}
   - component: {fileID: 1275713482620411571}
-  - component: {fileID: 9156110330730094551}
-  - component: {fileID: 58551293848153998}
+  - component: {fileID: 6851201882387125847}
+  - component: {fileID: -342813784211894207}
   m_Layer: 8
   m_HasEditorInfo: 1
   m_Name: Enemy_1
@@ -1229,7 +1192,7 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!114 &9156110330730094551
+--- !u!114 &6851201882387125847
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1238,15 +1201,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 8808637644688469431}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 02b6b1e99e081564398f6a96c4e5fb9d, type: 3}
+  m_Script: {fileID: 11500000, guid: 5175c25ba18cd9c42bf58f051df31db5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: 6e2f913aba0c24a4f9162bdb135dbdb2, type: 2}
-  moveMotor: {fileID: 58551293848153998}
-  OpenAI: 1
-  patrolOffset: {x: 0, y: 0}
-  patrolSize: {x: 17.5, y: 1.15}
---- !u!114 &58551293848153998
+  config: {fileID: 11400000, guid: 4dbe9214025402545ad4e79bbb22c1dc, type: 2}
+  moveMotor: {fileID: -342813784211894207}
+  bulletPrefab: {fileID: 6832848243399639401, guid: 9495aa813a51cf4459163c6433126aba, type: 3}
+  bulletMuzzle: {x: 0.52, y: 0}
+  patrolOffset: {x: 1.18, y: 0}
+  patrolSize: {x: 10.88, y: 1.59}
+--- !u!114 &-342813784211894207
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1255,33 +1219,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 8808637644688469431}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d3bf76265ffa61147a57a6e3d1745107, type: 3}
+  m_Script: {fileID: 11500000, guid: cc6f05402ac2c644eafa30e28e875ca6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: 6e2f913aba0c24a4f9162bdb135dbdb2, type: 2}
-  bodyCollider: {fileID: 9161692448869622561}
+  bodyCollider: {fileID: 6267328372798392623}
   feetRef: {fileID: 533421093811800593}
   headRef: {fileID: 5891344537717970208}
   snapToGround: 1
   groundSkin: 0.005
   snapDeadZone: 0.012
   groundProbe:
-    lift: 0.16
-    radius: 0.55
-    distance: 0.13
+    lift: 0.04
+    radius: 0.44
+    distance: 0.04
     maxSlopeAngle: 50
     layerMask:
       serializedVersion: 2
       m_Bits: 64
   wallProbe:
-    origin: {x: 0.7, y: 0}
-    radius: 0.25
-    height: 2
-    distance: 0.1
+    origin: {x: 0.34, y: 0.02}
+    radius: 0.18
+    height: 0.89
+    distance: 0.06
     maxTiltAngle: 30
     layerMask:
       serializedVersion: 2
       m_Bits: 64
-  ledgeAhead: 0.9
-  ledgeDepth: 0.28
-  ledgeRadius: 0.12
+  ledgeAhead: 0.58
+  ledgeDepth: 0.16
+  ledgeRadius: 0.08

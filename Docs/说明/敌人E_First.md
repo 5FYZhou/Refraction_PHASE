@@ -55,7 +55,7 @@
 | 后摇 Recover | 看得见玩家就朝玩家爬，进到 `recoverChaseRadius` 以内就站住；被框边 / 墙 / 悬崖挡住也原地 | `recoverTime` |
 
 - 子弹方向 = 前摇结束那帧的 `玩家位置 − 自身位置` 归一化；玩家正好重合时退回到朝向。
-- 枪口 = 自身位置 + `bulletMuzzle`（x 随朝向镜像）。
+- 枪口 = 自身位置 + 控制器上的 `bulletMuzzle`（x 随朝向镜像，Editor 里画成黄色小圈）。
 - `bulletSpeed = 0` 或预制体没给子弹 → 动作照走，不开火。
 - 后摇爬速用 `recoverChaseSpeed`，**恒速**（`SetVelocityX` 直接写，不走 `moveAcceleration` 逼近，所以起步不会冲一下）；只动 x；不踩地时不动。
 - 后摇爬到 `recoverChaseRadius`（两个身体中心的 x 距离）就停：再爬会把玩家顶走。留 0 就等于一路爬到玩家身上。
@@ -85,7 +85,7 @@
 - 根节点：`Rigidbody2D` + `E_FirstMotor` + `E_FirstController`；`config` 只挂在 `E_FirstController` 上，装配时注入给 `E_FirstMotor`。
 - **`E_FirstConfig.enableGravity` 必须勾上**：刚体的 `gravityScale` 被 `MoveMotor` 强制归零，没开逻辑重力这只虫子就永远悬在半空（离地不掉、踩不到地面判定）。
 - `maxFallSpeed` 建议 20 左右：它同时是下落速度上限，调太小会像羽毛一样飘下来。
-- 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（触发器，**视线范围**）、`AttackCollider`（触发器，接触伤害，可选）。
+- 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（**视线范围**）、`AttackCollider`（接触伤害，可选）。后两根的 Is Trigger 与层由 `EnemyColliderSetup` 在 Awake 里统一设置（探测盒只认 Player 层、攻击盒排除 Enemy 层），预制体上勾什么都会被覆盖。
 - `View` 下建议放 `Bottom` / `Top` 两个空物体：脚底探测、贴地、悬崖探针都以 Bottom 为基准；缺了退回碰撞体底边（贴地有偏差，会打一条 warning）。
 - **`E_FirstMotor` 的 `groundProbe.layerMask` 与 `wallProbe.layerMask` 必须分开勾**：地面填 Ground、墙面填 Wall。留默认 `Everything` 会把玩家与其它敌人的碰撞体当成地面，虫子会踩在别人头上。
 - `bulletPrefab` 留空 = 不开火（前摇与后摇照走）。

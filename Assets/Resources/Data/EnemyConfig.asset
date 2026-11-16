@@ -34,4 +34,3 @@ MonoBehaviour:
   bulletDamage: 1
   bulletKnockback: 0
   fireInterval: 1
-  bulletMuzzle: {x: 1.6, y: 0}

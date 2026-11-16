@@ -294,6 +294,9 @@ namespace Refraction.Presentation.Combat
         {
             if (_sweep != null)
             {
+                // 先停用再销毁：运行期 Destroy 要到帧末才落地，先停用才查不到这层残影
+                _sweep.SetActive(false);
+
                 if (Application.isPlaying) UnityEngine.Object.Destroy(_sweep);
                 else UnityEngine.Object.DestroyImmediate(_sweep);
             }

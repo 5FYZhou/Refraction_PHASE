@@ -49,8 +49,5 @@ namespace Refraction.Data
         [Tooltip("两次开火的最小间隔（秒）：玩家出去再进来不会连着吃两发。\n一次进入视野只开一枪，间隔只用来拦住反复进出。")]
         [Min(0f)]
         public float fireInterval = 1f;
-
-        [Tooltip("枪口相对敌人中心的偏移（单位）：x 取绝对值后朝玩家一侧，y 向上。\n要大于「身体半径 + 子弹半宽」，否则出膛那一帧子弹就压在自己的受击盒里。")]
-        public Vector2 bulletMuzzle = new(1.6f, 0f);
     }
 }

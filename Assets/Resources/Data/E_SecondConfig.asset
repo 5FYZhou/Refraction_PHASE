@@ -39,7 +39,6 @@ MonoBehaviour:
   bulletSpeed: 12
   bulletDamage: 1
   bulletKnockback: 6
-  muzzle: {x: 0, y: 0}
   contactDamage: 1
   contactInterval: 1
   contactKnockback: 8

@@ -38,7 +38,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private GameObject bulletPrefab;
 
-        private const string DetectChildName = "DetectCollider";
+        [Tooltip("出膛点相对敌人的局部偏移（单位，x 按开火方向镜像，y 向上为正）：只在接了子弹预制体时有用，Editor 里会画出这个点。\n要大于「身体半径 + 子弹半宽」，否则出膛那一帧子弹压在自己的受击盒里。")]
+        [SerializeField]
+        private Vector2 bulletMuzzle = new(1.6f, 0f);
+
         private const int EnemyBulletPoolSize = 4;
 
         private readonly EnemySight _sight = new(true);
@@ -53,7 +56,9 @@ namespace Refraction.Presentation.Actor
 
         private void Awake()
         {
-            DetectZoneBinder.Bind(transform, DetectChildName, nameof(EnemyController), _sight);
+            EnemyColliderSetup.Apply(transform);
+
+            DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(EnemyController), _sight);
         }
 
         private void Start()
@@ -86,7 +91,7 @@ namespace Refraction.Presentation.Actor
 
             WorldPolarity world = _root != null ? _root.World : WorldPolarity.White;
 
-            _logic = new EnemyLogic(moveMotor, config, OpenAI, world);
+            _logic = new EnemyLogic(moveMotor, config, OpenAI, world, bulletMuzzle);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
@@ -150,7 +155,9 @@ namespace Refraction.Presentation.Actor
             if (Application.isPlaying && _root != null) EnemyGizmos.DrawArea(_patrolArea, EnemyGizmos.Patrol);
             else EnemyGizmos.DrawZone(transform, patrolOffset, patrolSize, EnemyGizmos.Patrol);
 
-            EnemyGizmos.DrawSight(transform, DetectChildName);
+            EnemyGizmos.DrawSight(transform, EnemyColliderSetup.DetectChildName);
+
+            if (bulletPrefab != null) EnemyGizmos.DrawMuzzle(transform, bulletMuzzle);
         }
 #endif
     }

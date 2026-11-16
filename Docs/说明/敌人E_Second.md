@@ -80,8 +80,8 @@
 
 **白（子弹）**
 1. 前摇 `whiteWindupTime`：朝玩家飞，进到 `whiteChaseRadius` 以内就刹住（速度 `whiteChaseSpeed`），同时跟着玩家转身。
-2. 攻击：前摇结束那一帧锁定方向、**从身体中心**发一颗子弹（`BulletLogic`，复用玩家那套）。
-   - 出膛点是身体中心（`muzzle` 默认 `(0,0)`），不是身体边缘：从身上冒出来，视觉上不会拖出一段穿模。
+2. 攻击：前摇结束那一帧锁定方向、发一颗子弹（`BulletLogic`，复用玩家那套）。
+   - 出膛点 = 身体中心 + 控制器上的 `bulletMuzzle`（默认 `(0,0)`，也就是从身上冒出来，视觉上不拖穿模）；选中控制器时 Editor 会画一个黄色小圈。
    - 这一阶段只有**一帧**（开火即完成），所以白色 `Strike` 的颜色只会闪一下。
 3. 后摇 `whiteRecoverTime`：继续朝同一个半径靠——玩家跑远了就追上去，已经在圈里就不动。
 
@@ -124,8 +124,8 @@
 - `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data` 下新建），装配时注入给 `E_SecondMotor`。
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
-- `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）。
-- **必须有 `DetectCollider` 子物体**（带 Is Trigger 的碰撞体）：`E_SecondController` 在 Awake 里按名字找它并补挂转发器；找不到只警告，这只敌人会永远看不见玩家。
+- `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）；出膛点 `bulletMuzzle` 在同一个组件上（局部坐标，x 随朝向镜像），不进 `E_SecondConfig`。
+- **必须有 `DetectCollider` 子物体**：碰撞体本身的 Is Trigger 与层不用手勾，`EnemyColliderSetup` 会在 Awake 里统一设成「触发器 + 只认 Player(7) 层」；`E_SecondController` 按名字找它并补挂转发器，找不到只警告，这只敌人会永远看不见玩家。
 - 两个框都在 controller 的 Inspector 上画（`EnemyGizmos` 统一绘制）：`patrolOffset / patrolSize` 是绿框，`chaseOffset / chaseSize` 是橙红框，`Reset()` 会给默认值（12×4 与 20×6）；另有一圈青色的 `DetectCollider` 视线范围框。
   - 运行中 gizmo 画的是逻辑里那份快照（`E_SecondLogic.PatrolArea` 与 `E_SecondLogic.ChaseArea`），钉在世界坐标上、不跟敌人走；只有 `Recenter` 成对平移两个框之后才会一起挪。没运行时画的才是 Inspector 参数框。
 - `E_SecondMotor` 的撞墙探针画出两个同心圆（`wallInnerRadius` / `wallOuterRadius`），两圈之间那圈就是撞墙判定区，见下一节。
@@ -157,7 +157,7 @@
 - 视线只认触发器：玩家走出 `DetectCollider` 就不再进攻击（`Visible=false`），但只要还在追击框里就继续追，位置一直是最新的 —— 这只敌人不会像 `Enemy` 那样记住“最后看到的位置”再摸过去。反过来说，第一次发现玩家必须靠视线（`Known` 由 `DetectCollider` 首次进入置位），不会凭空去追框里的陌生人。
 - 两个框都是进游戏那一刻的快照，之后敌人飞多远都不改；只有撞墙重新安家（`Recenter`）那一刻，巡逻框与追击框会一起平移同样距离。
 - 白色攻击的"攻击"阶段只有一帧，颜色是闪一下而不是持续一段。
-- 白子弹从**身体中心**出膛（`muzzle` 默认 `(0,0)`）：触发盒一出生就压在发射者自己的受击盒里，靠 `AttackBox.SetOwnerRoot` 跳过开火者层级，所以不会自伤；把 `muzzle` 调大只影响观感。
+- 白子弹默认从**身体中心**出膛（控制器 `bulletMuzzle` 默认 `(0,0)`）：触发盒一出生就压在发射者自己的受击盒里，靠 `AttackBox.SetOwnerRoot` 跳过开火者层级，所以不会自伤；把 `bulletMuzzle` 调大只影响观感。
 - 黑冲刺不因为距离远而放弃：前摇结束就冲，撞不到就冲满 `blackDashMaxTime` 再进后摇，冲不到就再来一轮。
 - 冲刺撞人的判定读的是**帧首位置**，命中最多晚一帧进后摇；那一步的位移交给物理碰撞拦。
 - 没有死亡演出：血打空直接销毁。

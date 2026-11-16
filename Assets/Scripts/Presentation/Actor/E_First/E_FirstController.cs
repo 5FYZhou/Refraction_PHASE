@@ -26,6 +26,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private GameObject bulletPrefab;
 
+        [Tooltip("出膛点相对身体的局部偏移（单位，x 按开火方向镜像，y 向上为正）：只在接了子弹预制体时有用，Editor 里会画出这个点。")]
+        [SerializeField]
+        private Vector2 bulletMuzzle = new(0.6f, 0.2f);
+
         [Tooltip("巡逻范围相对敌人的偏移（局部坐标）：编辑器里跟着敌人显示，运行时以进入游戏那一刻的站位固化成世界坐标。")]
         [SerializeField]
         private Vector2 patrolOffset;
@@ -35,7 +39,6 @@ namespace Refraction.Presentation.Actor
         private Vector2 patrolSize;
 
         private const string ViewChildName = "View";
-        private const string DetectChildName = "DetectCollider";
         private const int BulletPoolSize = 4;
 
         private readonly EnemySight _sight = new(false);
@@ -55,7 +58,8 @@ namespace Refraction.Presentation.Actor
         private void Awake()
         {
             CacheView();
-            DetectZoneBinder.Bind(transform, DetectChildName, nameof(E_FirstController), _sight);
+            EnemyColliderSetup.Apply(transform);
+            DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(E_FirstController), _sight);
         }
 
         private void Start()
@@ -88,7 +92,7 @@ namespace Refraction.Presentation.Actor
 
             WorldPolarity world = _root != null ? _root.World : WorldPolarity.White;
 
-            _logic = new E_FirstLogic(moveMotor, config, true, world);
+            _logic = new E_FirstLogic(moveMotor, config, true, world, bulletMuzzle);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
@@ -176,7 +180,9 @@ namespace Refraction.Presentation.Actor
             if (Application.isPlaying && _root != null) EnemyGizmos.DrawArea(_patrolArea, EnemyGizmos.Patrol);
             else EnemyGizmos.DrawZone(transform, patrolOffset, patrolSize, EnemyGizmos.Patrol);
 
-            EnemyGizmos.DrawSight(transform, DetectChildName);
+            EnemyGizmos.DrawSight(transform, EnemyColliderSetup.DetectChildName);
+
+            if (bulletPrefab != null) EnemyGizmos.DrawMuzzle(transform, bulletMuzzle);
         }
 #endif
     }

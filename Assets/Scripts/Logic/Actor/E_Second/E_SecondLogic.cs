@@ -13,6 +13,7 @@ namespace Refraction.Logic.Actor
         private readonly E_SecondConfig _config;
         private readonly E_SecondMoveGroup _moveGroup;
         private readonly System.Random _rng = new();
+        private readonly Vector2 _muzzle;
 
         private EnemyTargetInfo _target;
         private EnemyArea _patrolArea;
@@ -24,12 +25,14 @@ namespace Refraction.Logic.Actor
             in EnemyArea patrolArea,
             in EnemyArea chaseArea,
             bool black,
-            bool aiEnabled = true)
+            bool aiEnabled = true,
+            Vector2 muzzle = default)
             : base(motor, config, aiEnabled, black ? WorldPolarity.Black : WorldPolarity.White)
         {
             _config = config;
             _patrolArea = patrolArea;
             _chaseArea = chaseArea;
+            _muzzle = muzzle;
             _moveGroup = new E_SecondMoveGroup(this, motor, config);
         }
 
@@ -89,6 +92,9 @@ namespace Refraction.Logic.Actor
 
             return Mathf.Lerp(min, max, (float)_rng.NextDouble());
         }
+
+        public Vector2 Muzzle(Vector2 pos, int sign) =>
+            pos + new Vector2(Mathf.Abs(_muzzle.x) * sign, _muzzle.y);
 
         public void FireWhite(Vector2 origin, Vector2 direction)
         {

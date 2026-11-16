@@ -13,14 +13,16 @@ namespace Refraction.Logic.Actor
         private readonly EnemyConfig _config;
         private readonly EnemyMoveGroup _moveGroup;
         private readonly Cooldown _fireCooldown = new();
+        private readonly Vector2 _muzzle;
 
         private EnemyArea _patrolArea;
         private bool _visibleLast;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White)
+        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White, Vector2 muzzle = default)
             : base(motor, config, aiEnabled, world)
         {
             _config = config;
+            _muzzle = muzzle;
             _moveGroup = new EnemyMoveGroup(this, motor, config);
         }
 
@@ -80,7 +82,7 @@ namespace Refraction.Logic.Actor
                 ? (dx > 0f ? 1 : -1)
                 : (ctx.WorldInfo.Face >= 0 ? 1 : -1);
 
-            Vector2 muzzle = origin + new Vector2(sign * Mathf.Abs(_config.bulletMuzzle.x), _config.bulletMuzzle.y);
+            Vector2 muzzle = origin + new Vector2(sign * Mathf.Abs(_muzzle.x), _muzzle.y);
 
             Launcher.Launch(new BulletSpawn(
                 muzzle,

@@ -33,7 +33,6 @@ MonoBehaviour:
   bulletSpeed: 10
   bulletDamage: 1
   bulletKnockback: 5
-  bulletMuzzle: {x: 0.6, y: 0.2}
   contactDamage: 1
   contactInterval: 1
   contactKnockback: 7

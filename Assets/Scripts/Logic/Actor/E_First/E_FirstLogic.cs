@@ -12,13 +12,15 @@ namespace Refraction.Logic.Actor
     {
         private readonly E_FirstConfig _config;
         private readonly E_FirstMoveGroup _moveGroup;
+        private readonly Vector2 _muzzle;
 
         private EnemyArea _activeArea;
 
-        public E_FirstLogic(IMoveMotor motor, E_FirstConfig config, bool aiEnabled, WorldPolarity world)
+        public E_FirstLogic(IMoveMotor motor, E_FirstConfig config, bool aiEnabled, WorldPolarity world, Vector2 muzzle = default)
             : base(motor, config, aiEnabled, world)
         {
             _config = config;
+            _muzzle = muzzle;
             _moveGroup = new E_FirstMoveGroup(this, motor, config);
         }
 
@@ -49,7 +51,7 @@ namespace Refraction.Logic.Actor
 
         /// <summary>枪口：x 随朝向镜像，往左射时不能从背后冒出来</summary>
         public Vector2 Muzzle(Vector2 pos, int sign) =>
-            pos + new Vector2(Mathf.Abs(_config.bulletMuzzle.x) * sign, _config.bulletMuzzle.y);
+            pos + new Vector2(Mathf.Abs(_muzzle.x) * sign, _muzzle.y);
 
         public void Fire(Vector2 origin, Vector2 direction)
         {
