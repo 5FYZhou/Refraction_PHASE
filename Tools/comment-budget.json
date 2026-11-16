@@ -17,7 +17,6 @@
     "Assets/Scripts/Logic/Actor/Enemy/EnemyMoveGroup.cs": 214,
     "Assets/Scripts/Logic/Actor/Enemy/EnemyStateTag.cs": 66,
     "Assets/Scripts/Logic/Actor/Enemy/EnemyTargetInfo.cs": 96,
-    "Assets/Scripts/Logic/Actor/Enemy/State/EnemyAttackState.cs": 332,
     "Assets/Scripts/Logic/Actor/Enemy/State/EnemyChaseState.cs": 199,
     "Assets/Scripts/Logic/Actor/Enemy/State/EnemyPatrolState.cs": 184,
     "Assets/Scripts/Logic/Actor/HurtState.cs": 113,
@@ -79,7 +78,6 @@
     "Assets/Scripts/Presentation/UI/BasePanel.cs": 103,
     "Assets/Scripts/Presentation/UI/Panel/DebugPanel.cs": 326,
     "Assets/Scripts/Presentation/UI/Panel/GameplayPanel.cs": 197,
-    "Assets/Scripts/Presentation/UI/Panel/PlayerDebugSnapshot.cs": 193,
     "Assets/Scripts/Presentation/UI/UIMgr.cs": 479,
     "Assets/Scripts/Presentation/UI/UIStyle.cs": 113
   },

@@ -38,7 +38,6 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 patrolSize;
 
-        private const string ViewChildName = "View";
         private const int BulletPoolSize = 4;
 
         private readonly EnemySight _sight = new(false);
@@ -49,7 +48,7 @@ namespace Refraction.Presentation.Actor
         private BulletLogic _bullets;
         private BulletField _bulletField;
 
-        private SpriteRenderer[] _viewRenderers;
+        private EnemyTint _tint;
         private EnemyVisual _visual = (EnemyVisual)(-1);
         private bool _visualBlack;
 
@@ -57,7 +56,7 @@ namespace Refraction.Presentation.Actor
 
         private void Awake()
         {
-            CacheView();
+            _tint = new EnemyTint(transform);
             EnemyColliderSetup.Apply(transform);
             DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(E_FirstController), _sight);
         }
@@ -103,7 +102,7 @@ namespace Refraction.Presentation.Actor
 
             _visual = _logic.Visual;
             _visualBlack = _logic.Black;
-            ApplyColor(EnemyVisualColors.Of(EnemyVisualConfig.Default, _visual, _visualBlack));
+            _tint.Apply(_visual, _visualBlack);
 
             _attached = true;
         }
@@ -135,19 +134,7 @@ namespace Refraction.Presentation.Actor
 
             _visual = visual;
             _visualBlack = black;
-            ApplyColor(EnemyVisualColors.Of(EnemyVisualConfig.Default, visual, black));
-        }
-
-        private void ApplyColor(Color color)
-        {
-            for (int i = 0; i < _viewRenderers.Length; i++) _viewRenderers[i].color = color;
-        }
-
-        private void CacheView()
-        {
-            Transform view = transform.Find(ViewChildName);
-
-            _viewRenderers = (view != null ? view : transform).GetComponentsInChildren<SpriteRenderer>(true);
+            _tint.Apply(visual, black);
         }
 
         private void AttachBullets()

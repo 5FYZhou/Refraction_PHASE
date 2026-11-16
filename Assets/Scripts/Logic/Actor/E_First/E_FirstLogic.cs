@@ -26,7 +26,21 @@ namespace Refraction.Logic.Actor
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        public EnemyVisual Visual => _moveGroup.Visual;
+        public EnemyVisual Visual
+        {
+            get
+            {
+                if (CurrentTag != EnemyStateTag.Attack) return EnemyVisual.Patrol;
+
+                switch (_moveGroup.Phase)
+                {
+                    case E_FirstAttackPhase.Windup: return EnemyVisual.Windup;
+                    case E_FirstAttackPhase.Strike: return EnemyVisual.Strike;
+                }
+
+                return EnemyVisual.Recover;
+            }
+        }
 
         /// <summary>本帧生效的巡逻范围：无界只表示没画框，跑到框外也照旧拿它掉头</summary>
         public EnemyArea PatrolArea => _activeArea;

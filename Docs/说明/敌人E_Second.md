@@ -105,20 +105,19 @@
 - `contactInterval = 0` 表示不设间隔：每个物理帧都试一次，实际节奏由玩家的无敌窗决定，不建议。
 - 伤害源是 `DamageSource.Contact`，`E_SecondLogic.TakeDamage` 直接丢弃这类伤害 —— 敌人之间挤在一起不会互相掉血。
 
-## 八、颜色（`EnemyVisualConfig` 资产，与敌人 1 共用一套）
+## 八、颜色（平时用初始色，只有攻击三段读资产）
 
-色值在 `Assets/Resources/Data/EnemyVisualConfig.asset` 里（字段名 `patrolWhite` / `chaseBlack` 这种），三只敌人共用一份；`EnemyVisualColors.Of` 只做「展示态 × 极性 → 字段」的映射。资产没建时用脚本默认值，就是下表。
+平时不配色：`View` 里摆的就是最终色，世界反转为黑时 `rgb = 1 - rgb` 取反（alpha 不动），回白世界还原。初始色由 `EnemyTint` 在 Awake 缓存一次，缓存的是「设计态」颜色，反复反转不会越取越偏。
+
+只有攻击三段查 `Assets/Resources/Data/Enemy/EnemyVisualConfig.asset`（与另外两只共用）：
 
 | 展示态 | 白 | 黑 |
 | --- | --- | --- |
-| 巡逻 | 青绿 | 紫 |
-| 追击 | 橙 | 暗金 |
-| 返回 | 紫 | 深紫 |
-| 前摇 | 橙 | 暗红 |
-| 攻击 | 近白 | 深灰 |
-| 后摇 | 灰蓝 | 墨青 |
+| 前摇 | `windupWhite` 橙 | `windupBlack` 暗红 |
+| 攻击 | `strikeWhite` 近白 | `strikeBlack` 深灰 |
+| 后摇 | `recoverWhite` 灰蓝 | `recoverBlack` 墨青 |
 
-只在该变的时候写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质。`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
+巡逻 / 追击 / 返回不查资产，用初始色（黑世界取反）。只在展示态或极性变化时写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质；`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
 
 ## 九、预制体接线（本次只写了脚本）
 

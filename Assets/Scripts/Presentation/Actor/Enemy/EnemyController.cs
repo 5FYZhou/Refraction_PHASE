@@ -54,8 +54,13 @@ namespace Refraction.Presentation.Actor
 
         private EnemyArea _patrolArea;
 
+        private EnemyTint _tint;
+        private EnemyVisual _visual = (EnemyVisual)(-1);
+        private bool _visualBlack;
+
         private void Awake()
         {
+            _tint = new EnemyTint(transform);
             EnemyColliderSetup.Apply(transform);
 
             DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(EnemyController), _sight);
@@ -100,6 +105,10 @@ namespace Refraction.Presentation.Actor
 
             AttachBullets();
 
+            _visual = _logic.Visual;
+            _visualBlack = _logic.Black;
+            _tint.Apply(_visual, _visualBlack);
+
             _attached = true;
         }
 
@@ -121,8 +130,22 @@ namespace Refraction.Presentation.Actor
 
             _bullets?.Tick(deltaTime);
 
+            TickVisual();
+
             // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
             if (!_logic.IsAlive) Destroy(gameObject);
+        }
+
+        private void TickVisual()
+        {
+            EnemyVisual visual = _logic.Visual;
+            bool black = _logic.Black;
+
+            if (visual == _visual && black == _visualBlack) return;
+
+            _visual = visual;
+            _visualBlack = black;
+            _tint.Apply(visual, black);
         }
 
         private void AttachBullets()

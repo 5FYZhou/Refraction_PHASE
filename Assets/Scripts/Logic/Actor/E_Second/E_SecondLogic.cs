@@ -38,7 +38,27 @@ namespace Refraction.Logic.Actor
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        public EnemyVisual Visual => _moveGroup.Visual;
+        public EnemyVisual Visual
+        {
+            get
+            {
+                switch (CurrentTag)
+                {
+                    case EnemyStateTag.Chase: return EnemyVisual.Chase;
+                    case EnemyStateTag.Return: return EnemyVisual.Return;
+                    case EnemyStateTag.Attack:
+                        switch (_moveGroup.Phase)
+                        {
+                            case E_SecondAttackPhase.Windup: return EnemyVisual.Windup;
+                            case E_SecondAttackPhase.Strike: return EnemyVisual.Strike;
+                        }
+
+                        return EnemyVisual.Recover;
+                }
+
+                return EnemyVisual.Patrol;
+            }
+        }
 
         /// <summary>巡逻范围：也是返回态的落点</summary>
         public EnemyArea PatrolArea => _patrolArea;

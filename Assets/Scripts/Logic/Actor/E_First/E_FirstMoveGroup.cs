@@ -25,19 +25,8 @@ namespace Refraction.Logic.Actor
         public EnemyStateTag Current =>
             machine.CurrentState == null ? EnemyStateTag.None : machine.CurrentState.Tag;
 
-        public EnemyVisual Visual
-        {
-            get
-            {
-                switch (Current)
-                {
-                    case EnemyStateTag.Patrol: return EnemyVisual.Patrol;
-                    case EnemyStateTag.Attack: return AttackVisual;
-                }
-
-                return EnemyVisual.Patrol;
-            }
-        }
+        /// <summary>攻击内部走到哪一段：状态组只管动作进度，配色映射归 E_FirstLogic</summary>
+        public E_FirstAttackPhase Phase => _attack.Phase;
 
         public void Tick(in LogicContext ctx) => TickStates(ctx);
 
@@ -56,19 +45,5 @@ namespace Refraction.Logic.Actor
         }
 
         protected override bool TryCommitPreempt(in LogicContext ctx, EnemyStateTag target) => true;
-
-        private EnemyVisual AttackVisual
-        {
-            get
-            {
-                switch (_attack.Phase)
-                {
-                    case E_FirstAttackPhase.Windup: return EnemyVisual.Windup;
-                    case E_FirstAttackPhase.Strike: return EnemyVisual.Strike;
-                }
-
-                return EnemyVisual.Recover;
-            }
-        }
     }
 }
