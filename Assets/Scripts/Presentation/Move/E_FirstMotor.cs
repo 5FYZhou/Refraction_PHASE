@@ -93,7 +93,10 @@ namespace Refraction.Presentation
 
             CacheRefs();
             CacheBody();
+        }
 
+        protected override void OnConfigBound()
+        {
             if (!Config.enableGravity)
             {
                 Debug.LogWarning($"[E_FirstMotor] {name} 的配置没勾 enableGravity：刚体重力已被强制为 0，虫子离地后不会下落。");

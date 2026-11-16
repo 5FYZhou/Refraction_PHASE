@@ -46,8 +46,11 @@ namespace Refraction.Logic.Actor
         public MovementStateTag CurrentTag =>
             machine.CurrentState == null ? MovementStateTag.None : machine.CurrentState.Tag;
 
-        /// <summary>黑突进期间由 PlayerLogic 每帧提交：压住整组，不判不写，解除后照常推进</summary>
+        /// <summary>黑突进期间由 PlayerLogic 每帧提交：压住整组，不判不写</summary>
         public bool Blocked { get; set; }
+
+        /// <summary>后摇：只挡跳跃与冲刺</summary>
+        public bool ActionsBlocked { get; set; }
 
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {
@@ -88,6 +91,8 @@ namespace Refraction.Logic.Actor
         protected override bool TryDecidePreempt(in LogicContext ctx, out MovementStateTag target)
         {
             target = EmptyTag;
+
+            if (ActionsBlocked) return false;
 
             if (CanDash(ctx))
             {

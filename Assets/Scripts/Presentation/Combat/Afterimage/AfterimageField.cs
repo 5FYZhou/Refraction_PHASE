@@ -378,11 +378,11 @@ namespace Refraction.Presentation.Combat
                 if (hit.transform.IsChildOf(_playerRoot)) continue;
 
                 HurtBox box = hit.GetComponent<HurtBox>();
-                if (box == null || box.Attackable == null) continue;
+                if (box == null || box.Hurtable == null) continue;
                 if (!_hitBoxes.Add(box)) continue;
 
                 Damage damage = new(_config.afterimageLinkDamage, DamageSource.AfterimageLink);
-                if (!box.Attackable.TakeDamage(in damage)) continue;
+                if (!box.Hurtable.TakeDamage(in damage)) continue;
 
                 EventBus<AfterimageLinkHit>.Publish(new(hit.bounds.center, _config.afterimageLinkDamage));
             }

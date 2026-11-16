@@ -11,9 +11,7 @@ namespace Refraction.Presentation
     [RequireComponent(typeof(Rigidbody2D))]
     public abstract class MoveMotor : MonoBehaviour, IMoveMotor
     {
-        [Tooltip("参数资产。移动速度、重力、冲刺等数值都从这里读，运行时只读不改。")]
-        [SerializeField]
-        private CharacterConfig config;
+        private CharacterConfig _config;
 
         private Rigidbody2D _rb;
         private MoveLedger _ledger;
@@ -23,7 +21,7 @@ namespace Refraction.Presentation
         private MoveGates _gates;
         private bool _hasGates;
 
-        protected CharacterConfig Config => config;
+        protected CharacterConfig Config => _config;
 
         /// <summary>已初始化为 Dynamic 且 gravityScale = 0 的刚体：重力由账本统一施加，物理重力再叠一层跳跃高度就失控</summary>
         protected Rigidbody2D Body => _rb;
@@ -31,7 +29,6 @@ namespace Refraction.Presentation
         /// <summary>站立碰撞体高度（不含运行时压缩）</summary>
         public abstract float BodyHeight { get; }
 
-        /// <summary>脚底到枢轴的高度差</summary>
         public abstract float FeetOffsetY { get; }
 
         /// <summary>身体高度倍率（1=站立），脚底不动</summary>
@@ -71,15 +68,25 @@ namespace Refraction.Presentation
 
         protected virtual void Awake()
         {
-            Require.Assigned(config, nameof(MoveMotor), nameof(config));
-
             InitRb();
 
             _ledger = new MoveLedger(
                 readVelocity: () => _rb.velocity,
                 writeVelocity: v => _rb.velocity = v);
-            _ledger.Configure(config);
+
+            if (_config != null) _ledger.Configure(_config);
         }
+
+        /// <summary>参数由 Controller 在装配时注入，Awake 时还读不到</summary>
+        public void BindConfig(CharacterConfig config)
+        {
+            _config = Require.Assigned(config, nameof(MoveMotor), nameof(config));
+
+            if (_ledger != null) _ledger.Configure(_config);
+            OnConfigBound();
+        }
+
+        protected virtual void OnConfigBound() { }
 
         private void InitRb()
         {

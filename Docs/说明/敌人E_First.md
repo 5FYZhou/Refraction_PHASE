@@ -82,7 +82,7 @@
 
 ## 八、预制体与配置（脚本之外要做的事）
 
-- 根节点：`Rigidbody2D` + `E_FirstMotor` + `E_FirstController`，两个组件的 `config` 指向同一份 `E_FirstConfig`。
+- 根节点：`Rigidbody2D` + `E_FirstMotor` + `E_FirstController`；`config` 只挂在 `E_FirstController` 上，装配时注入给 `E_FirstMotor`。
 - **`E_FirstConfig.enableGravity` 必须勾上**：刚体的 `gravityScale` 被 `MoveMotor` 强制归零，没开逻辑重力这只虫子就永远悬在半空（离地不掉、踩不到地面判定）。
 - `maxFallSpeed` 建议 20 左右：它同时是下落速度上限，调太小会像羽毛一样飘下来。
 - 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（触发器，**视线范围**）、`AttackCollider`（触发器，接触伤害，可选）。

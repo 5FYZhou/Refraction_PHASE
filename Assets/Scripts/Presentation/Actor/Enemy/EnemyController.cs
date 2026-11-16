@@ -80,6 +80,8 @@ namespace Refraction.Presentation.Actor
             Require.Assigned(moveMotor, nameof(EnemyController), nameof(moveMotor));
             Require.Assigned(config, nameof(EnemyController), nameof(config));
 
+            moveMotor.BindConfig(config);
+
             _root ??= GameRoot.Instance;
 
             WorldPolarity world = _root != null ? _root.World : WorldPolarity.White;

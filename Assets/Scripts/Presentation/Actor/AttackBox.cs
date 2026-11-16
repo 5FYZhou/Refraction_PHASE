@@ -73,7 +73,7 @@ namespace Refraction.Presentation.Actor
                 }
             }
 
-            if (!target.Attackable.TakeDamage(in damage)) return;
+            if (!target.Hurtable.TakeDamage(in damage)) return;
 
             if (interval != null) interval.MarkHit(Time.fixedTime);
             if (Attacker is IHitLanded landed) landed.OnHitLanded();

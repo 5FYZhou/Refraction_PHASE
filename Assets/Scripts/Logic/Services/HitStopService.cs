@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Service
 {
-    /// <summary>顿帧：收到 HitStopRequested 就冻结游戏，攒够时长自己解冻</summary>
+    /// <summary>顿帧：收到 RequestHitStop 就冻结游戏，攒够时长自己解冻</summary>
     /// <remarks>计时只能用未缩放时长——冻结期间 deltaTime 恒为 0，用它就永远解不开；
     /// 同一 owner 重复 PushFreeze 是 no-op，所以多次请求只延长计时、不会叠出第二层冻结</remarks>
     public sealed class HitStopService : IService
@@ -25,12 +25,12 @@ namespace Refraction.Logic.Service
         public void Init()
         {
             _remaining = 0f;
-            EventBus<HitStopRequested>.Subscribe(OnRequested);
+            EventBus<RequestHitStop>.Subscribe(OnRequestHitStop);
         }
 
         public void Dispose()
         {
-            EventBus<HitStopRequested>.Unsubscribe(OnRequested);
+            EventBus<RequestHitStop>.Unsubscribe(OnRequestHitStop);
 
             _remaining = 0f;
             _pause.PopFreeze(this);
@@ -56,9 +56,8 @@ namespace Refraction.Logic.Service
             if (seconds > _remaining) _remaining = seconds;
 
             _pause.PushFreeze(this);
-            Debug.Log("request HitStop " +  seconds);
         }
 
-        private void OnRequested(HitStopRequested evt) => Request(evt.seconds);
+        private void OnRequestHitStop(RequestHitStop evt) => Request(evt.seconds);
     }
 }

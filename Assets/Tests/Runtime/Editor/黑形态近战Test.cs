@@ -10,7 +10,8 @@ using UnityEngine;
 
 namespace Refraction.Tests
 {
-    public sealed class 黑攻击判定Test
+    /// <summary>黑形态近战判定：普攻与突进共用 BlackDash 下那三只盒，但各读各的伤害、击退与反冲</summary>
+    public sealed class 黑形态近战Test
     {
         private const float Dt = 0.02f;
 
@@ -20,15 +21,13 @@ namespace Refraction.Tests
         public void 建立参数()
         {
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
-            _config.blackAttackDamage = 7f;
-            _config.blackAttackKnockback = 3f;
-            _config.blackAttackTime = 0.2f;
-            _config.blackAttackMissRecoilAhead = 1f;
-            _config.blackAttackMissRecoilUp = 3f;
-            _config.blackAttackMissRecoilDown = 5f;
-            _config.blackAttackHitRecoilAhead = 2f;
-            _config.blackAttackHitRecoilUp = 10f;
-            _config.blackAttackHitRecoilDown = 16f;
+            _config.flatAttackDamage = 11f;
+            _config.flatAttackKnockback = 6f;
+            _config.flatAttackTime = 0.2f;
+            _config.flatAttackMissRecoil = 1f;
+            _config.flatAttackHitRecoil = 2f;
+            _config.blackDashDamage = 7f;
+            _config.blackDashKnockback = 3f;
         }
 
         [TearDown]
@@ -52,21 +51,7 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 进本体_点亮对应判定_出本体_全部关掉()
-        {
-            记判定的表现记录 view = new();
-            BlackAttackState state = new(_config, view);
-
-            state.Enter(Ctx(1f));
-            Assert.AreEqual(BlackAttackKind.Up, view.BeginKind, "按住上时点亮斜上判定");
-            Assert.AreEqual(BlackAttackKind.Up, state.Kind, "状态自己也要记下本次判定");
-
-            state.Exit();
-            Assert.IsTrue(view.Ended, "离开本体要关掉攻击盒，否则站着不动也会一直打人");
-        }
-
-        [Test]
-        public void 三个攻击盒_只点亮命中的那一个()
+        public void 普攻只点亮正前方_突进只点亮斜上斜下()
         {
             using 层级场景 scene = new();
 
@@ -74,43 +59,45 @@ namespace Refraction.Tests
 
             AssertAllOff(scene, "构造完只留空判，不能自带来伤害");
 
-            view.Begin(BlackAttackKind.Ahead);
-            Assert.IsTrue(scene.Ahead.activeSelf, "平推只开 AheadCollider");
-            AssertAllOff(scene, "平推时另外两只必须关着", scene.Ahead);
+            view.BeginFlat();
+            Assert.IsTrue(scene.Ahead.activeSelf, "普攻只开 AheadCollider");
+            AssertAllOff(scene, "普攻时另外两只必须关着", scene.Ahead);
 
-            view.Begin(BlackAttackKind.Up);
-            Assert.IsTrue(scene.Up.activeSelf, "斜上只开 UpCollider");
-            AssertAllOff(scene, "斜上时另外两只必须关着", scene.Up);
+            view.BeginDash(BlackAttackKind.Up);
+            Assert.IsTrue(scene.Up.activeSelf, "上突进只开 UpCollider");
+            AssertAllOff(scene, "上突进时另外两只必须关着", scene.Up);
 
-            view.Begin(BlackAttackKind.Down);
-            Assert.IsTrue(scene.Down.activeSelf, "斜下只开 DownCollider");
-            AssertAllOff(scene, "斜下时另外两只必须关着", scene.Down);
+            view.BeginDash(BlackAttackKind.Down);
+            Assert.IsTrue(scene.Down.activeSelf, "下突进只开 DownCollider");
+            AssertAllOff(scene, "下突进时另外两只必须关着", scene.Down);
 
             view.End();
             AssertAllOff(scene, "结束后三只都要关");
         }
 
         [Test]
-        public void 伤害_走配置_方向随判定与朝向()
+        public void 伤害_普攻与突进各读各的数值_方向随判定与朝向()
         {
             using 层级场景 scene = new();
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
 
-            view.Begin(BlackAttackKind.Ahead);
-            Damage ahead = view.ProduceDamage();
-            Assert.AreEqual(7f, ahead.Amount, "伤害取 blackAttackDamage");
-            Assert.AreEqual(3f, ahead.KnockbackSpeed, "击退取 blackAttackKnockback");
-            Assert.AreEqual(1f, ahead.Direction.x, 1e-4f, "平推沿朝向");
-            Assert.AreEqual(0f, ahead.Direction.y, 1e-4f, "平推不带竖直分量");
+            view.BeginFlat();
+            Damage flat = view.ProduceDamage();
+            Assert.AreEqual(11f, flat.Amount, "普攻伤害取 flatAttackDamage");
+            Assert.AreEqual(6f, flat.KnockbackSpeed, "普攻击退取 flatAttackKnockback");
+            Assert.AreEqual(1f, flat.Direction.x, 1e-4f, "平推沿朝向");
+            Assert.AreEqual(0f, flat.Direction.y, 1e-4f, "平推不带竖直分量");
 
-            view.Begin(BlackAttackKind.Up);
+            view.BeginDash(BlackAttackKind.Up);
             Damage up = view.ProduceDamage();
-            Assert.Greater(up.Direction.y, 0f, "斜上判定要往上打");
+            Assert.AreEqual(7f, up.Amount, "突进伤害取 blackDashDamage");
+            Assert.AreEqual(3f, up.KnockbackSpeed, "突进击退取 blackDashKnockback");
+            Assert.Greater(up.Direction.y, 0f, "斜上突进要往上打");
             Assert.AreEqual(0.70710678f, up.Direction.x, 1e-4f, "斜上横向分量为 cos45");
 
-            view.Begin(BlackAttackKind.Down);
+            view.BeginDash(BlackAttackKind.Down);
             Damage down = view.ProduceDamage();
-            Assert.Less(down.Direction.y, 0f, "斜下判定要往下打");
+            Assert.Less(down.Direction.y, 0f, "斜下突进要往下打");
         }
 
         [Test]
@@ -119,11 +106,11 @@ namespace Refraction.Tests
             using 层级场景 scene = new();
             BlackAttackView view = new(scene.Root.transform, _config, () => -1);
 
-            view.Begin(BlackAttackKind.Ahead);
+            view.BeginFlat();
             Assert.AreEqual(-1f, view.ProduceDamage().Direction.x, 1e-4f, "朝左时平推要朝左");
 
-            view.Begin(BlackAttackKind.Up);
-            Assert.Less(view.ProduceDamage().Direction.x, 0f, "朝左时斜上也要朝左");
+            view.BeginDash(BlackAttackKind.Up);
+            Assert.Less(view.ProduceDamage().Direction.x, 0f, "朝左时斜上突进也要朝左");
         }
 
         [Test]
@@ -136,7 +123,7 @@ namespace Refraction.Tests
             AssertRange(scene.Up, "斜上盒要能看见范围");
             AssertRange(scene.Down, "斜下盒要能看见范围");
 
-            view.Begin(BlackAttackKind.Up);
+            view.BeginDash(BlackAttackKind.Up);
 
             Transform range = scene.Up.transform.Find("Range");
             Assert.IsTrue(range.gameObject.activeInHierarchy, "盒点亮时色块跟着出现");
@@ -203,24 +190,14 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 空挥_按判定取空挥那份并反向()
+        public void 空挥_沿朝向反向并直接写速度()
         {
             记后坐力的电机 motor = new();
-            BlackAttackState state = new(_config, null, motor, null);
+            FlatAttackState state = new(_config, null, motor, null);
 
-            state.Enter(Ctx(1f));
-            Assert.AreEqual(0f, motor.Total.x, 1e-3f, "上劈只推竖直，横向必须为 0");
-            Assert.AreEqual(-3f, motor.Total.y, 1e-3f, "上劈空挥把玩家往下推");
-
-            motor.Reset();
-            state.Enter(Ctx(-1f));
-            Assert.AreEqual(0f, motor.Total.x, 1e-3f, "下劈只推竖直，横向必须为 0");
-            Assert.AreEqual(5f, motor.Total.y, 1e-3f, "下劈空挥把玩家往上推");
-
-            motor.Reset();
             state.Enter(Ctx(0f));
             Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "平劈空挥沿朝向反向");
-            Assert.AreEqual(0f, motor.Total.y, 1e-3f, "平劈空挥不带竖直分量");
+            Assert.AreEqual(0f, motor.Total.y, 1e-3f, "普攻不带竖直反冲");
             Assert.AreEqual(0, motor.ExternalCalls, "反冲力直接写速度，不走会衰减的外部速度");
         }
 
@@ -228,7 +205,7 @@ namespace Refraction.Tests
         public void 命中_把空挥那份换成命中那份()
         {
             记后坐力的电机 motor = new();
-            BlackAttackState state = new(_config, null, motor, null);
+            FlatAttackState state = new(_config, null, motor, null);
 
             state.Enter(Ctx(0f));
             Assert.AreEqual(-1f, motor.Total.x, 1e-3f, "开打先给空挥那份");
@@ -238,20 +215,13 @@ namespace Refraction.Tests
 
             state.Tick(Ctx(Dt));
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "下一帧 tick 里重写一次，速度等于命中那份，不是空挥 + 命中");
-
-            motor.Reset();
-            state.Enter(Ctx(1f));
-            state.NotifyHit();
-            state.Tick(Ctx(Dt));
-            Assert.AreEqual(0f, motor.Total.x, 1e-3f, "上劈命中换成命中那份，横向仍为 0");
-            Assert.AreEqual(-10f, motor.Total.y, 1e-3f, "上劈命中仍往下推");
         }
 
         [Test]
         public void 反冲力_朝左时镜像()
         {
             记后坐力的电机 motor = new();
-            BlackAttackState state = new(_config, null, motor, null);
+            FlatAttackState state = new(_config, null, motor, null);
 
             state.Enter(Ctx(0f, 0f, -1));
             Assert.AreEqual(1f, motor.Total.x, 1e-3f, "朝左平劈空挥要往右后推");
@@ -259,18 +229,13 @@ namespace Refraction.Tests
             state.NotifyHit();
             state.Tick(Ctx(Dt));
             Assert.AreEqual(2f, motor.Total.x, 1e-3f, "命中那份同样按朝向镜像");
-
-            motor.Reset();
-            state.Enter(Ctx(1f, 0f, -1));
-            Assert.AreEqual(0f, motor.Total.x, 1e-3f, "上劈朝左也不带横向分量");
-            Assert.AreEqual(-3f, motor.Total.y, 1e-3f, "上劈朝左仍是竖直往下推");
         }
 
         [Test]
         public void 反冲力_一次挥击只换一次()
         {
             记后坐力的电机 motor = new();
-            BlackAttackState state = new(_config, null, motor, null);
+            FlatAttackState state = new(_config, null, motor, null);
 
             state.Enter(Ctx(0f));
             state.NotifyHit();
@@ -286,7 +251,7 @@ namespace Refraction.Tests
         public void 反冲力_出本体后迟到的命中不再换()
         {
             记后坐力的电机 motor = new();
-            BlackAttackState state = new(_config, null, motor, null);
+            FlatAttackState state = new(_config, null, motor, null);
 
             state.Enter(Ctx(0f));
             state.Exit();
@@ -302,7 +267,7 @@ namespace Refraction.Tests
 
             记后坐力的电机 motor = new();
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
-            BlackAttackState state = new(_config, view, motor, null);
+            FlatAttackState state = new(_config, view, motor, null);
             view.SetHitHandler(state.NotifyHit);
 
             state.Enter(Ctx(0f));
@@ -322,7 +287,7 @@ namespace Refraction.Tests
 
             记后坐力的电机 motor = new();
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
-            BlackAttackState state = new(_config, view, motor, null);
+            FlatAttackState state = new(_config, view, motor, null);
             view.SetHitHandler(state.NotifyHit);
 
             state.Enter(Ctx(0f));
@@ -334,6 +299,39 @@ namespace Refraction.Tests
             Assert.AreEqual(-2f, motor.Total.x, 1e-3f, "没扣到血也是砍在实体上，反冲不该缩回空挥那份");
         }
 
+        [Test]
+        public void 普攻_点亮黑突进的正前方盒_突进那两只不动()
+        {
+            using 层级场景 scene = new();
+            BlackAttackView view = new(scene.Root.transform, _config, () => 1);
+
+            view.BeginFlat();
+
+            Assert.IsTrue(scene.Ahead.activeSelf, "普攻点亮 BlackDash/AheadCollider");
+            Assert.IsFalse(scene.Up.activeSelf, "突进的斜上盒跟着关");
+            Assert.IsFalse(scene.Down.activeSelf, "突进的斜下盒跟着关");
+            Assert.IsNull(scene.Ahead.transform.parent, "普攻盒摘到根上冻住，玩家走开判定不跟着走");
+
+            view.End();
+
+            Assert.IsFalse(scene.Ahead.activeSelf, "结束后普攻盒也关掉");
+            Assert.AreEqual("BlackDash", scene.Ahead.transform.parent.name, "盒装回 BlackDash 下，下一次按新站位重摘");
+        }
+
+        [Test]
+        public void 普攻_伤害与击退走自己那一套()
+        {
+            using 层级场景 scene = new();
+            BlackAttackView view = new(scene.Root.transform, _config, () => 1);
+
+            view.BeginFlat();
+            Damage damage = view.ProduceDamage();
+
+            Assert.AreEqual(11f, damage.Amount, "普攻伤害取 flatAttackDamage");
+            Assert.AreEqual(6f, damage.KnockbackSpeed, "击退取 flatAttackKnockback");
+            Assert.AreEqual(1f, damage.Direction.x, 1e-4f, "普攻沿朝向");
+        }
+
         private static void AssertAllOff(层级场景 scene, string message, GameObject except = null)
         {
             if (scene.Ahead != except) Assert.IsFalse(scene.Ahead.activeSelf, $"{message}（AheadCollider 仍开着）");
@@ -341,28 +339,22 @@ namespace Refraction.Tests
             if (scene.Down != except) Assert.IsFalse(scene.Down.activeSelf, $"{message}（DownCollider 仍开着）");
         }
 
-        /// <summary>只搭 Player/BlackAttack/xxxCollider 这三层名字，正是 BlackAttackView 按路径找的那套</summary>
+        /// <summary>只搭 Player/BlackDash/xxxCollider 这三层名字，正是 BlackAttackView 按路径找的那套</summary>
         private sealed class 层级场景 : System.IDisposable
         {
             public readonly GameObject Root;
-            public readonly GameObject Black;
+            public readonly GameObject Dash;
             public readonly GameObject Ahead;
             public readonly GameObject Up;
             public readonly GameObject Down;
-            public readonly GameObject Dash;
 
             public 层级场景()
             {
                 Root = new GameObject("Player");
-                Black = Child(Root, "BlackAttack");
-                Ahead = Box(Black, "AheadCollider");
-                Up = Box(Black, "UpCollider");
-                Down = Box(Black, "DownCollider");
-
                 Dash = Child(Root, "BlackDash");
-                Box(Dash, "AheadCollider");
-                Box(Dash, "UpCollider");
-                Box(Dash, "DownCollider");
+                Ahead = Box(Dash, "AheadCollider");
+                Up = Box(Dash, "UpCollider");
+                Down = Box(Dash, "DownCollider");
             }
 
             public void Dispose()
@@ -398,12 +390,6 @@ namespace Refraction.Tests
 
             public int ExternalCalls;
 
-            public void Reset()
-            {
-                Total = Vector2.zero;
-                Last = Vector2.zero;
-            }
-
             public void AddExternalVelocity(Vector2 velocity)
             {
                 ExternalCalls++;
@@ -429,23 +415,6 @@ namespace Refraction.Tests
             public void SetGravityEnable(bool enable) { }
             public void SetGravity(float gravity) { }
             public void SetBodyScale(float scale) { }
-        }
-
-        private sealed class 记判定的表现记录 : IBlackAttackView
-        {
-            public BlackAttackKind BeginKind;
-
-            public bool Ended;
-
-            public System.Action OnHit;
-
-            public void Begin(BlackAttackKind kind) => BeginKind = kind;
-
-            public void BeginDash(BlackAttackKind kind) => BeginKind = kind;
-
-            public void End() => Ended = true;
-
-            public void SetHitHandler(System.Action onHit) => OnHit = onHit;
         }
     }
 }

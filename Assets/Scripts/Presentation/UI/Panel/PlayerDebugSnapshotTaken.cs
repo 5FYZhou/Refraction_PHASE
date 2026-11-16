@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Refraction.Presentation.UI
 {
     /// <summary>玩家调试快照：玩家侧每个物理帧发布一次，面板只订阅，不反向索要</summary>
-    public readonly struct PlayerDebugSnapshot
+    public readonly struct PlayerDebugSnapshotTaken
     {
         /// <summary>物理帧开始时刚体的真实速度，含外部速度（后坐力、外力）</summary>
         public readonly Vector2 FrameStartVelocity;
@@ -29,7 +29,7 @@ namespace Refraction.Presentation.UI
 
         public readonly int MaxPolarity;
 
-        public PlayerDebugSnapshot(
+        public PlayerDebugSnapshotTaken(
             Vector2 frameStartVelocity,
             Vector2 ledgerVelocity,
             Vector2 hurtVelocity,

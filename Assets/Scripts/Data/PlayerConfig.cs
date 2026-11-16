@@ -130,74 +130,51 @@ namespace Refraction.Data
         [Min(0f)]
         public float attackRecoverTime = 0.12f;
 
-        [Header("攻击 · 黑")]
-        [Tooltip("黑攻击前摇时长（秒）：按下攻击键到进入黑攻击本体之间的等待。\n0 表示没有前摇，按键当帧就进入 BlackAttack。")]
+        [Header("攻击 · 黑 · 普攻")]
+        [Tooltip("普攻前摇时长（秒）：黑形态只按攻击键走普攻，这里是按下到判定盒点亮之间的等待。\n0 表示没有前摇，按键当帧就开打。")]
         [Min(0f)]
-        public float blackAttackPrepareTime = 0.15f;
+        public float flatAttackPrepareTime = 0.15f;
 
-        [Tooltip("黑攻击本体持续时间（秒）：这一段是持续状态而不是一帧，时间到才进后摇。\n0 表示当帧即结束，效果只在进入那一帧发生。")]
+        [Tooltip("普攻本体持续时间（秒）：Player/BlackDash/AheadCollider 点亮到熄灭的时长，时间到进后摇。")]
         [Min(0f)]
-        public float blackAttackTime = 0.2f;
+        public float flatAttackTime = 0.2f;
 
-        [Tooltip("黑攻击后摇时长（秒）：本体结束到攻击组回到 None 的等待，期间不响应新的攻击输入。\n0 表示没有后摇，结束即可再攻击（仍受 attackCooldown 限制）。")]
+        [Tooltip("普攻后摇时长（秒）：本体结束到攻击组回到空闲的等待，期间不响应新的攻击输入。\n0 表示没有后摇，结束即可再攻击（仍受 flatAttackCooldown 限制）。")]
         [Min(0f)]
-        public float blackAttackRecoverTime = 0.2f;
+        public float flatAttackRecoverTime = 0.2f;
 
-        [Tooltip("黑攻击的伤害点数：判定盒（平推/斜上/斜下）碰到怪物受击盒时按这个值扣血。\n0 表示不造成伤害，但仍然算一次攻击。")]
+        [Tooltip("普攻冷却（秒）：从按攻击键那一刻起算，只有普攻走这份；突进那份是 blackDashCooldown。")]
         [Min(0f)]
-        public float blackAttackDamage = 20f;
+        public float flatAttackCooldown = 0.35f;
 
-        [Tooltip("黑攻击的击退初速度（单位/秒）：0 表示不击退。\n方向随判定走（平推沿朝向，斜上/斜下按 45°），滑多远由目标自己的 KnockbackDecay 决定。")]
+        [Tooltip("普攻的伤害点数：判定盒碰到怪物受击盒时按这个值扣血。\n0 表示不造成伤害，但仍然算一次攻击。")]
         [Min(0f)]
-        public float blackAttackKnockback = 4f;
+        public float flatAttackDamage = 20f;
 
-        [Tooltip("黑攻击空挥（没砍到人）时平劈的后坐力（单位/秒）：沿劈击方向反向叠加一份外部速度，不直接改常规移动速度。\n最终速度 = 常规移动速度 + 外部速度，外部部分按 externalDeceleration 衰减；0 表示空挥不后退。")]
+        [Tooltip("普攻的击退初速度（单位/秒）：方向沿朝向；0 表示不击退。\n滑多远由目标自己的 KnockbackDecay 决定。")]
         [Min(0f)]
-        public float blackAttackMissRecoilAhead = 3f;
+        public float flatAttackKnockback = 4f;
 
-        [Tooltip("黑攻击空挥时上劈的后坐力（单位/秒）：玩家被往斜下推，横向与竖直分量各为 0.707 × 该值。\n同样乘下蹲倍率；0 表示上劈不后退。")]
+        [Tooltip("普攻空挥（没砍到人）时的后坐力（单位/秒）：沿劈击方向反向叠加一份外部速度，不直接改常规移动速度。\n0 表示空挥不后退。")]
         [Min(0f)]
-        public float blackAttackMissRecoilUp = 3f;
+        public float flatAttackMissRecoil = 3f;
 
-        [Tooltip("黑攻击空挥时下劈的后坐力（单位/秒）：玩家被往斜上推，横向与竖直分量各为 0.707 × 该值。\n同样乘下蹲倍率；0 表示下劈不后退。")]
+        [Tooltip("普攻命中敌人时的后坐力（单位/秒）：命中会把空挥那一份整体换成这份，不是两者相加。\n同样乘下蹲倍率；0 表示命中不后退，但空挥那份仍会被撤掉。")]
         [Min(0f)]
-        public float blackAttackMissRecoilDown = 3f;
-
-        [Tooltip("黑攻击命中敌人时平劈的后坐力（单位/秒）：命中会把空挥那一份整体换成这份，不是两者相加。\n0 表示命中不后退，但空挥那份仍会被撤掉。")]
-        [Min(0f)]
-        public float blackAttackHitRecoilAhead = 10f;
-
-        [Tooltip("黑攻击命中敌人时上劈的后坐力（单位/秒）：往斜下推，横向与竖直分量各为 0.707 × 该值，同样乘下蹲倍率。")]
-        [Min(0f)]
-        public float blackAttackHitRecoilUp = 10f;
-
-        [Tooltip("黑攻击命中敌人时下劈的后坐力（单位/秒）：往斜上推，横向与竖直分量各为 0.707 × 该值，同样乘下蹲倍率。")]
-        [Min(0f)]
-        public float blackAttackHitRecoilDown = 20f;
+        public float flatAttackHitRecoil = 10f;
 
         [Header("攻击 · 黑突进")]
-        [Tooltip("黑形态按攻击键走哪一套：勾上走黑突进，不勾走黑劈砍。\n两套互斥，同一时刻只存在一套；只和攻击抢位置，弹反不受影响。")]
-        public bool useBlackDash = false;
-
-        [Tooltip("黑突进前摇时长（秒）：按下攻击键到冲出去之间的等待，期间被打中会整段打断；突进方向在这段走完那一刻定死。\n0 表示按下当帧就冲，方向取当帧输入。")]
+        [Tooltip("黑突进前摇时长（秒）：按下攻击键到冲出去之间的等待，期间被打中会整段打断；突进方向在这段走完那一刻定死。\n这段时间速度锁成 0、重力也关掉，能挨打但不接受任何移动输入。")]
         [Min(0f)]
         public float blackDashPrepareTime = 0.12f;
 
-        [Tooltip("黑突进后摇时长（秒）：冲完到回到空闲之间的等待，期间重力已恢复、速度按移动规则自然减速，但不接受移动 / 跳跃 / 冲刺输入。\n0 表示冲完立刻恢复操作。")]
+        [Tooltip("黑突进后摇时长（秒）：冲完到回到空闲之间的等待，期间重力已恢复、也能照常移动，但攻击 / 跳跃 / 冲刺都不接受。\n0 表示冲完立刻恢复操作。")]
         [Min(0f)]
         public float blackDashRecoverTime = 0.15f;
 
-        [Tooltip("黑突进冷却（秒）：从冲出去那一刻起算。后摇里再按一次突进取消后摇接下一段，不受这条限制（否则连不起来）。")]
+        [Tooltip("黑突进冷却（秒）：从按攻击键那一刻起算，与普攻共用同一个冷却计时器。")]
         [Min(0f)]
         public float blackDashCooldown = 0.6f;
-
-        [Tooltip("黑突进起手的无敌时长（秒）：从冲出去那一刻起算，这段时间内不吃伤害也不进受伤态（与冲刺无敌共用同一个窗口）。\n0 表示不给无敌。")]
-        [Min(0f)]
-        public float blackDashInvulnerableTime = 0.12f;
-
-        [Tooltip("平推突进的初速度（单位/秒）：沿朝向水平冲，竖直速度一并清零。\n0 表示原地不动，只剩无敌与后摇。")]
-        [Min(0f)]
-        public float blackDashSpeedAhead = 22f;
 
         [Tooltip("斜上 45° 突进的初速度（单位/秒）：横向取朝向、竖直向上，两个分量各为 0.707 × 该值。")]
         [Min(0f)]
@@ -207,11 +184,7 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackDashSpeedDown = 20f;
 
-        [Tooltip("平推突进的持续时间（秒）：这段时间内重力关闭、速度不变，时间到进后摇。\n速度 × 该值就是冲出去的距离。")]
-        [Min(0f)]
-        public float blackDashTimeAhead = 0.2f;
-
-        [Tooltip("斜上 45° 突进的持续时间（秒）：同样在结束时进后摇，之后按重力与移动减速自己落回来。")]
+        [Tooltip("斜上 45° 突进的持续时间（秒）：这段时间内重力关闭、速度不变，时间到进后摇，之后按重力与移动减速自己落回来。")]
         [Min(0f)]
         public float blackDashTimeUp = 0.18f;
 
@@ -219,13 +192,17 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackDashTimeDown = 0.2f;
 
-        [Tooltip("黑突进的伤害点数：突进盒（平推/斜上/斜下）碰到怪物受击盒时按这个值扣血。\n一次突进里同一个受击盒只结算一次，穿过去也只扣一次；0 表示不造成伤害。")]
+        [Tooltip("黑突进的伤害点数：突进盒（斜上/斜下）碰到怪物受击盒时按这个值扣血。\n一次突进里同一个受击盒只结算一次，穿过去也只扣一次；0 表示不造成伤害。")]
         [Min(0f)]
         public float blackDashDamage = 20f;
 
-        [Tooltip("黑突进的击退初速度（单位/秒）：方向沿突进方向（平推水平，斜上/斜下按 45°）。\n滑多远由目标自己的 KnockbackDecay 决定；0 表示不击退。")]
+        [Tooltip("黑突进的击退初速度（单位/秒）：方向沿突进方向（斜上/斜下按 45°）。\n滑多远由目标自己的 KnockbackDecay 决定；0 表示不击退。")]
         [Min(0f)]
         public float blackDashKnockback = 4f;
+
+        [Tooltip("突进撞到第一个目标后向上弹起的竖直速度（单位/秒）：直接覆盖当前竖直速度，横向保留冲出去的那一份。\n命中即结束本体进后摇；0 表示命中不弹起，只停在原地。")]
+        [Min(0f)]
+        public float blackDashBounceSpeed = 14f;
 
         [Header("受击")]
         [Tooltip("破坏力：敌人子弹打到玩家时扣的血量（点）。\n敌人只知道开了火，不知道玩家的数值——敌弹自带的伤害在这里一律被顶掉。0 表示敌弹不扣血。")]
@@ -233,9 +210,9 @@ namespace Refraction.Data
         public float destruction = 1f;
 
         [Header("打击感 · 顿帧")]
-        [Tooltip("黑攻击命中敌人的顿帧时长（秒）：命中当帧整个游戏冻结，到点自动恢复。\n只有黑攻击走这条，子弹命中不顿帧；0 表示不顿帧。")]
+        [Tooltip("近战命中敌人（普攻 / 突进）的顿帧时长（秒）：命中当帧整个游戏冻结，到点自动恢复。\n子弹命中不顿帧；0 表示不顿帧。")]
         [Min(0f)]
-        public float blackAttackHitStopTime = 0.06f;
+        public float meleeHitStopTime = 0.06f;
 
         [Tooltip("被怪物撞到（接触伤害）的顿帧时长（秒）：真扣到血才触发，被无敌窗挡掉的那次不顿帧。\n0 表示不顿帧。")]
         [Min(0f)]

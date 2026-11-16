@@ -206,9 +206,9 @@ namespace Refraction.Presentation.Combat
             // 敌弹打中就收，无敌窗挡掉也收
             HurtBox hurt = HurtBoxOf(other);
 
-            if (!PlayerOwned && hurt != null && hurt.Attackable != null)
+            if (!PlayerOwned && hurt != null && hurt.Hurtable != null)
             {
-                hurt.Attackable.TakeDamage(_damage);
+                hurt.Hurtable.TakeDamage(_damage);
                 OnHitLanded();
                 return;
             }

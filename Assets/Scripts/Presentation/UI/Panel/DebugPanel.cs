@@ -66,14 +66,14 @@ namespace Refraction.Presentation.UI
 
         private void OnEnable()
         {
-            EventBus<PlayerDebugSnapshot>.Subscribe(OnSnapshot);
+            EventBus<PlayerDebugSnapshotTaken>.Subscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
             EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
         private void OnDisable()
         {
-            EventBus<PlayerDebugSnapshot>.Unsubscribe(OnSnapshot);
+            EventBus<PlayerDebugSnapshotTaken>.Unsubscribe(OnSnapshot);
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
             EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
@@ -98,7 +98,7 @@ namespace Refraction.Presentation.UI
             _maxHealth = evt.max;
         }
 
-        private void OnSnapshot(PlayerDebugSnapshot snapshot)
+        private void OnSnapshot(PlayerDebugSnapshotTaken snapshot)
         {
             if (_text == null) return;
 

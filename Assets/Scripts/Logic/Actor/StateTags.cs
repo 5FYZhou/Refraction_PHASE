@@ -41,9 +41,9 @@ namespace Refraction.Logic.Actor
         WhiteAttackPrepare,
         WhiteAttack,
         WhiteAttackRecover,
-        BlackAttackPrepare,
-        BlackAttack,
-        BlackAttackRecover,
+        FlatAttackPrepare,
+        FlatAttack,
+        FlatAttackRecover,
         BlackDashPrepare,
         BlackDash,
         BlackDashRecover

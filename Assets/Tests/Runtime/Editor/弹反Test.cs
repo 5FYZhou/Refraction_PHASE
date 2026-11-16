@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic.Combat;
@@ -28,7 +28,7 @@ namespace Refraction.Tests
         public void 清理参数() => Object.DestroyImmediate(_config);
 
         [Test]
-        public void 弹反范围_随黑攻击开关_且不脱开玩家层级()
+        public void 弹反范围_随近战开关_且不脱开玩家层级()
         {
             using 玩家层级 scene = new();
 
@@ -36,25 +36,25 @@ namespace Refraction.Tests
 
             AssertAllReboundOff(scene, "构造完弹反范围必须全关，不能自带来判定");
 
-            view.Begin(BlackAttackKind.Ahead);
+            view.BeginFlat();
 
-            Assert.IsTrue(scene.ReboundAhead.activeSelf, "平劈只开 BlackRebound/AheadCollider");
-            AssertAllReboundOff(scene, "平劈时另外两只弹反范围必须关着", scene.ReboundAhead);
+            Assert.IsTrue(scene.ReboundAhead.activeSelf, "普攻只开 BlackRebound/AheadCollider");
+            AssertAllReboundOff(scene, "普攻时另外两只弹反范围必须关着", scene.ReboundAhead);
             Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "弹反范围留在 BlackRebound 下，不跟着攻击盒摘出去");
 
-            view.Begin(BlackAttackKind.Up);
+            view.BeginDash(BlackAttackKind.Up);
 
-            Assert.IsTrue(scene.ReboundUp.activeSelf, "上劈开 BlackRebound/UpCollider");
-            AssertAllReboundOff(scene, "上劈时另外两只弹反范围必须关着", scene.ReboundUp);
+            Assert.IsTrue(scene.ReboundUp.activeSelf, "上突进开 BlackRebound/UpCollider");
+            AssertAllReboundOff(scene, "上突进时另外两只弹反范围必须关着", scene.ReboundUp);
 
-            view.Begin(BlackAttackKind.Down);
+            view.BeginDash(BlackAttackKind.Down);
 
-            Assert.IsTrue(scene.ReboundDown.activeSelf, "下劈开 BlackRebound/DownCollider");
-            AssertAllReboundOff(scene, "下劈时另外两只弹反范围必须关着", scene.ReboundDown);
+            Assert.IsTrue(scene.ReboundDown.activeSelf, "下突进开 BlackRebound/DownCollider");
+            AssertAllReboundOff(scene, "下突进时另外两只弹反范围必须关着", scene.ReboundDown);
 
             view.End();
 
-            AssertAllReboundOff(scene, "出黑攻击本体，弹反范围要跟着关");
+            AssertAllReboundOff(scene, "出近战本体，弹反范围要跟着关");
             Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "结束后仍留在玩家层级里");
         }
 
@@ -64,7 +64,7 @@ namespace Refraction.Tests
             using 玩家层级 scene = new();
 
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
-            view.Begin(BlackAttackKind.Ahead);
+            view.BeginFlat();
 
             Vector3 local = scene.ReboundAhead.transform.localPosition;
 
@@ -138,15 +138,15 @@ namespace Refraction.Tests
             if (scene.ReboundDown != except) Assert.IsFalse(scene.ReboundDown.activeSelf, $"{message}（DownCollider 仍开着）");
         }
 
-        /// <summary>搭 Player/BlackAttack 与 Player/BlackRebound 两套名字，正是 BlackAttackView 按路径找的那套</summary>
+        /// <summary>搭 Player/BlackDash 与 Player/BlackRebound 两套名字，正是 BlackAttackView 按路径找的那套</summary>
         private sealed class 玩家层级 : System.IDisposable
         {
             public readonly GameObject Root;
-            public readonly GameObject Black;
+            public readonly GameObject Dash;
             public readonly GameObject Rebound;
-            public readonly GameObject Ahead;
-            public readonly GameObject Up;
-            public readonly GameObject Down;
+            public readonly GameObject DashAhead;
+            public readonly GameObject DashUp;
+            public readonly GameObject DashDown;
             public readonly GameObject ReboundAhead;
             public readonly GameObject ReboundUp;
             public readonly GameObject ReboundDown;
@@ -154,10 +154,10 @@ namespace Refraction.Tests
             public 玩家层级()
             {
                 Root = new GameObject("Player");
-                Black = Child(Root, "BlackAttack");
-                Ahead = Box(Black, "AheadCollider", new Vector3(1f, 0f, 0f));
-                Up = Box(Black, "UpCollider", new Vector3(0f, 1f, 0f));
-                Down = Box(Black, "DownCollider", new Vector3(0f, -1f, 0f));
+                Dash = Child(Root, "BlackDash");
+                DashAhead = Box(Dash, "AheadCollider", new Vector3(1f, 0f, 0f));
+                DashUp = Box(Dash, "UpCollider", new Vector3(0f, 1f, 0f));
+                DashDown = Box(Dash, "DownCollider", new Vector3(0f, -1f, 0f));
 
                 Rebound = Child(Root, "BlackRebound");
                 ReboundAhead = Child(Rebound, "AheadCollider");
@@ -176,9 +176,9 @@ namespace Refraction.Tests
             public void Dispose()
             {
                 // 攻击盒点亮时会摘成根物体，销毁玩家带不走它们
-                Object.DestroyImmediate(Ahead);
-                Object.DestroyImmediate(Up);
-                Object.DestroyImmediate(Down);
+                Object.DestroyImmediate(DashAhead);
+                Object.DestroyImmediate(DashUp);
+                Object.DestroyImmediate(DashDown);
                 Object.DestroyImmediate(Root);
             }
 

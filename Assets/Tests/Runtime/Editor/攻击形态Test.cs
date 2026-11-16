@@ -25,9 +25,10 @@ namespace Refraction.Tests
             _config.attackCooldown = 0f;
             _config.attackPrepareTime = 0.1f;
             _config.attackRecoverTime = 0.1f;
-            _config.blackAttackPrepareTime = 0.1f;
-            _config.blackAttackTime = 0.2f;
-            _config.blackAttackRecoverTime = 0.15f;
+            _config.flatAttackPrepareTime = 0.1f;
+            _config.flatAttackTime = 0.2f;
+            _config.flatAttackRecoverTime = 0.15f;
+            _config.flatAttackCooldown = 0f;
 
             FakeMotor motor = new();
             PostureGroup posture = new(_config, motor);
@@ -99,7 +100,7 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 反转后攻击进黑前摇()
+        public void 反转后攻击进普攻前摇()
         {
             _group.Tick(Ctx(0f, false));
             EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
@@ -107,7 +108,7 @@ namespace Refraction.Tests
             Assert.IsTrue(_group.IsBlack, "世界转黑后形态应跟着变黑");
 
             _group.Tick(Ctx(Dt, true));
-            Assert.AreEqual(AttackStateTag.BlackAttackPrepare, _group.Current, "黑形态攻击先走黑前摇");
+            Assert.AreEqual(AttackStateTag.FlatAttackPrepare, _group.Current, "黑形态按攻击键先走普攻前摇");
         }
 
         [Test]
@@ -117,19 +118,19 @@ namespace Refraction.Tests
             EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
 
             _group.Tick(Ctx(Dt, true));
-            Assert.AreEqual(AttackStateTag.BlackAttackPrepare, _group.Current, "黑攻击先走前摇");
+            Assert.AreEqual(AttackStateTag.FlatAttackPrepare, _group.Current, "普攻先走前摇");
 
             _group.Tick(Ctx(0.13f, false));
-            Assert.AreEqual(AttackStateTag.BlackAttack, _group.Current, "黑前摇走满进黑本体");
+            Assert.AreEqual(AttackStateTag.FlatAttack, _group.Current, "普攻前摇走满进本体");
 
             _group.Tick(Ctx(0.16f, false));
-            Assert.AreEqual(AttackStateTag.BlackAttack, _group.Current, "黑本体未到 blackAttackTime 不结束");
+            Assert.AreEqual(AttackStateTag.FlatAttack, _group.Current, "本体未到 flatAttackTime 不结束");
 
             _group.Tick(Ctx(0.35f, false));
-            Assert.AreEqual(AttackStateTag.BlackAttackRecover, _group.Current, "黑本体走满进黑后摇");
+            Assert.AreEqual(AttackStateTag.FlatAttackRecover, _group.Current, "本体走满进后摇");
 
             _group.Tick(Ctx(0.51f, false));
-            Assert.AreEqual(AttackStateTag.None, _group.Current, "黑后摇走满回到空闲");
+            Assert.AreEqual(AttackStateTag.None, _group.Current, "后摇走满回到空闲");
         }
 
         [Test]

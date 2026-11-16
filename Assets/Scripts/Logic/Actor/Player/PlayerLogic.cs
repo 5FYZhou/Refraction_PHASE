@@ -27,6 +27,7 @@ namespace Refraction.Logic.Actor
         private ChargePhase _chargePhase;
         private float _chargeEnterTime;
         private float _chargeNow;
+        private bool _black;
 
         private Vector2 _lastGroundedPos;
         private bool _hasGroundedPos;
@@ -48,12 +49,12 @@ namespace Refraction.Logic.Actor
             _config = config;
             _polarity = new(config.maxPolarity);
             EventBus<AfterimageLinkHit>.Subscribe(OnAfterimageLinkHit);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
         /// <summary>还没踩过地（出生就在空中）时为 false</summary>
         public bool HasGroundedPos => _hasGroundedPos;
 
-        /// 最近一次踩地点
         public Vector2 LastGroundedPos => _lastGroundedPos;
 
         /// PlayerController 每帧拿去应用
@@ -77,13 +78,23 @@ namespace Refraction.Logic.Actor
 
         public void OnHitLanded() => AddPolarity(_config.polarityPerHit);
 
-        public void OnBlackAttackHitLanded()
+        public void OnMeleeHitLanded()
         {
             OnHitLanded();
-            EventBus<HitStopRequested>.Publish(new(_config.blackAttackHitStopTime));
+            EventBus<RequestHitStop>.Publish(new(_config.meleeHitStopTime));
         }
 
         private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
+
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
+        {
+            _black = evt.World == WorldPolarity.Black;
+
+            if (!_black) return;
+
+            CancelCharge();
+            _afterimages?.Clear();
+        }
 
         private void AddPolarity(int amount)
         {
@@ -146,6 +157,7 @@ namespace Refraction.Logic.Actor
 
             MovementStateTag beforeMove = _moveGroup.CurrentTag;
             _moveGroup.Blocked = _attackGroup.BlocksMovement;
+            _moveGroup.ActionsBlocked = _attackGroup.BlocksActions;
             _moveGroup.Tick(in tick);
 
             bool dashStarted = beforeMove != MovementStateTag.Dash && _moveGroup.CurrentTag == MovementStateTag.Dash;
@@ -163,6 +175,13 @@ namespace Refraction.Logic.Actor
         {
             float now = ctx.GameTime.now;
             _chargeNow = now;
+
+            // 黑形态起不了充能
+            if (_black)
+            {
+                CancelCharge();
+                return;
+            }
 
             if (dashStarted && _afterimages != null && _afterimages.TrySpawn(ctx.WorldInfo.Pos, now, ctx.WorldInfo.Face))
             {
@@ -199,6 +218,12 @@ namespace Refraction.Logic.Actor
             _afterimages?.Arm();
         }
 
+        private void CancelCharge()
+        {
+            _chargePhase = ChargePhase.None;
+            _chargeEnterTime = 0f;
+        }
+
         private void TryReverseWorld(in LogicContext ctx)
         {
             if (!ctx.InputSnapshot.ReversePressed) return;
@@ -229,8 +254,7 @@ namespace Refraction.Logic.Actor
         {
             _motor.SpawnAt(pos, Vector2.zero);
 
-            _chargePhase = ChargePhase.None;
-            _chargeEnterTime = 0f;
+            CancelCharge();
         }
 
         public void BindAfterimageSpawner(IAfterimageSpawner spawner)
@@ -245,6 +269,7 @@ namespace Refraction.Logic.Actor
         public void Dispose()
         {
             EventBus<AfterimageLinkHit>.Unsubscribe(OnAfterimageLinkHit);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
             _attackGroup.Dispose();
         }
 
@@ -303,7 +328,7 @@ namespace Refraction.Logic.Actor
 
             Announce();
 
-            if (hit.Source == DamageSource.Contact) EventBus<HitStopRequested>.Publish(new(_config.contactHitStopTime));
+            if (hit.Source == DamageSource.Contact) EventBus<RequestHitStop>.Publish(new(_config.contactHitStopTime));
 
             return true;
         }

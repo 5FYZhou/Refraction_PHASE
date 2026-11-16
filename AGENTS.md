@@ -164,6 +164,7 @@ dotnet build Assembly-CSharp.csproj
 - [ ] 7. `pwsh Tools/compile-gate.ps1` → `GATE OK`（0 error、警告不超基线、无新增越层 / 驱动违规）。
       裸 `dotnet build Assembly-CSharp.csproj` 只能算等价下限：它不重扫文件表，新文件可能被漏编。
 - [ ] 8. 测试按 §9 写在 `Assets/Tests/Runtime/Editor/`、**中文 + `Test`** 命名；写完后**没有自己跑测试、没有动编辑器进程**。
+- [ ] 9. 新增或改名的事件符合 §10：请求以 `Request` 开头，事实是过去式；订阅点与 `Unsubscribe` 成对，无残留旧名。
 
 ---
 
@@ -193,12 +194,32 @@ dotnet build Assembly-CSharp.csproj
 
 ---
 
-## 10. 工程速查
+## 10. 事件命名规范 (Event Naming)
+
+`EventBus<T>` 的事件类型只有两种，别的一律不许造：
+
+| 类别 | 语义 | 命名 | 实例 |
+|---|---|---|---|
+| **请求 Request** | 一方**要求**另一方干活，谁干、干不干由订阅者决定，发布者不等结果 | `Request` 开头 + **动词原形 + 对象** | `RequestNextDoor`、`RequestHitStop`、`RequestCameraShake` |
+| **事实 Fact** | 某事**已经发生**，发布者只是陈述，订阅者自行反应 | **过去式**（`-ed` / 不规则过去式/过去分词） | `PlayerHealthChanged`、`WorldReversed`、`AfterimageLinkHit`、`PlayerDebugSnapshotTaken` |
+
+1. **只有这两类**。`XxxEvent`、`XxxNotification`、`OnXxx`、`XxxMessage` 这类"中性名"一律不许：分不清是请求还是事实，订阅者就没法判断"我该不该改状态"。
+2. **请求不许用 `-ed` 收尾**。`HitStopRequested` 在语法上已经是"已被请求过"（事实），却是要别人去执行——请求一律 `Request + 动词原形`。
+3. **事实必须是过去式**。`PlayerHealthChanged` 对；`PlayerHealthChange`、`PlayerHealthChanging` 错。名词不能当事实名（`PlayerDebugSnapshot` → `PlayerDebugSnapshotTaken`）。
+4. **同一件事的请求与事实分开命名，禁止合并**。`RequestHitStop`（请求顿帧）与 `HitStopStarted` / `HitStopEnded`（事实）是三个类型，不许塞一个 bool 凑成一个事件。
+5. **落点**：跨层共享的事件结构体只放 `Assets/Scripts/Logic/Event/Events.cs`；表现层私有的调试事件可以就近定义（`PlayerDebugSnapshotTaken` 就在 `UI/Panel/`），但命名照旧受本节约束。
+6. **处理器**：订阅端方法以 `On` 开头并写清事件语义（`OnRequestHitStop`、`OnWorldPolarityChanged`；`OnSnapshot` 这种同文件内不会误读的短名可留）。`Subscribe` 与 `Unsubscribe` 必须成对，静态总线不会自己忘掉旧实例。
+7. **改名 = 改代码**：改事件名要同步 grep 全仓（订阅点、处理器、日志、`Docs/**/*.md` 的引用），过 `compile-gate.ps1`；`.txt` 需求文档即使写着旧名**也不许改**（§3）。
+
+---
+
+## 11. 工程速查
 
 | 项 | 位置 |
 |---|---|
 | 单例 / 驱动入口 | `Assets/Scripts/Presentation/Root/GameRoot.cs` |
 | 场景根契约与 Order | `Assets/Scripts/Presentation/ISceneRoot.cs` |
+| 事件定义（请求 / 事实） | `Assets/Scripts/Logic/Event/Events.cs` |
 | 逻辑入参快照（输入/世界/时间） | `Assets/Scripts/Logic/Context.cs` |
 | 全部手感参数 | `Assets/Resources/PlayerConfig.asset` |
 | 输入绑定 | `Assets/Scripts/Presentation/Input/InputSys.inputactions` |
