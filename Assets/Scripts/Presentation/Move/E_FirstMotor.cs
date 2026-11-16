@@ -1,11 +1,12 @@
-﻿using UnityEngine;
+﻿using Refraction.Data;
+using UnityEngine;
 
 namespace Refraction.Presentation
 {
     /// <summary>毛毛虫执行器：探地面并贴回、探墙、探前方悬崖；身体按名字找 BodyCollider，脚底优先 View/Bottom</summary>
     public sealed class E_FirstMotor : MoveMotor
     {
-        private const string BodyChildName = "BodyCollider";
+        private static string BodyChildName => EnemyColliderConfig.Default.bodyChildName;
         private const string ViewChildName = "View";
         private const string BottomChildName = "Bottom";
         private const string TopChildName = "Top";

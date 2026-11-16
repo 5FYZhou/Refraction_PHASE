@@ -2,7 +2,7 @@
 
 > 依据代码：`E_SecondLogic`（目标 / 领地 / 极性）、`E_SecondMoveGroup`（四态切换）、`E_SecondPatrolState` / `E_SecondChaseState` / `E_SecondReturnState` / `E_SecondAttackState`。
 > 表现层：`E_SecondController`（装配、喂玩家位置、换色）、`E_SecondMotor`（飞行执行器，只探墙）。
-> 数值全在 `E_SecondConfig` 资产里；颜色写在 `E_SecondController` 开头。
+> 数值全在 `E_SecondConfig` 资产里；颜色在共用的 `EnemyVisualConfig` 资产里。
 
 这套逻辑与 `Enemy` 完全独立：不共用 `EnemyLogic` / `EnemyMoveGroup` / 任何 Enemy 状态，只共用 `ActorLogic`、`MoveMotor`、`StateGroup`、`BulletLogic` 这些框架件，以及探测触发器的转发器（`EnemyDetectZone` 认 `IDetectSink`，三只敌人统一由 `EnemySight` 实现，控制器不再各自管视线）。
 
@@ -105,7 +105,9 @@
 - `contactInterval = 0` 表示不设间隔：每个物理帧都试一次，实际节奏由玩家的无敌窗决定，不建议。
 - 伤害源是 `DamageSource.Contact`，`E_SecondLogic.TakeDamage` 直接丢弃这类伤害 —— 敌人之间挤在一起不会互相掉血。
 
-## 八、颜色（`EnemyVisualColors`，与敌人 1 共用一套）
+## 八、颜色（`EnemyVisualConfig` 资产，与敌人 1 共用一套）
+
+色值在 `Assets/Resources/Data/EnemyVisualConfig.asset` 里（字段名 `patrolWhite` / `chaseBlack` 这种），三只敌人共用一份；`EnemyVisualColors.Of` 只做「展示态 × 极性 → 字段」的映射。资产没建时用脚本默认值，就是下表。
 
 | 展示态 | 白 | 黑 |
 | --- | --- | --- |
@@ -125,7 +127,8 @@
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
 - `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）；出膛点 `bulletMuzzle` 在同一个组件上（局部坐标，x 随朝向镜像），不进 `E_SecondConfig`。
-- **必须有 `DetectCollider` 子物体**：碰撞体本身的 Is Trigger 与层不用手勾，`EnemyColliderSetup` 会在 Awake 里统一设成「触发器 + 只认 Player(7) 层」；`E_SecondController` 按名字找它并补挂转发器，找不到只警告，这只敌人会永远看不见玩家。
+- **必须有 `DetectCollider` 子物体**：名字必须是这个（`EnemyColliderConfig.detectChildName`）；Is Trigger 与层不用手勾，`EnemyColliderSetup` 会在 Awake 里按资产设成「触发器 + 只认 Player(7) 层」；`E_SecondController` 按名字找它并补挂转发器，找不到只警告，这只敌人会永远看不见玩家。
+- 三只敌人共用的两份资产要在 `Assets/Resources/Data/` 下建（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider / EnemyVisual），文件名必须正好是 `EnemyColliderConfig` / `EnemyVisualConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
 - 两个框都在 controller 的 Inspector 上画（`EnemyGizmos` 统一绘制）：`patrolOffset / patrolSize` 是绿框，`chaseOffset / chaseSize` 是橙红框，`Reset()` 会给默认值（12×4 与 20×6）；另有一圈青色的 `DetectCollider` 视线范围框。
   - 运行中 gizmo 画的是逻辑里那份快照（`E_SecondLogic.PatrolArea` 与 `E_SecondLogic.ChaseArea`），钉在世界坐标上、不跟敌人走；只有 `Recenter` 成对平移两个框之后才会一起挪。没运行时画的才是 Inspector 参数框。
 - `E_SecondMotor` 的撞墙探针画出两个同心圆（`wallInnerRadius` / `wallOuterRadius`），两圈之间那圈就是撞墙判定区，见下一节。

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Refraction.Data;
+using UnityEngine;
 
 namespace Refraction.Presentation
 {
@@ -6,7 +7,7 @@ namespace Refraction.Presentation
     /// <remarks>身体碰撞体按名字找 Enemy/BodyCollider，不在 Inspector 里连线；脚下那圈自检必须排掉自身碰撞体，否则永远判成踩地</remarks>
     public sealed class EnemyMotor : MoveMotor
     {
-        private const string BodyChildName = "BodyCollider";
+        private static string BodyChildName => EnemyColliderConfig.Default.bodyChildName;
         private const string ViewChildName = "View";
         private const string BottomChildName = "Bottom";
         private const string TopChildName = "Top";

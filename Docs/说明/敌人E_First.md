@@ -67,16 +67,16 @@
 
 ## 七、颜色
 
-配色统一放在 `EnemyVisualColors`（`Logic/Actor/Enemy/EnemyVisual.cs` 里的静态类，`Color` 不能是 C# `const`，所以都是 `static readonly`），三只敌人共用，按「展示态 × 世界极性」取：
+配色放在 `EnemyVisualConfig` 资产（`Assets/Resources/Data/EnemyVisualConfig.asset`）里，三只敌人共用同一份，按「展示态 × 世界极性」取；`EnemyVisualColors.Of` 只负责把枚举映射到字段，不含色值。资产还没建时用脚本里的默认值（就是下表这些色），不会变成白块。
 
 | 展示态 | 白 | 黑 |
 | --- | --- | --- |
-| 巡逻 Patrol | `PatrolWhite` 青绿 | `PatrolBlack` 紫 |
-| 追击 Chase | `ChaseWhite` 橙 | `ChaseBlack` 暗金 |
-| 返回 Return | `ReturnWhite` 紫 | `ReturnBlack` 深紫 |
-| 前摇 Windup | `WindupWhite` 橙 | `WindupBlack` 暗红 |
-| 攻击 Strike | `StrikeWhite` 近白 | `StrikeBlack` 深灰 |
-| 后摇 Recover | `RecoverWhite` 灰蓝 | `RecoverBlack` 墨青 |
+| 巡逻 Patrol | `patrolWhite` 青绿 | `patrolBlack` 紫 |
+| 追击 Chase | `chaseWhite` 橙 | `chaseBlack` 暗金 |
+| 返回 Return | `returnWhite` 紫 | `returnBlack` 深紫 |
+| 前摇 Windup | `windupWhite` 橙 | `windupBlack` 暗红 |
+| 攻击 Strike | `strikeWhite` 近白 | `strikeBlack` 深灰 |
+| 后摇 Recover | `recoverWhite` 灰蓝 | `recoverBlack` 墨青 |
 
 换色作用于 `View` 下所有 `SpriteRenderer`（含未激活），只在展示态或极性变化时刷一次。毛毛虫黑世界永远进不了攻击，所以它只用得上巡逻那两格；追击 / 返回只有飞行敌人会产出，攻击三段的黑色则被飞行敌人的黑突进吃掉。
 
@@ -85,7 +85,8 @@
 - 根节点：`Rigidbody2D` + `E_FirstMotor` + `E_FirstController`；`config` 只挂在 `E_FirstController` 上，装配时注入给 `E_FirstMotor`。
 - **`E_FirstConfig.enableGravity` 必须勾上**：刚体的 `gravityScale` 被 `MoveMotor` 强制归零，没开逻辑重力这只虫子就永远悬在半空（离地不掉、踩不到地面判定）。
 - `maxFallSpeed` 建议 20 左右：它同时是下落速度上限，调太小会像羽毛一样飘下来。
-- 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（**视线范围**）、`AttackCollider`（接触伤害，可选）。后两根的 Is Trigger 与层由 `EnemyColliderSetup` 在 Awake 里统一设置（探测盒只认 Player 层、攻击盒排除 Enemy 层），预制体上勾什么都会被覆盖。
+- 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（**视线范围**）、`AttackCollider`（接触伤害，可选）。后三根的名字与层都由 `EnemyColliderConfig` 资产决定，`EnemyColliderSetup` 在 Awake 里按它统一改写（探测盒只认 Player 层、攻击盒排除 Enemy 层），预制体上勾什么都会被覆盖。
+- 三只敌人共用两份资产，**要在 `Assets/Resources/Data/` 下建**（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider / EnemyVisual），文件名必须正好是 `EnemyColliderConfig` / `EnemyVisualConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
 - `View` 下建议放 `Bottom` / `Top` 两个空物体：脚底探测、贴地、悬崖探针都以 Bottom 为基准；缺了退回碰撞体底边（贴地有偏差，会打一条 warning）。
 - **`E_FirstMotor` 的 `groundProbe.layerMask` 与 `wallProbe.layerMask` 必须分开勾**：地面填 Ground、墙面填 Wall。留默认 `Everything` 会把玩家与其它敌人的碰撞体当成地面，虫子会踩在别人头上。
 - `bulletPrefab` 留空 = 不开火（前摇与后摇照走）。

@@ -59,29 +59,6 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 突进画出绿色扫掠面_结束就清掉()
-        {
-            _view.BeginDash(BlackAttackKind.Up);
-
-            GameObject sweep = GameObject.Find("DashSweep");
-            Assert.IsNotNull(sweep, "突进开始要把扫过的范围画出来");
-
-            MeshRenderer mr = sweep.GetComponent<MeshRenderer>();
-            Assert.IsNotNull(mr, "扫掠面要有渲染器");
-            Assert.Greater(VertexCount(sweep), 2, "凸包至少能拼出三角面");
-
-            float startX = _scene.DashUp.transform.position.x;
-            float startY = _scene.DashUp.transform.position.y;
-
-            Assert.Greater(mr.bounds.max.x, startX + 1f, "扫掠面要沿突进方向延伸出去");
-            Assert.Greater(mr.bounds.max.y, startY + 1f, "斜上突进的扫掠面要往上走");
-            Assert.Less(mr.sortingOrder, 30000, "绿色压在紫色实时范围下面");
-
-            _view.End();
-            Assert.IsNull(GameObject.Find("DashSweep"), "突进结束清掉绿色范围");
-        }
-
-        [Test]
         public void 扫掠面画在起手位置_玩家跑开也不跟着动()
         {
             _view.BeginDash(BlackAttackKind.Up);

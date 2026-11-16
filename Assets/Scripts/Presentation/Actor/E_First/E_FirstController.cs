@@ -103,7 +103,7 @@ namespace Refraction.Presentation.Actor
 
             _visual = _logic.Visual;
             _visualBlack = _logic.Black;
-            ApplyColor(EnemyVisualColors.Of(_visual, _visualBlack));
+            ApplyColor(EnemyVisualColors.Of(EnemyVisualConfig.Default, _visual, _visualBlack));
 
             _attached = true;
         }
@@ -135,7 +135,7 @@ namespace Refraction.Presentation.Actor
 
             _visual = visual;
             _visualBlack = black;
-            ApplyColor(EnemyVisualColors.Of(visual, black));
+            ApplyColor(EnemyVisualColors.Of(EnemyVisualConfig.Default, visual, black));
         }
 
         private void ApplyColor(Color color)

@@ -1,3 +1,4 @@
+using Refraction.Data;
 using UnityEngine;
 
 namespace Refraction.Logic.Actor
@@ -13,35 +14,21 @@ namespace Refraction.Logic.Actor
         Recover,
     }
 
-    /// <summary>展示态 + 黑白极性 → View 颜色：三种敌人共用一套色阶，改配色只改这里</summary>
+    /// <summary>展示态 + 黑白极性 → View 颜色：色值在 EnemyVisualConfig 资产里，这里只做映射</summary>
     public static class EnemyVisualColors
     {
-        private static readonly Color PatrolWhite = new(0.45f, 0.95f, 0.75f);
-        private static readonly Color ChaseWhite = new(1f, 0.84f, 0.35f);
-        private static readonly Color ReturnWhite = new(0.62f, 0.55f, 1f);
-        private static readonly Color WindupWhite = new(1f, 0.62f, 0.25f);
-        private static readonly Color StrikeWhite = new(1f, 1f, 0.92f);
-        private static readonly Color RecoverWhite = new(0.55f, 0.62f, 0.78f);
-
-        private static readonly Color PatrolBlack = new(0.55f, 0.4f, 0.78f);
-        private static readonly Color ChaseBlack = new(0.72f, 0.48f, 0.24f);
-        private static readonly Color ReturnBlack = new(0.42f, 0.34f, 0.6f);
-        private static readonly Color WindupBlack = new(0.78f, 0.3f, 0.32f);
-        private static readonly Color StrikeBlack = new(0.38f, 0.38f, 0.45f);
-        private static readonly Color RecoverBlack = new(0.3f, 0.48f, 0.52f);
-
-        public static Color Of(EnemyVisual visual, bool black)
+        public static Color Of(EnemyVisualConfig config, EnemyVisual visual, bool black)
         {
             switch (visual)
             {
-                case EnemyVisual.Patrol: return black ? PatrolBlack : PatrolWhite;
-                case EnemyVisual.Chase: return black ? ChaseBlack : ChaseWhite;
-                case EnemyVisual.Return: return black ? ReturnBlack : ReturnWhite;
-                case EnemyVisual.Windup: return black ? WindupBlack : WindupWhite;
-                case EnemyVisual.Strike: return black ? StrikeBlack : StrikeWhite;
+                case EnemyVisual.Patrol: return black ? config.patrolBlack : config.patrolWhite;
+                case EnemyVisual.Chase: return black ? config.chaseBlack : config.chaseWhite;
+                case EnemyVisual.Return: return black ? config.returnBlack : config.returnWhite;
+                case EnemyVisual.Windup: return black ? config.windupBlack : config.windupWhite;
+                case EnemyVisual.Strike: return black ? config.strikeBlack : config.strikeWhite;
             }
 
-            return black ? RecoverBlack : RecoverWhite;
+            return black ? config.recoverBlack : config.recoverWhite;
         }
     }
 }
