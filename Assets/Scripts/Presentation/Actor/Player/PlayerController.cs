@@ -48,6 +48,8 @@ namespace Refraction.Presentation.Actor
         private IBulletLauncher _launcher;
         private BlackAttackView _blackAttack;
         private Collider2D _hurt;
+        private PlayerAniView _aniView;
+        private float _moveX;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -194,6 +196,7 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
+            _moveX = snapshot.Move.x;
             // 世界信息由 PlayerMotor 的物理探测给出，本层只负责组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
@@ -279,6 +282,8 @@ namespace Refraction.Presentation.Actor
 
             ApplyChargeVisual(_logic.ChargeProgress, _logic.IsCharged);
             ApplyBlinkVisual(deltaTime);
+
+            if (_aniView != null) _aniView.PlayMove(_logic.CurrentTag, _moveX, _logic.IsHurt);
         }
 
         private void ApplyBlinkVisual(float deltaTime)
@@ -382,6 +387,8 @@ namespace Refraction.Presentation.Actor
         /// <remarks>Bottom 是 View 的直接子节点，必须 view.Find 而不是 transform.Find——后者只扫 Player 的一级子物体，找不到就以身体中心为锚点（脚浮起来）；基准取 localPosition / localScale，存世界坐标会在关卡根节点不在原点时把人整体甩出去</remarks>
         private void CacheView()
         {
+            _aniView = GetComponentInChildren<PlayerAniView>(true);
+
             view = transform.Find(ViewChildName);
             if (view == null)
             {
