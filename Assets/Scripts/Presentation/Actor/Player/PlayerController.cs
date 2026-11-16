@@ -18,6 +18,7 @@ namespace Refraction.Presentation.Actor
         private const float BlinkHz = 5f;
         private const float BlinkMinAlpha = 0.3f;
         private const float DashInvulnerableAlpha = 100f / 255f;
+        private const int BulletLayer = 11;
 
         public int Order => SceneOrder.Player;
 
@@ -48,6 +49,8 @@ namespace Refraction.Presentation.Actor
         private IBulletLauncher _launcher;
         private BlackAttackView _blackAttack;
         private Collider2D _hurt;
+        private int _hurtExclude;
+        private bool _phasing;
         private PlayerAniView _aniView;
         private float _moveX;
 
@@ -134,6 +137,9 @@ namespace Refraction.Presentation.Actor
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);
 
             _hurt = hurtBox != null ? hurtBox.GetComponent<Collider2D>() : null;
+
+            if (_hurt != null) _hurtExclude = _hurt.excludeLayers;
+
             _blackAttack.BindRebound(() => _launcher, _hurt);
 
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
@@ -203,6 +209,7 @@ namespace Refraction.Presentation.Actor
             LogicContext context = new(snapshot, worldInfo, gameTime);
 
             _logic.FixedTick(context);
+            ApplyPhase();
 
             _blackAttack?.ReboundTick();
 
@@ -316,6 +323,18 @@ namespace Refraction.Presentation.Actor
 
             color.a = alpha;
             _viewRenderer.color = color;
+        }
+
+        private void ApplyPhase()
+        {
+            if (_hurt == null) return;
+
+            bool phase = _logic.IsPhasing;
+
+            if (phase == _phasing) return;
+
+            _phasing = phase;
+            _hurt.excludeLayers = phase ? _hurtExclude | (1 << BulletLayer) : _hurtExclude;
         }
 
         private void ApplyChargeVisual(float progress, bool charged)

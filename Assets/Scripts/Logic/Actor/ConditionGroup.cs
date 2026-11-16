@@ -18,6 +18,7 @@ namespace Refraction.Logic.Actor
         private float _now;
         private float _invulnerableUntil;
         private float _dashInvulnerableUntil;
+        private float _phaseUntil;
 
         public ConditionGroup(IMoveMotor motor, CharacterConfig config)
         {
@@ -50,6 +51,15 @@ namespace Refraction.Logic.Actor
             _dashInvulnerableUntil = _now + duration;
         }
 
+        public bool IsPhasing => _now < _phaseUntil;
+
+        public void BeginPhase(float duration)
+        {
+            if (duration <= 0f) return;
+
+            _phaseUntil = _now + duration;
+        }
+
         /// 受伤期接管速度（方向 × 速率），非受伤态为零
         public Vector2 HurtVelocity => _hurt.ForcedVelocity;
 
@@ -69,6 +79,7 @@ namespace Refraction.Logic.Actor
         {
             _invulnerableUntil = 0f;
             _dashInvulnerableUntil = 0f;
+            _phaseUntil = 0f;
             _hasPending = false;
             ChangeState(ConditionStateTag.Normal, default);
         }

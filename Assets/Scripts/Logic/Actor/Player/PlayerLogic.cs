@@ -131,6 +131,8 @@ namespace Refraction.Logic.Actor
 
         public bool IsDashInvulnerable => Conditions.IsDashInvulnerable;
 
+        public bool IsPhasing => Conditions.IsPhasing;
+
         public Vector2 HurtVelocity => Conditions.HurtVelocity;
 
         public Vector2 Position => Vector2.zero;
@@ -188,6 +190,7 @@ namespace Refraction.Logic.Actor
                 _chargeCooldown.MarkUsed(now, _config.chargeCooldown);
                 _chargePhase = ChargePhase.None;
                 Conditions.BeginDashInvulnerable(_config.dashInvulnerableTime);
+                Conditions.BeginPhase(_config.dashInvulnerableTime);
                 return;
             }
 

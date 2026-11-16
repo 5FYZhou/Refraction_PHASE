@@ -182,6 +182,39 @@ namespace Refraction.Tests
         }
 
         [Test]
+        public void 本体_只开无敌不虚化()
+        {
+            走到(0f, 1f, true);
+            走到(0.11f, 1f, false);
+
+            Assert.IsTrue(_conditions.IsDashInvulnerable, "本体照旧无敌");
+            Assert.IsFalse(_conditions.IsPhasing, "虚化只归充能残影，黑突进不穿子弹");
+        }
+
+        [Test]
+        public void 虚化窗_与冲刺无敌各记各的()
+        {
+            走到(0f, 0f, false);
+
+            _conditions.BeginDashInvulnerable(0.1f);
+            _conditions.BeginPhase(0.2f);
+
+            走到(0.05f, 0f, false);
+
+            Assert.IsTrue(_conditions.IsDashInvulnerable, "冲刺无敌窗先开");
+            Assert.IsTrue(_conditions.IsPhasing, "虚化窗同时开着，两者互不顶替");
+
+            走到(0.15f, 0f, false);
+
+            Assert.IsFalse(_conditions.IsDashInvulnerable, "0.1 秒后冲刺无敌先关");
+            Assert.IsTrue(_conditions.IsPhasing, "虚化窗还没到期，说明是两个独立计时器");
+
+            _conditions.ClearHurt();
+
+            Assert.IsFalse(_conditions.IsPhasing, "清伤一并清掉虚化，窗口不会带进下一条命");
+        }
+
+        [Test]
         public void 命中第一个目标_提前进后摇并向上弹起()
         {
             走到(0f, 1f, true);

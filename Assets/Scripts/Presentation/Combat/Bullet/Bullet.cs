@@ -92,6 +92,8 @@ namespace Refraction.Presentation.Combat
 
             int mask = _damage.Source == DamageSource.PlayerBullet ? PlayerBulletMask : EnemyBulletMask;
 
+            mask |= 1 << gameObject.layer;
+
             for (int i = 0; i < _colliders.Length; i++) _colliders[i].excludeLayers = mask;
         }
 
