@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>毛毛虫 E_First：白世界站定射击，黑世界只巡逻</summary>
-    /// <remarks>跑出巡逻框就退回整平台，与地面敌人同一套判法</remarks>
+    /// <remarks>巡逻框按身体中心判，出框那几帧照旧用老框掉头，被顶出去会自己走回来</remarks>
     public sealed class E_FirstLogic : EnemyLogicBase
     {
         private readonly E_FirstConfig _config;
@@ -28,7 +28,7 @@ namespace Refraction.Logic.Actor
 
         public EnemyVisual Visual => _moveGroup.Visual;
 
-        /// <summary>本帧生效的巡逻范围：无界表示没画框或已经跑出去了</summary>
+        /// <summary>本帧生效的巡逻范围：无界只表示没画框，跑到框外也照旧拿它掉头</summary>
         public EnemyArea PatrolArea => _activeArea;
 
         /// <summary>白世界才动手：黑世界对玩家没有反应，一直巡逻</summary>
@@ -43,7 +43,7 @@ namespace Refraction.Logic.Actor
         /// <summary>表现层唯一入口：写入本帧索敌结果与巡逻范围，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target, in EnemyArea patrolArea)
         {
-            _activeArea = patrolArea.HasBounds && patrolArea.ContainsX(ctx.WorldInfo.Pos.x) ? patrolArea : default;
+            _activeArea = patrolArea;
 
             SetSight(target.Known, target.Visible, target.Pos);
             FixedTick(ctx);

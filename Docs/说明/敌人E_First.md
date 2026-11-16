@@ -41,8 +41,9 @@
 - 只动 x；竖直速度交给**逻辑重力**（`E_FirstConfig.enableGravity`）。
 - 重力只有一套：`MoveMotor.InitRb` 会把刚体的 `gravityScale` 强制写成 0，靠 `MoveLedger.ApplyGravity` 施加。**`enableGravity` 没勾 = 两套重力都没有，虫子离地后悬空不动**（`E_FirstMotor.Awake` 会打一条 warning 提醒）。
 - 方向：到框边、贴墙、前方是悬崖，三者任一就掉头。
-- 范围：`EnemyController` 式的 `patrolOffset` + `patrolSize` 方框，运行时以进游戏那一刻的站位快照成世界坐标。**`patrolSize.x ≤ 0` 或身体跑出框** → 退回整平台，只靠墙与悬崖掉头。
-- 「跑出框」只在 `E_FirstLogic.FixedTick` 里判一次（身体中心 x 是否在框内），巡逻与后摇读的都是这一份结果。
+- 范围：`EnemyController` 式的 `patrolOffset` + `patrolSize` 方框，运行时以进游戏那一刻的站位快照成世界坐标。**`patrolSize.x ≤ 0`** → 不启用框，只靠墙与悬崖掉头。
+- 框按**身体中心**判，边界只是"中心点的活动范围"：身体本身有半径，站到框边时半个身子会在框外，这是正常的。
+- 越过框边那几帧（掉头惯性会多滑出 0.02~0.05 单位）**照旧用同一个框判**，巡逻与后摇读的都是这一次写进来的结果：出框那一帧就会朝框内掉头，被顶飞、或者框画在身侧，也是一样往回走，框不会因为"身体在框外"而失效。
 
 ## 五、攻击（白）
 
