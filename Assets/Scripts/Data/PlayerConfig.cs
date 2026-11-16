@@ -278,5 +278,14 @@ namespace Refraction.Data
         [Tooltip("子弹在残影之间传输时的移动速度（单位/秒）：从当前残影中心直线走向下一枚的速度。\n0 表示瞬间抵达下一枚，看不到中间过程。")]
         [Min(0f)]
         public float bulletTransferSpeed = 26f;
+
+        [Header("弹反")]
+        [Tooltip("一次弹反最长能开多久（秒）：与按住攻击键的时长取小，到点就关。\n0 表示不设上限，按住就一直开。")]
+        [Min(0f)]
+        public float reboundMaxTime = 0.4f;
+
+        [Tooltip("弹反冷却（秒）：弹反关掉的那一刻起算，冷却没走完再按攻击键不开弹反。\n0 表示没有冷却。")]
+        [Min(0f)]
+        public float reboundCooldown = 0.6f;
     }
 }

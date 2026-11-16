@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:yousandi.cn,2023:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -91,3 +91,5 @@ MonoBehaviour:
   afterimageAlpha: 0.35
   afterimageLinkColor: {r: 0.9559748, g: 0.95017225, b: 0.730509, a: 0.50980395}
   bulletTransferSpeed: 80
+  reboundMaxTime: 0.4
+  reboundCooldown: 0

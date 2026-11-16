@@ -28,7 +28,7 @@ namespace Refraction.Tests
         public void 清理参数() => Object.DestroyImmediate(_config);
 
         [Test]
-        public void 弹反范围_随近战开关_且不脱开玩家层级()
+        public void 弹反范围_按逻辑指令开关_且不脱开玩家层级()
         {
             using 玩家层级 scene = new();
 
@@ -38,45 +38,71 @@ namespace Refraction.Tests
 
             view.BeginFlat();
 
-            Assert.IsTrue(scene.ReboundAhead.activeSelf, "普攻只开 BlackRebound/AheadCollider");
-            AssertAllReboundOff(scene, "普攻时另外两只弹反范围必须关着", scene.ReboundAhead);
+            AssertAllReboundOff(scene, "普攻不再自己开弹反，开关归逻辑层");
+
+            view.ShowRebound(BlackAttackKind.Ahead, 1);
+
+            Assert.IsTrue(scene.ReboundAhead.activeSelf, "指令正前只开 BlackRebound/AheadCollider");
+            AssertAllReboundOff(scene, "正前时另外两只弹反范围必须关着", scene.ReboundAhead);
             Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "弹反范围留在 BlackRebound 下，不跟着攻击盒摘出去");
 
-            view.BeginDash(BlackAttackKind.Up);
+            view.ShowRebound(BlackAttackKind.Up, 1);
 
-            Assert.IsTrue(scene.ReboundUp.activeSelf, "上突进开 BlackRebound/UpCollider");
-            AssertAllReboundOff(scene, "上突进时另外两只弹反范围必须关着", scene.ReboundUp);
+            Assert.IsTrue(scene.ReboundUp.activeSelf, "斜上开 BlackRebound/UpCollider");
+            AssertAllReboundOff(scene, "斜上时另外两只弹反范围必须关着", scene.ReboundUp);
 
-            view.BeginDash(BlackAttackKind.Down);
+            view.ShowRebound(BlackAttackKind.Down, -1);
 
-            Assert.IsTrue(scene.ReboundDown.activeSelf, "下突进开 BlackRebound/DownCollider");
-            AssertAllReboundOff(scene, "下突进时另外两只弹反范围必须关着", scene.ReboundDown);
+            Assert.IsTrue(scene.ReboundDown.activeSelf, "斜下开 BlackRebound/DownCollider");
+            AssertAllReboundOff(scene, "斜下时另外两只弹反范围必须关着", scene.ReboundDown);
 
             view.End();
 
-            AssertAllReboundOff(scene, "出近战本体，弹反范围要跟着关");
-            Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "结束后仍留在玩家层级里");
+            Assert.IsTrue(scene.ReboundDown.activeSelf, "近战结束不该顺手关掉逻辑层还开着的弹反");
+
+            view.HideRebound();
+
+            AssertAllReboundOff(scene, "逻辑层收手，弹反范围要跟着关");
+            Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "关掉后仍留在玩家层级里");
         }
 
         [Test]
-        public void 玩家转身_弹反范围跟着镜像()
+        public void 弹反左右_与朝向相反时镜像到另一侧()
         {
             using 玩家层级 scene = new();
 
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
-            view.BeginFlat();
+
+            view.ShowRebound(BlackAttackKind.Ahead, 1);
 
             Vector3 local = scene.ReboundAhead.transform.localPosition;
 
-            Assert.AreEqual(1f, scene.ReboundAhead.transform.position.x, Eps, "朝右时弹反范围在身体右侧");
+            Assert.AreEqual(1f, scene.ReboundAhead.transform.position.x, Eps, "朝右、指令也朝右时弹反范围在身体右侧");
 
-            Vector3 scale = scene.Root.transform.localScale;
-            scale.x = -1f;
-            scene.Root.transform.localScale = scale;
+            view.ShowRebound(BlackAttackKind.Ahead, -1);
 
-            Assert.AreEqual(-1f, scene.ReboundAhead.transform.position.x, Eps, "翻面后弹反范围要镜像到左侧");
-            Assert.AreEqual(local.x, scene.ReboundAhead.transform.localPosition.x, Eps, "镜像靠根节点翻转，局部坐标不许被改写");
+            Assert.AreEqual(-1f, scene.ReboundAhead.transform.position.x, Eps, "指令朝左要镜像到左侧");
+            Assert.AreEqual(local.x, scene.ReboundAhead.transform.localPosition.x, Eps, "镜像靠 BlackRebound 翻 scale，局部坐标不许被改写");
             Assert.AreEqual(scene.Rebound.transform, scene.ReboundAhead.transform.parent, "翻身不改层级");
+        }
+
+        [Test]
+        public void 玩家转身_同一侧指令仍然落在世界同一侧()
+        {
+            using 玩家层级 scene = new();
+
+            int face = 1;
+            BlackAttackView view = new(scene.Root.transform, _config, () => face);
+
+            view.ShowRebound(BlackAttackKind.Ahead, 1);
+
+            Assert.AreEqual(1f, scene.ReboundAhead.transform.position.x, Eps, "朝右时正前范围偏右");
+
+            face = -1;
+            scene.Root.transform.localScale = new Vector3(-1f, 1f, 1f);
+            view.ShowRebound(BlackAttackKind.Ahead, 1);
+
+            Assert.AreEqual(1f, scene.ReboundAhead.transform.position.x, Eps, "转身后同一个右侧指令要翻回来，不能跟着人跑到另一侧");
         }
 
         [Test]

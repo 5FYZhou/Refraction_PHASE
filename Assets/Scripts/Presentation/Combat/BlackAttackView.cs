@@ -13,8 +13,10 @@ namespace Refraction.Presentation.Combat
     /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down 并且整段跟着玩家跑。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
     /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹</remarks>
-    public sealed class BlackAttackView : IBlackAttackView, IAttacker, IHitLanded
+    public sealed class BlackAttackView : IBlackAttackView, IReboundView, IAttacker, IHitLanded
     {
+        private const string ReboundRootPath = "BlackRebound";
+
         private const string ReboundAheadPath = "BlackRebound/AheadCollider";
         private const string ReboundUpPath = "BlackRebound/UpCollider";
         private const string ReboundDownPath = "BlackRebound/DownCollider";
@@ -42,6 +44,8 @@ namespace Refraction.Presentation.Combat
         private readonly Collider2D _reboundAhead;
         private readonly Collider2D _reboundUp;
         private readonly Collider2D _reboundDown;
+        private readonly Transform _reboundRoot;
+        private readonly float _reboundBaseScaleX;
         private readonly AttackBox _dashAhead;
         private readonly AttackBox _dashUp;
         private readonly AttackBox _dashDown;
@@ -74,6 +78,9 @@ namespace Refraction.Presentation.Combat
             _reboundUp = FindRebound(root, ReboundUpPath);
             _reboundDown = FindRebound(root, ReboundDownPath);
 
+            _reboundRoot = root != null ? root.Find(ReboundRootPath) : null;
+            _reboundBaseScaleX = _reboundRoot != null ? _reboundRoot.localScale.x : 1f;
+
             _dashAhead = Find(root, DashAheadPath);
             _dashUp = Find(root, DashUpPath);
             _dashDown = Find(root, DashDownPath);
@@ -93,6 +100,7 @@ namespace Refraction.Presentation.Combat
             Paint(_dashDown);
 
             End();
+            HideRebound();
         }
 
         /// <summary>普攻用：点亮 BlackDash 下的正前方盒，开打那一帧摘下来冻在原地，直到 End 才装回去</summary>
@@ -108,7 +116,6 @@ namespace Refraction.Presentation.Combat
             _dashHits.Clear();
             _dashAhead.transform.SetParent(null, true);
             SetActive(_dashAhead, true);
-            OpenRebound(BlackAttackKind.Ahead);
         }
 
         /// <summary>黑突进用：点亮对应突进盒与弹反盒，突进盒不摘下来，整段跟着玩家跑</summary>
@@ -123,7 +130,6 @@ namespace Refraction.Presentation.Combat
             _dashHits.Clear();
             SetActive(DashBoxOf(kind), true);
             PaintSweep(kind);
-            OpenRebound(kind);
         }
 
         public void End()
@@ -134,11 +140,6 @@ namespace Refraction.Presentation.Combat
 
             ClearSweep();
             _dashMode = false;
-            _reboundActive = null;
-
-            SetActive(_reboundAhead, false);
-            SetActive(_reboundUp, false);
-            SetActive(_reboundDown, false);
         }
 
         private static void Close(AttackBox box, in Anchor home)
@@ -149,17 +150,57 @@ namespace Refraction.Presentation.Combat
             home.Restore(box);
         }
 
-        /// <summary>弹反盒不摘下来：留在玩家层级里，翻转根节点 scale.x 时自己跟着镜像，这才算"跟随转身"</summary>
-        private void OpenRebound(BlackAttackKind kind)
+        /// <summary>弹反盒不摘下来：留在玩家层级里，靠 BlackRebound 的 scale.x 翻到指令那一侧</summary>
+        public void ShowRebound(BlackAttackKind kind, int side)
         {
-            _reboundActive = kind switch
-            {
-                BlackAttackKind.Up => _reboundUp,
-                BlackAttackKind.Down => _reboundDown,
-                _ => _reboundAhead,
-            };
+            Collider2D zone = ReboundOf(kind);
 
-            SetActive(_reboundActive, true);
+            if (zone == null) return;
+
+            if (_reboundActive != zone)
+            {
+                SetActive(_reboundAhead, false);
+                SetActive(_reboundUp, false);
+                SetActive(_reboundDown, false);
+                SetActive(zone, true);
+                _reboundActive = zone;
+            }
+
+            MirrorRebound(side);
+        }
+
+        public void HideRebound()
+        {
+            _reboundActive = null;
+
+            SetActive(_reboundAhead, false);
+            SetActive(_reboundUp, false);
+            SetActive(_reboundDown, false);
+        }
+
+        /// <summary>根节点已经按朝向翻过 scale，指令那一侧与朝向相反时把 BlackRebound 再翻一次</summary>
+        private void MirrorRebound(int side)
+        {
+            if (_reboundRoot == null) return;
+
+            int face = _face != null ? _face() : 1;
+            float x = _reboundBaseScaleX * (side == face ? 1f : -1f);
+            Vector3 scale = _reboundRoot.localScale;
+
+            if (Mathf.Approximately(scale.x, x)) return;
+
+            scale.x = x;
+            _reboundRoot.localScale = scale;
+        }
+
+        private Collider2D ReboundOf(BlackAttackKind kind)
+        {
+            switch (kind)
+            {
+                case BlackAttackKind.Up: return _reboundUp;
+                case BlackAttackKind.Down: return _reboundDown;
+                default: return _reboundAhead;
+            }
         }
 
         /// <summary>接上玩家自己的开火口与身体受击盒：弹反要借玩家的池重发一发，受击盒用来判优先级</summary>

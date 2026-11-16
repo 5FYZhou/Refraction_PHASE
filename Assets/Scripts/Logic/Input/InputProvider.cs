@@ -17,6 +17,7 @@ namespace Refraction.Logic.Input
         private bool _jumpHeld;
         private bool _crouchHeld;
         private bool _attack;
+        private bool _attackHeld;
         private bool _charge;
         private bool _reverse;
         private bool _save;
@@ -54,12 +55,13 @@ namespace Refraction.Logic.Input
 
             _jumpHeld = _input.Player.Jump.IsPressed();
             _crouchHeld = _input.Player.Crouch.IsPressed();
+            _attackHeld = _input.Player.Attack.IsPressed();
         }
 
         /// <summary>物理帧取走一次按下沿；取走即清零，不能留着，否则会被反复消费</summary>
         public InputSnapshot ConsumeSnapshot()
         {
-            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save, _reverse);
+            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save, _reverse, _attackHeld);
 
             _jump = false;
             _dash = false;

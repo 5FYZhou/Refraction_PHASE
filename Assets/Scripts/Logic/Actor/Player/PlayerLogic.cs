@@ -16,6 +16,7 @@ namespace Refraction.Logic.Actor
         private MoveGroup _moveGroup;
         private PostureGroup _postureGroup;
         private AttackGroup _attackGroup;
+        private ReboundGroup _rebound;
         private TransitMotor _transit;
         private IMoveMotor _motor;
         private InputBuffer _buffer;
@@ -43,6 +44,7 @@ namespace Refraction.Logic.Actor
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
             _attackGroup = new(config, motor, launcher, _postureGroup, blackAttack, Conditions);
+            _rebound = new(config, blackAttack as IReboundView);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
             _buffer = buffer;
@@ -165,6 +167,8 @@ namespace Refraction.Logic.Actor
             bool dashStarted = beforeMove != MovementStateTag.Dash && _moveGroup.CurrentTag == MovementStateTag.Dash;
 
             _attackGroup.Tick(in tick);
+
+            _rebound.Tick(in tick, _black);
 
             TickCharge(in tick, dashStarted);
 
