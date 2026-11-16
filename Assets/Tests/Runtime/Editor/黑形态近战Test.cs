@@ -21,6 +21,7 @@ namespace Refraction.Tests
         public void 建立参数()
         {
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
+            _config.flatAttackPrepareTime = 0f;
             _config.flatAttackDamage = 11f;
             _config.flatAttackKnockback = 6f;
             _config.flatAttackTime = 0.2f;

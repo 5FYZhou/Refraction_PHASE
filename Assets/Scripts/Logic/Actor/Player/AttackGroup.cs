@@ -7,18 +7,20 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>攻击状态组：None → 前摇 → 本体 → 后摇 → None；黑形态平劈走普攻、斜上 / 斜下走突进</summary>
+    /// <summary>攻击状态组：白形态三段接力；黑形态三向各一只自带前后摇的状态</summary>
     public sealed class AttackGroup : StateGroup<AttackStateTag, LogicContext>
     {
         protected override AttackStateTag EmptyTag => AttackStateTag.None;
 
         private readonly PlayerConfig _config;
         private readonly Cooldown _cooldown = new();
+        private readonly Cooldown _flatCooldown = new();
+        private readonly Cooldown _dashUpCooldown = new();
+        private readonly Cooldown _dashDownCooldown = new();
         private readonly WhiteAttackState _white;
         private readonly FlatAttackState _flat;
-        private readonly BlackDashPrepareState _dashPrepare;
-        private readonly BlackDashState _dash;
-        private readonly BlackDashRecoverState _dashRecover;
+        private readonly BlackDashState _dashUp;
+        private readonly BlackDashState _dashDown;
         private readonly ConditionGroup _conditions;
         private bool _black;
 
@@ -33,17 +35,13 @@ namespace Refraction.Logic.Actor
             RegisterState(_white);
             RegisterState(new WhiteAttackRecoverState(config));
 
-            RegisterState(new FlatAttackPrepareState(config));
             _flat = new FlatAttackState(config, blackView, motor, posture);
-            RegisterState(_flat);
-            RegisterState(new FlatAttackRecoverState(config));
+            _dashUp = new BlackDashState(config, motor, blackView, conditions, AttackStateTag.BlackDashUp, BlackAttackKind.Up);
+            _dashDown = new BlackDashState(config, motor, blackView, conditions, AttackStateTag.BlackDashDown, BlackAttackKind.Down);
 
-            _dashPrepare = new(config, motor);
-            _dash = new(config, motor, blackView, conditions, _dashPrepare);
-            _dashRecover = new(config);
-            RegisterState(_dashPrepare);
-            RegisterState(_dash);
-            RegisterState(_dashRecover);
+            RegisterState(_flat);
+            RegisterState(_dashUp);
+            RegisterState(_dashDown);
 
             blackView?.SetHitHandler(OnBlackHit);
 
@@ -53,33 +51,58 @@ namespace Refraction.Logic.Actor
         public bool IsBlack => _black;
 
         /// <summary>前摇与本体压住移动组，连状态都不推进</summary>
-        public bool BlocksMovement
-            => Current == AttackStateTag.BlackDashPrepare || Current == AttackStateTag.BlackDash;
+        public bool BlocksMovement => Phased != null && Phased.BlocksMovement;
 
-        /// <summary>后摇只挡跳跃与冲刺</summary>
-        public bool BlocksActions => BlocksMovement || Current == AttackStateTag.BlackDashRecover;
+        /// <summary>整段（含后摇）都挡跳跃与冲刺</summary>
+        public bool BlocksActions => Phased != null && Phased.BlocksActions;
+
+        /// <summary>正在后摇：别的攻击可以顶掉它</summary>
+        public bool Cancelable => Phased != null && Phased.Cancelable;
 
         public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
 
         public AttackStateTag Current => machine.CurrentState?.Tag ?? AttackStateTag.None;
 
+        private AttackPhaseState Phased => machine.CurrentState as AttackPhaseState;
+
         public void Tick(in LogicContext ctx)
         {
-            // 前摇挨打整段作废
-            if (Current == AttackStateTag.BlackDashPrepare && _conditions != null && _conditions.IsHurt)
-                ChangeState(AttackStateTag.None, in ctx);
+            AbortOnHurt(in ctx);
+
+            Phased?.Advance(in ctx);
 
             TickStates(ctx);
         }
 
         public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
 
+        private void AbortOnHurt(in LogicContext ctx)
+        {
+            if (_conditions == null || !_conditions.IsHurt) return;
+
+            AttackPhaseState phased = Phased;
+
+            if (phased == null || !phased.InPrepare || !phased.AbortsOnHurt) return;
+
+            ChangeState(AttackStateTag.None, in ctx);
+        }
+
         private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = evt.World == WorldPolarity.Black;
 
         private void OnBlackHit()
         {
-            if (Current == AttackStateTag.FlatAttack) _flat.NotifyHit();
-            else if (Current == AttackStateTag.BlackDash) _dash.NotifyHit();
+            switch (Current)
+            {
+                case AttackStateTag.FlatAttack:
+                    _flat.NotifyHit();
+                    break;
+                case AttackStateTag.BlackDashUp:
+                    _dashUp.NotifyHit();
+                    break;
+                case AttackStateTag.BlackDashDown:
+                    _dashDown.NotifyHit();
+                    break;
+            }
         }
 
         protected override AttackStateTag Fallback(in LogicContext ctx)
@@ -92,18 +115,6 @@ namespace Refraction.Logic.Actor
                     return _config.attackRecoverTime > 0f
                         ? AttackStateTag.WhiteAttackRecover
                         : AttackStateTag.None;
-                case AttackStateTag.FlatAttackPrepare:
-                    return AttackStateTag.FlatAttack;
-                case AttackStateTag.FlatAttack:
-                    return _config.flatAttackRecoverTime > 0f
-                        ? AttackStateTag.FlatAttackRecover
-                        : AttackStateTag.None;
-                case AttackStateTag.BlackDashPrepare:
-                    return AttackStateTag.BlackDash;
-                case AttackStateTag.BlackDash:
-                    return _config.blackDashRecoverTime > 0f
-                        ? AttackStateTag.BlackDashRecover
-                        : AttackStateTag.None;
                 default:
                     return AttackStateTag.None;
             }
@@ -113,48 +124,81 @@ namespace Refraction.Logic.Actor
         {
             target = EmptyTag;
 
-            if (Current != AttackStateTag.None) return false;
             if (_conditions != null && _conditions.IsHurt) return false;
             if (!ctx.InputSnapshot.Attack) return false;
-            if (!_cooldown.CanUse(ctx.GameTime.now)) return false;
+            if (!CanPreempt()) return false;
 
-            if (_black)
+            if (!_black)
             {
-                target = BlackTarget(ctx.InputSnapshot.Move.y, ctx.WorldInfo.Grounded);
+                if (!_cooldown.CanUse(ctx.GameTime.now)) return false;
 
-                return target != EmptyTag;
+                target = _config.attackPrepareTime > 0f
+                    ? AttackStateTag.WhiteAttackPrepare
+                    : AttackStateTag.WhiteAttack;
+
+                return true;
             }
 
-            target = _config.attackPrepareTime > 0f
-                ? AttackStateTag.WhiteAttackPrepare
-                : AttackStateTag.WhiteAttack;
+            target = BlackTarget(ctx.InputSnapshot.Move.y, ctx.WorldInfo.Grounded);
 
-            return true;
+            return target != EmptyTag && CooldownOf(target).CanUse(ctx.GameTime.now);
         }
 
         protected override bool TryCommitPreempt(in LogicContext ctx, AttackStateTag target)
         {
-            bool dash = target == AttackStateTag.BlackDashPrepare;
-            bool flat = target == AttackStateTag.FlatAttackPrepare || target == AttackStateTag.FlatAttack;
-
-            _cooldown.MarkUsed(ctx.GameTime.now, dash
-                ? _config.blackDashCooldown
-                : flat ? _config.flatAttackCooldown : _config.attackCooldown);
+            CooldownOf(target).MarkUsed(ctx.GameTime.now, CooldownTimeOf(target));
 
             return true;
         }
 
-        /// <summary>平劈走普攻；站在地上不给下突进</summary>
+        private bool CanPreempt()
+        {
+            AttackPhaseState phased = Phased;
+
+            return phased != null ? phased.Cancelable : Current == AttackStateTag.None;
+        }
+
         private AttackStateTag BlackTarget(float vertical, bool grounded)
         {
-            BlackAttackKind kind = AttackAim.Kind(vertical);
+            switch (AttackAim.Kind(vertical))
+            {
+                case BlackAttackKind.Up:
+                    return AttackStateTag.BlackDashUp;
+                case BlackAttackKind.Down:
+                    return grounded ? AttackStateTag.None : AttackStateTag.BlackDashDown;
+                default:
+                    return AttackStateTag.FlatAttack;
+            }
+        }
 
-            if (kind == BlackAttackKind.Ahead)
-                return _config.flatAttackPrepareTime > 0f ? AttackStateTag.FlatAttackPrepare : AttackStateTag.FlatAttack;
+        private Cooldown CooldownOf(AttackStateTag target)
+        {
+            switch (target)
+            {
+                case AttackStateTag.FlatAttack:
+                    return _flatCooldown;
+                case AttackStateTag.BlackDashUp:
+                    return _dashUpCooldown;
+                case AttackStateTag.BlackDashDown:
+                    return _dashDownCooldown;
+                default:
+                    return _cooldown;
+            }
+        }
 
-            if (kind == BlackAttackKind.Down && grounded) return AttackStateTag.None;
-
-            return AttackStateTag.BlackDashPrepare;
+        private float CooldownTimeOf(AttackStateTag target)
+        {
+            switch (target)
+            {
+                case AttackStateTag.FlatAttack:
+                    return _config.flatAttackCooldown;
+                case AttackStateTag.BlackDashUp:
+                    return _config.blackDashUpCooldown;
+                case AttackStateTag.BlackDashDown:
+                    return _config.blackDashDownCooldown;
+                default:
+                    return _config.attackCooldown;
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Refraction.Tests
 {
-    /// <summary>黑突进：平劈走普攻、斜上 / 斜下才突进；前摇锁死速度、本体整段无敌、后摇只挡动作</summary>
+    /// <summary>黑形态三只自带前后摇的状态：平劈 / 斜上 / 斜下各有自己的冷却，前摇与本体不许抢，后摇可以顶掉</summary>
     public sealed class 黑突进Test
     {
         private const float Dt = 0.02f;
@@ -29,17 +29,18 @@ namespace Refraction.Tests
             _config = ScriptableObject.CreateInstance<PlayerConfig>();
             _config.blackDashPrepareTime = 0.1f;
             _config.blackDashRecoverTime = 0.1f;
-            _config.blackDashCooldown = 0.5f;
+            _config.blackDashUpCooldown = 0f;
+            _config.blackDashDownCooldown = 0f;
             _config.blackDashSpeedUp = 10f;
             _config.blackDashSpeedDown = 30f;
             _config.blackDashTimeUp = 0.1f;
             _config.blackDashTimeDown = 0.1f;
+            _config.blackDashBounceSpeed = 9f;
             _config.flatAttackPrepareTime = 0.1f;
             _config.flatAttackTime = 0.1f;
             _config.flatAttackRecoverTime = 0.1f;
             _config.attackCooldown = 0f;
             _config.flatAttackCooldown = 0f;
-            _config.blackDashBounceSpeed = 9f;
 
             _motor = new();
             _view = new();
@@ -63,7 +64,8 @@ namespace Refraction.Tests
         {
             走到(0f, 0f, true);
 
-            Assert.AreEqual(AttackStateTag.FlatAttackPrepare, _attack.Current, "只按攻击键是普攻，不是突进");
+            Assert.AreEqual(AttackStateTag.FlatAttack, _attack.Current, "只按攻击键走普攻，不碰突进");
+            Assert.IsFalse(_view.Began, "这一刻还在前摇，判定盒没点亮");
             Assert.IsFalse(_attack.BlocksMovement, "普攻打的时候照常能走");
             Assert.IsFalse(_attack.BlocksActions, "普攻也不挡跳跃与冲刺");
         }
@@ -74,26 +76,35 @@ namespace Refraction.Tests
             走到(0f, 0f, true);
             走到(0.11f, 0f, false);
 
-            Assert.AreEqual(AttackStateTag.FlatAttack, _attack.Current, "普攻前摇走完进本体");
-            Assert.IsTrue(_view.Began, "普攻要点亮黑突进那套判定盒");
+            Assert.AreEqual(AttackStateTag.FlatAttack, _attack.Current, "普攻前摇走完仍在同一只状态里");
+            Assert.IsTrue(_view.Began, "普攻要点亮 BlackDash 下正前方那套判定盒");
             Assert.AreEqual(BlackAttackKind.Ahead, _view.FlatKind, "判定固定正前方");
         }
 
         [Test]
-        public void 斜上_按攻击键进突进前摇()
+        public void 斜上_按攻击键进斜上突进()
         {
             走到(0f, 1f, true);
 
-            Assert.AreEqual(AttackStateTag.BlackDashPrepare, _attack.Current, "按住上走斜上突进");
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "按住上走斜上突进");
             Assert.IsTrue(_attack.BlocksMovement, "前摇也算突进的一部分，移动组已被压住");
+            Assert.IsFalse(_attack.Cancelable, "前摇不许被别的攻击顶掉");
         }
 
         [Test]
-        public void 斜下_按攻击键进突进前摇()
+        public void 斜下_按攻击键进斜下突进()
         {
             走到(0f, -1f, true, grounded: false);
 
-            Assert.AreEqual(AttackStateTag.BlackDashPrepare, _attack.Current, "按住下走斜下突进");
+            Assert.AreEqual(AttackStateTag.BlackDashDown, _attack.Current, "按住下走斜下突进，是另一只状态");
+        }
+
+        [Test]
+        public void 站在地面上_按斜下不进突进()
+        {
+            走到(0f, -1f, true, grounded: true);
+
+            Assert.AreEqual(AttackStateTag.None, _attack.Current, "下突进只能从空中起手，站在地上按斜下不成立");
         }
 
         [Test]
@@ -120,28 +131,12 @@ namespace Refraction.Tests
             走到(0f, 1f, true);
             走到(0.11f, 1f, false);
 
-            Assert.AreEqual(AttackStateTag.BlackDash, _attack.Current, "前摇走完进本体");
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "前摇走完进本体");
             Assert.AreEqual(BlackAttackKind.Up, _view.DashKind, "斜上点亮斜上那一路突进盒");
             Assert.IsFalse(_motor.GravityEnabled, "突进期间关重力");
             Assert.AreEqual(Diagonal * 10f, _motor.VelocityX, Eps, "斜上横向分量");
             Assert.AreEqual(Diagonal * 10f, _motor.VelocityY, Eps, "斜上竖直分量");
             Assert.IsTrue(_attack.BlocksMovement, "本体期间移动组继续被压住");
-        }
-
-        [Test]
-        public void 站在地面上_按斜下不进突进()
-        {
-            走到(0f, -1f, true, grounded: true);
-
-            Assert.AreEqual(AttackStateTag.None, _attack.Current, "下突进只能从空中起手，站在地上按斜下不成立");
-        }
-
-        [Test]
-        public void 离地时_斜下照常进突进前摇()
-        {
-            走到(0f, -1f, true, grounded: false);
-
-            Assert.AreEqual(AttackStateTag.BlackDashPrepare, _attack.Current, "空中按斜下走突进");
         }
 
         [Test]
@@ -156,14 +151,16 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 方向_在前摇最后一刻固定_本体期间改输入无效()
+        public void 方向_按下那一刻定死_前摇里改输入不换()
         {
             走到(0f, 1f, true);
-            走到(0.05f, 1f, false);
-            走到(0.11f, -1f, false);
+            走到(0.05f, -1f, false, grounded: false);
 
-            Assert.AreEqual(BlackAttackKind.Up, _view.DashKind, "本体里按着下也改不回方向");
-            Assert.Greater(_motor.VelocityY, 0f, "冲出去还是前摇最后定下的斜上");
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "状态本身就是方向，前摇里改输入也不换");
+
+            走到(0.11f, -1f, false, grounded: false);
+
+            Assert.Greater(_motor.VelocityY, 0f, "冲出去还是按下那一刻的斜上");
         }
 
         [Test]
@@ -180,37 +177,40 @@ namespace Refraction.Tests
 
             走到(0.22f, 1f, false);
 
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "本体走完进后摇");
+            Assert.IsTrue(_attack.Cancelable, "本体走完进后摇");
             Assert.IsFalse(_conditions.IsDashInvulnerable, "后摇不再无敌");
         }
 
         [Test]
-        public void 命中第一个目标_突进提前结束并向上弹起()
+        public void 命中第一个目标_提前进后摇并向上弹起()
         {
             走到(0f, 1f, true);
             走到(0.11f, 1f, false);
-            Assert.AreEqual(AttackStateTag.BlackDash, _attack.Current, "先在突进本体里");
+
+            Assert.IsFalse(_attack.Cancelable, "先在突进本体里");
 
             _view.OnHit?.Invoke();
             走到(0.13f, 1f, false);
 
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "命中就结束本体，不等时间到");
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "命中不换状态，只把段跳到后摇");
+            Assert.IsTrue(_attack.Cancelable, "命中直接进后摇，不等本体时间到");
             Assert.AreEqual(9f, _motor.VelocityY, Eps, "竖直速度换成配置的弹起值");
             Assert.AreEqual(Diagonal * 10f, _motor.VelocityX, Eps, "横向保留冲出去的那一份");
             Assert.IsTrue(_motor.GravityEnabled, "重力已经还回来，弹上去才会落回地面");
+            Assert.IsTrue(_view.Ended, "命中收尾，突进盒与弹反盒一并关掉");
         }
 
         [Test]
-        public void 撞到墙_突进提前结束且速度清零()
+        public void 撞到墙_提前进后摇且速度清零()
         {
             走到(0f, 1f, true);
             走到(0.11f, 1f, false);
-            Assert.AreEqual(AttackStateTag.BlackDash, _attack.Current, "先在突进本体里");
+
+            Assert.IsFalse(_attack.Cancelable, "先在突进本体里");
 
             走到(0.13f, 1f, false, wall: true);
-            走到(0.15f, 1f, false, wall: true);
 
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "撞墙直接结束本体，不等时间到");
+            Assert.IsTrue(_attack.Cancelable, "撞墙直接进后摇，不等本体时间到");
             Assert.AreEqual(0f, _motor.VelocityX, Eps, "撞墙后横向速度清零");
             Assert.AreEqual(0f, _motor.VelocityY, Eps, "竖直速度也清零");
             Assert.IsTrue(_motor.GravityEnabled, "重力恢复");
@@ -237,23 +237,82 @@ namespace Refraction.Tests
             走到(0.11f, 1f, false);
             走到(0.22f, 1f, false);
 
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "本体走完进后摇");
+            Assert.IsTrue(_attack.Cancelable, "本体走完进后摇");
             Assert.IsTrue(_motor.GravityEnabled, "后摇一开始重力就恢复了");
             Assert.IsFalse(_attack.BlocksMovement, "后摇不再压移动组，能照常走");
             Assert.IsTrue(_attack.BlocksActions, "但跳跃与冲刺的抢占被挡掉");
         }
 
         [Test]
-        public void 后摇_再按攻击键不会取消后摇()
+        public void 前摇与本体_不接受别的攻击()
+        {
+            走到(0f, 1f, true);
+            走到(0.05f, -1f, true, grounded: false);
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "前摇里按别的方向不换手");
+
+            走到(0.11f, -1f, false, grounded: false);
+            走到(0.13f, 0f, true);
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "本体也不许被平劈顶掉");
+        }
+
+        [Test]
+        public void 后摇_换一种攻击可以直接顶掉()
+        {
+            走到(0f, 0f, true);
+            走到(0.11f, 0f, false);
+            走到(0.22f, 0f, false);
+
+            Assert.IsTrue(_attack.Cancelable, "平劈后摇允许被顶掉");
+
+            走到(0.24f, 1f, true);
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "后摇里按斜上，直接换到斜上突进前摇");
+        }
+
+        [Test]
+        public void 后摇_同方向再按不会重开()
         {
             走到(0f, 1f, true);
             走到(0.11f, 1f, false);
             走到(0.22f, 1f, false);
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "先站在后摇里");
 
             走到(0.24f, 1f, true);
 
-            Assert.AreEqual(AttackStateTag.BlackDashRecover, _attack.Current, "后摇不再支持按突进取消");
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "仍是同一只状态");
+            Assert.IsTrue(_attack.Cancelable, "没有重开前摇，还停在后摇里");
+        }
+
+        [Test]
+        public void 斜上冷却没到_斜上按不出来但平劈可以()
+        {
+            _config.blackDashUpCooldown = 0.5f;
+
+            走到(0f, 1f, true);
+            走到(0.11f, 1f, false);
+            走到(0.31f, 1f, false);
+            Assert.AreEqual(AttackStateTag.None, _attack.Current, "斜上整条链已经收尾");
+
+            走到(0.35f, 1f, true);
+            Assert.AreEqual(AttackStateTag.None, _attack.Current, "斜上自己的冷却还没过，再按不成立");
+
+            走到(0.37f, 0f, true);
+            Assert.AreEqual(AttackStateTag.FlatAttack, _attack.Current, "平劈读自己那份冷却，不受斜上牵连");
+        }
+
+        [Test]
+        public void 斜上冷却中_斜下照样可以起手()
+        {
+            _config.blackDashUpCooldown = 0.5f;
+
+            走到(0f, 1f, true);
+            走到(0.11f, 1f, false);
+            走到(0.31f, 1f, false);
+
+            走到(0.35f, -1f, true, grounded: false);
+
+            Assert.AreEqual(AttackStateTag.BlackDashDown, _attack.Current, "斜下有自己的冷却，斜上在冷却也不挡它");
         }
 
         [Test]
@@ -262,12 +321,15 @@ namespace Refraction.Tests
             走到(0f, 1f, true);
             走到(0.11f, 1f, false);
             走到(0.22f, 1f, false);
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _attack.Current, "后摇里仍是这只状态");
+
             走到(0.35f, 1f, false);
 
             Assert.AreEqual(AttackStateTag.None, _attack.Current, "后摇走完回空闲");
             Assert.IsFalse(_attack.BlocksMovement, "回到空闲就把移动组松开");
             Assert.IsFalse(_attack.BlocksActions, "跳跃与冲刺也一并放开");
-            Assert.IsTrue(_view.Ended, "结束时突进盒与弹反盒一并关掉");
+            Assert.IsTrue(_view.Ended, "结束后突进盒与弹反盒都已关掉");
         }
 
         private void 走到(float now, float moveY, bool attack, bool grounded = true, bool wall = false)

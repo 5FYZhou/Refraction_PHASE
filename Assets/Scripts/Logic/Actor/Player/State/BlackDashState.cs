@@ -1,88 +1,97 @@
 ﻿using Refraction.Data;
-using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Move;
 using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>黑突进本体：关重力按方向定速冲，速度与时长斜上 / 斜下各一套</summary>
-    /// <remarks>方向在前摇最后一帧已定死，本体期间读输入不生效；整段无敌，突进盒与弹反盒同时点亮。
-    /// 打到第一个目标就提前结束并向上弹起，撞墙同样提前结束但把速度清成 0，两者都靠 Exit 收尾</remarks>
-    public sealed class BlackDashState : BaseState<AttackStateTag, LogicContext>
+    /// <summary>黑突进：前摇锁死 → 定速冲（整段无敌）→ 后摇，斜上与斜下各一只实例</summary>
+    /// <remarks>方向在按下那一刻就定了（状态本身就是方向），前摇期间改输入不换方向；
+    /// 打到第一个目标就提前进后摇并向上弹起（y 换成 blackDashBounceSpeed，x 保留），撞墙则提前进后摇并清零</remarks>
+    public sealed class BlackDashState : AttackPhaseState
     {
-        public override AttackStateTag Tag => AttackStateTag.BlackDash;
-
         private readonly PlayerConfig _config;
         private readonly IStateMove _motor;
         private readonly IBlackAttackView _view;
         private readonly ConditionGroup _conditions;
-        private readonly BlackDashPrepareState _prepare;
-        private float _enterTime;
+        private readonly AttackStateTag _tag;
+        private readonly BlackAttackKind _kind;
         private bool _hit;
         private bool _blocked;
 
-        public BlackDashState(PlayerConfig config, IStateMove motor, IBlackAttackView view, ConditionGroup conditions, BlackDashPrepareState prepare)
+        public BlackDashState(PlayerConfig config, IStateMove motor, IBlackAttackView view, ConditionGroup conditions, AttackStateTag tag, BlackAttackKind kind)
         {
             _config = config;
             _motor = motor;
             _view = view;
             _conditions = conditions;
-            _prepare = prepare;
+            _tag = tag;
+            _kind = kind;
         }
 
-        public BlackAttackKind Kind { get; private set; }
+        public override AttackStateTag Tag => _tag;
 
-        /// <summary>命中回报：物理回调里不能切状态，只置标记，下一帧 IsDone 收</summary>
+        public override bool AbortsOnHurt => true;
+
+        protected override float PrepareTime => _config.blackDashPrepareTime;
+
+        protected override float ActiveTime
+            => _kind == BlackAttackKind.Up ? _config.blackDashTimeUp : _config.blackDashTimeDown;
+
+        protected override float RecoverTime => _config.blackDashRecoverTime;
+
+        /// <summary>命中回报：物理回调里不能改段，只置标记，下一帧 Advance 收</summary>
         public void NotifyHit() => _hit = true;
 
-        public override void Enter(in LogicContext ctx)
+        protected override void OnPrepareEnter(in LogicContext ctx)
         {
-            _enterTime = ctx.GameTime.now;
             _hit = false;
             _blocked = false;
 
-            Kind = _prepare.Kind == BlackAttackKind.Ahead ? BlackAttackKind.Up : _prepare.Kind;
-
-            Vector2 dir = _prepare.Direction == Vector2.zero
-                ? AttackAim.Direction(ctx.WorldInfo.Face, 1f)
-                : _prepare.Direction;
-
-            float speed = SpeedOf(Kind);
-
-            _motor.SetGravityEnable(false);
-            _motor.SetVelocityX(dir.x * speed);
-            _motor.SetVelocityY(dir.y * speed);
-
-            _view?.BeginDash(Kind);
-            _conditions?.BeginDashInvulnerable(TimeOf(Kind));
+            _motor?.SetGravityEnable(false);
+            _motor?.SnapVelocity(Vector2.zero);
         }
 
-        public override void Tick(in LogicContext ctx)
+        protected override void OnActiveEnter(in LogicContext ctx)
         {
+            Vector2 dir = AttackAim.Direction(ctx.WorldInfo.Face, _kind == BlackAttackKind.Up ? 1f : -1f);
+            float speed = _kind == BlackAttackKind.Up ? _config.blackDashSpeedUp : _config.blackDashSpeedDown;
+
+            _motor?.SetVelocityX(dir.x * speed);
+            _motor?.SetVelocityY(dir.y * speed);
+
+            _view?.BeginDash(_kind);
+            _conditions?.BeginDashInvulnerable(ActiveTime);
+        }
+
+        protected override void OnAdvance(in LogicContext ctx)
+        {
+            if (!InActive) return;
+
             if (ctx.WorldInfo.TouchingWall) _blocked = true;
+
+            if (_hit || _blocked) SkipToRecover(in ctx);
         }
 
-        public override bool IsDone(in LogicContext ctx)
-            => _hit || _blocked || ctx.GameTime.now - _enterTime >= TimeOf(Kind);
-
-        public override void Exit()
+        protected override void OnRecoverEnter(in LogicContext ctx)
         {
-            if (_hit)
-            {
-                _motor?.SetVelocityX(0);
-                _motor?.SetVelocityY(_config.blackDashBounceSpeed);
-            }
-            else if (_blocked) _motor?.SnapVelocity(Vector2.zero);
+            _motor?.SetGravityEnable(true);
+            _view?.End();
 
+            if (_hit) _motor?.SetVelocityY(_config.blackDashBounceSpeed);
+            else if (_blocked) _motor?.SnapVelocity(Vector2.zero);
+        }
+
+        protected override void OnTick(in LogicContext ctx)
+        {
+            if (InPrepare) _motor?.SnapVelocity(Vector2.zero);
+        }
+
+        /// <summary>前摇挨打整段作废时本体不会来接手，重力必须在这里还回去</summary>
+        protected override void OnExit()
+        {
             _motor?.SetGravityEnable(true);
             _view?.End();
         }
-
-        private float SpeedOf(BlackAttackKind kind)
-            => kind == BlackAttackKind.Up ? _config.blackDashSpeedUp : _config.blackDashSpeedDown;
-
-        private float TimeOf(BlackAttackKind kind)
-            => kind == BlackAttackKind.Up ? _config.blackDashTimeUp : _config.blackDashTimeDown;
     }
 }

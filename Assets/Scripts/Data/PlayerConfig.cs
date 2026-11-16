@@ -98,7 +98,7 @@ namespace Refraction.Data
         [Min(0f)]
         public float bulletDamage = 1f;
 
-        [Tooltip("两次攻击之间的最短间隔（秒）。从触发攻击那一帧起算，前摇与后摇都算在间隔内。\n0 表示无冷却，攻击组回到 None 后下一帧即可再攻击。")]
+        [Tooltip("白形态两次攻击之间的最短间隔（秒）。从触发攻击那一帧起算，前摇与后摇都算在间隔内。\n0 表示无冷却，攻击组回到 None 后下一帧即可再攻击。黑形态的三只各读自己那份冷却。")]
         [Min(0f)]
         public float attackCooldown = 0.35f;
 
@@ -139,11 +139,11 @@ namespace Refraction.Data
         [Min(0f)]
         public float flatAttackTime = 0.2f;
 
-        [Tooltip("普攻后摇时长（秒）：本体结束到攻击组回到空闲的等待，期间不响应新的攻击输入。\n0 表示没有后摇，结束即可再攻击（仍受 flatAttackCooldown 限制）。")]
+        [Tooltip("普攻后摇时长（秒）：本体结束到这只状态收尾的等待，期间能走、能跳、能冲刺，但按别的方向攻击会直接顶掉这段后摇。\n0 表示没有后摇，结束即可再攻击（仍受 flatAttackCooldown 限制）。")]
         [Min(0f)]
         public float flatAttackRecoverTime = 0.2f;
 
-        [Tooltip("普攻冷却（秒）：从按攻击键那一刻起算，只有普攻走这份；突进那份是 blackDashCooldown。")]
+        [Tooltip("普攻冷却（秒）：从按攻击键那一刻起算，只有平劈走这份；斜上 / 斜下各有一份自己的冷却。")]
         [Min(0f)]
         public float flatAttackCooldown = 0.35f;
 
@@ -164,17 +164,21 @@ namespace Refraction.Data
         public float flatAttackHitRecoil = 10f;
 
         [Header("攻击 · 黑突进")]
-        [Tooltip("黑突进前摇时长（秒）：按下攻击键到冲出去之间的等待，期间被打中会整段打断；突进方向在这段走完那一刻定死。\n这段时间速度锁成 0、重力也关掉，能挨打但不接受任何移动输入。")]
+        [Tooltip("黑突进前摇时长（秒）：按下攻击键到冲出去之间的等待，期间被打中会整段打断；方向由按下那一刻的竖直输入决定。\n这段时间速度锁成 0、重力也关掉，能挨打但不接受任何移动输入。")]
         [Min(0f)]
         public float blackDashPrepareTime = 0.12f;
 
-        [Tooltip("黑突进后摇时长（秒）：冲完到回到空闲之间的等待，期间重力已恢复、也能照常移动，但攻击 / 跳跃 / 冲刺都不接受。\n0 表示冲完立刻恢复操作。")]
+        [Tooltip("黑突进后摇时长（秒）：冲完到这只状态收尾的等待，期间重力已恢复、也能照常移动，但跳跃 / 冲刺不接受，按别的方向攻击会直接顶掉这段后摇。\n0 表示冲完立刻收尾。")]
         [Min(0f)]
         public float blackDashRecoverTime = 0.15f;
 
-        [Tooltip("黑突进冷却（秒）：从按攻击键那一刻起算，与普攻共用同一个冷却计时器。")]
+        [Tooltip("斜上突进的冷却（秒）：从按攻击键那一刻起算，只占斜上这一份，平劈与斜下各有自己的冷却。")]
         [Min(0f)]
-        public float blackDashCooldown = 0.6f;
+        public float blackDashUpCooldown = 0.6f;
+
+        [Tooltip("斜下突进的冷却（秒）：从按攻击键那一刻起算，只占斜下这一份。")]
+        [Min(0f)]
+        public float blackDashDownCooldown = 0.6f;
 
         [Tooltip("斜上 45° 突进的初速度（单位/秒）：横向取朝向、竖直向上，两个分量各为 0.707 × 该值。")]
         [Min(0f)]
