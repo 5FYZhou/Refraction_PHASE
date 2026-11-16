@@ -64,7 +64,7 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeLayer: 0
@@ -1166,7 +1166,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8ba844c98d3b094097b4baa9a59d33c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: 09168d4ad3df1644fbcb0b2def91d125, type: 2}
   wallInnerRadius: 0.95
   wallOuterRadius: 1.11
   wallMask:
