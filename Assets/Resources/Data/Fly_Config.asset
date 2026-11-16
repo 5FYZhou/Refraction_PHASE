@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c261389300ecf4f459a4c56e143eb24e, type: 3}
   m_Name: Fly_Config
   m_EditorClassIdentifier: 
-  moveSpeed: 10
+  moveSpeed: 5
   moveAcceleration: 50
   moveDeceleration: 60
   turnAcceleration: 80
@@ -27,16 +27,16 @@ MonoBehaviour:
   patrolSpeed: 2
   chaseStopDistance: 3.5
   blackWindupTime: 0.8
-  blackDashSpeed: 16
+  blackDashSpeed: 12
   blackDashMaxTime: 1
   riseMin: 1
   riseMax: 3
   riseSpeed: 5
-  whiteChaseSpeed: 4
-  whiteChaseRadius: 5
+  whiteChaseSpeed: 3.5
+  whiteChaseRadius: 6
   whiteWindupTime: 0.6
   whiteRecoverTime: 1
-  bulletSpeed: 6
+  bulletSpeed: 5
   bulletDamage: 20
   bulletKnockback: 6
   contactDamage: 1

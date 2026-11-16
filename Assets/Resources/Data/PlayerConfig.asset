@@ -18,7 +18,7 @@ MonoBehaviour:
   turnAcceleration: 225
   externalDeceleration: 40
   maxHealth: 5
-  invulnerableTime: 1.4
+  invulnerableTime: 0.6
   KnockbackDecay: 80
   enableGravity: 1
   maxFallSpeed: 26
@@ -44,7 +44,7 @@ MonoBehaviour:
   crouchMoveSpeedScale: 0.45
   crouchRecoilScale: 0
   crouchAllowJump: 0
-  crouchAllowDash: 0
+  crouchAllowDash: 1
   crouchGroundGrace: 0.13
   bulletDamage: 20
   attackCooldown: 0.4
@@ -55,37 +55,37 @@ MonoBehaviour:
   attackPrepareTime: 0.08
   bulletKnockback: 1.5
   attackRecoverTime: 0.12
-  flatAttackPrepareTime: 0.01
+  flatAttackPrepareTime: 0.08
   flatAttackTime: 0.15
-  flatAttackRecoverTime: 0.25
+  flatAttackRecoverTime: 0.2
   flatAttackCooldown: 0.4
   flatAttackDamage: 15
-  flatAttackKnockback: 2.5
-  flatAttackMissRecoil: 2
-  flatAttackHitRecoil: 5
-  blackDashPrepareTime: 0.08
-  blackDashRecoverTime: 0.1
-  blackDashCooldown: 0.35
-  blackDashSpeedUp: 18
-  blackDashSpeedDown: 20
-  blackDashTimeUp: 0.18
-  blackDashTimeDown: 0.2
-  blackDashDamage: 15
-  blackDashKnockback: 2.5
+  flatAttackKnockback: 4
+  flatAttackMissRecoil: 3
+  flatAttackHitRecoil: 10
+  blackDashPrepareTime: 0.1
+  blackDashRecoverTime: 0.12
+  blackDashCooldown: 0.5
+  blackDashSpeedUp: 19
+  blackDashSpeedDown: 21
+  blackDashTimeUp: 0.15
+  blackDashTimeDown: 0.18
+  blackDashDamage: 18
+  blackDashKnockback: 10
   blackDashBounceSpeed: 14
   destruction: 1
-  meleeHitStopTime: 0.055
+  meleeHitStopTime: 0.06
   contactHitStopTime: 0.035
   maxPolarity: 180
   polarityPerHit: 20
-  afterimageLinkPolarity: 2
-  chargePrepareTime: 0.5
+  afterimageLinkPolarity: 15
+  chargePrepareTime: 0.25
   chargeCooldown: 0.5
   dashInvulnerableTime: 0.15
   maxAfterimages: 3
   afterimageDuration: 40
   afterimageLinkDamage: 30
-  afterimageLinkThickness: 0.25
+  afterimageLinkThickness: 0.3
   afterimageLinkSenseRadius: 25
   afterimageAlpha: 0.35
   afterimageLinkColor: {r: 0.9559748, g: 0.95017225, b: 0.730509, a: 0.50980395}
