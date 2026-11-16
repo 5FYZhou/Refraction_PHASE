@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 7453196329512129898}
   - component: {fileID: 8709123207043585241}
-  - component: {fileID: 7716341094782669018}
   - component: {fileID: 5810685816209187431}
+  - component: {fileID: 6839496073047619959}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: Spwan
@@ -81,7 +81,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
+  m_Sprite: {fileID: -2009304142, guid: 7378f949c53a7464e82e2195ee11d637, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -92,8 +92,21 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!58 &7716341094782669018
-CircleCollider2D:
+--- !u!114 &5810685816209187431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6391097310814701061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7089d3e9da02224a839d453d8be17c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashSeconds: 0.4
+--- !u!60 &6839496073047619959
+PolygonCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -127,17 +140,20 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeLayer: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.5
---- !u!114 &5810685816209187431
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6391097310814701061}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7089d3e9da02224a839d453d8be17c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  flashSeconds: 0.4
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 1.4545455, y: 1.3472728}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Points:
+    m_Paths:
+    - - {x: -0.28651103, y: 0.46578127}
+      - {x: -0.63184434, y: -0.6198007}
+      - {x: 0.61618733, y: -0.63903886}
+      - {x: 0.36960995, y: 0.63995266}
+      - {x: -0.03707564, y: 0.32765076}
+  m_UseDelaunayMesh: 0
