@@ -4,6 +4,7 @@ using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
 using Refraction.Presentation.Actor;
+using TMPro;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
@@ -30,10 +31,20 @@ namespace Refraction.Presentation.Combat
 
             /// <summary>这一格绑定的残影序号；序号不变就绝不再碰它的姿态与颜色</summary>
             public int Index = -1;
+
+            /// <summary>头顶标号：场上有几枚就显示 1..N，按落影先后排</summary>
+            public TextMeshProUGUI Label;
+
+            /// <summary>标号所在的 Num 节点，根节点翻面后靠它把字反向抵消回来</summary>
+            public Transform LabelRoot;
+
+            /// <summary>已经写进 Label 的数字，不加这个每帧都会重排一次文字</summary>
+            public int LabelValue = -1;
         }
 
         private const string ContainerName = "Afterimages";
         private const string ViewName = "View";
+        private const string NumName = "Num";
 
         // 淡出与闪烁先写死：末态透明度、闪烁窗口、闪烁频率
         private const float FadeEndAlpha = 0.12f;
@@ -61,6 +72,9 @@ namespace Refraction.Presentation.Combat
         private GameObject _prefab;
         private float _z;
 
+        // 标号文案预先造好，换号时只挪引用，免得在每物理帧的 Sync 里 ToString 造垃圾
+        private string[] _labelText;
+
         /// <summary>由 CombatRoot 装配；view 是残影里那张皮，playerRoot 是账本里 Pos 所属的枢轴，prefab 是带 Collider 的残影外壳</summary>
         public void Init(AfterimageLogic afterimages, PlayerConfig config, Transform view, Transform playerRoot, GameObject prefab)
         {
@@ -84,6 +98,9 @@ namespace Refraction.Presentation.Combat
 
             // 残影体交给通用池：容量跟残影上限走，预创建一批，落影时不再现场 Instantiate
             int capacity = Mathf.Max(1, config.maxAfterimages);
+
+            _labelText = new string[capacity + 1];
+            for (int i = 1; i <= capacity; i++) _labelText[i] = i.ToString();
 
             _slots = new Pool<Slot>(
                 CreateSlot,
@@ -145,6 +162,7 @@ namespace Refraction.Presentation.Combat
                 }
 
                 ApplyFade(slot, in snap, now);
+                ApplyLabel(slot, i + 1);
             }
 
             SyncLinks();
@@ -169,6 +187,21 @@ namespace Refraction.Presentation.Combat
             for (int i = 0; i < behaviours.Length; i++) behaviours[i].enabled = false;
 
             for (int i = 0; i < shell.Length; i++) shell[i].enabled = true;
+
+            Transform num = go.transform.Find(NumName);
+            TextMeshProUGUI label = null;
+
+            if (num != null)
+            {
+                // 上面那一轮把外壳里的 TMP / Canvas 一并关了，标号要单独放回来才画得出字
+                Behaviour[] labelParts = num.GetComponentsInChildren<Behaviour>(true);
+                for (int i = 0; i < labelParts.Length; i++) labelParts[i].enabled = true;
+
+                label = num.GetComponentInChildren<TextMeshProUGUI>(true);
+
+                // 世界空间 Canvas 的 GraphicRaycaster 还是开着的，字自己不吃点击就不会挡 UI
+                if (label != null) label.raycastTarget = false;
+            }
 
             GameObject body = Instantiate(_view.gameObject, go.transform);
             body.name = ViewName;
@@ -196,7 +229,9 @@ namespace Refraction.Presentation.Combat
                 Tr = go.transform,
                 Body = body.transform,
                 Renderer = renderer,
-                Anchor = anchor
+                Anchor = anchor,
+                Label = label,
+                LabelRoot = num
             };
         }
 
@@ -215,6 +250,12 @@ namespace Refraction.Presentation.Combat
                 host.x != 0f ? world.x / host.x : world.x,
                 host.y != 0f ? world.y / host.y : world.y,
                 1f);
+
+            // 转向是靠根节点负缩放做的，标号会跟着镜像，所以 Num 要再翻一次抵消掉
+            if (slot.LabelRoot != null)
+            {
+                slot.LabelRoot.localScale = new Vector3(slot.Tr.localScale.x < 0f ? -1f : 1f, 1f, 1f);
+            }
 
             slot.Body.localPosition = _view.localPosition;
             slot.Body.localRotation = _view.localRotation;
@@ -256,6 +297,15 @@ namespace Refraction.Presentation.Combat
             }
 
             slot.Renderer.color = new Color(slot.Tint.r, slot.Tint.g, slot.Tint.b, alpha);
+        }
+
+        /// <summary>标号按落影先后填：最早的 1、最新的 N，队列前面过期后整排数字往前挪</summary>
+        private void ApplyLabel(Slot slot, int number)
+        {
+            if (slot.Label == null || slot.LabelValue == number) return;
+
+            slot.LabelValue = number;
+            slot.Label.text = number < _labelText.Length ? _labelText[number] : number.ToString();
         }
 
         private void SyncLinks()

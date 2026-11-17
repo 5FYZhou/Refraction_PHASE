@@ -66,18 +66,15 @@ namespace Refraction.Presentation.Actor
 
         private SpriteRenderer _viewRenderer;
         private Color _viewBaseColor = Color.white;
-        private Sprite _viewBaseSprite;
-        private float _lastChargeProgress = -1f;
-        private bool _lastCharged;
         private float _blinkElapsed;
-
-        private static readonly Color ChargeYellow = new(1f, 0.92f, 0.3f, 1f);
-        private static readonly Color ChargeOrange = new(1f, 0.5f, 0.08f, 1f);
+        private ChargeBarView _chargeBar;
 
         private void Awake()
         {
             // 必须放 Awake：GameRoot 可能在 Start 前就调 Attach/Tick，那帧 view 还没解析，会先报一次“找不到 View”
             CacheView();
+
+            _chargeBar = new(transform);
         }
         private void Start()
         {
@@ -285,7 +282,7 @@ namespace Refraction.Presentation.Actor
                 SetViewScale(_curViewScale);
             }
 
-            ApplyChargeVisual(_logic.ChargeProgress, _logic.IsCharged);
+            _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
 
             if (_aniView != null)
@@ -334,35 +331,6 @@ namespace Refraction.Presentation.Actor
             _phasing = phase;
             _hurt.excludeLayers = phase ? _hurtExclude | (1 << BulletLayer) : _hurtExclude;
         }
-
-        private void ApplyChargeVisual(float progress, bool charged)
-        {
-            if (Mathf.Approximately(progress, _lastChargeProgress) && charged == _lastCharged) return;
-
-            _lastChargeProgress = progress;
-            _lastCharged = charged;
-
-            if (_viewRenderer == null) return;
-
-            if (charged)
-            {
-                _viewRenderer.color = ChargeOrange;
-                _viewRenderer.sprite =  _viewBaseSprite;
-                return;
-            }
-
-            if (progress <= 0f)
-            {
-                _viewRenderer.color = _viewBaseColor;
-                _viewRenderer.sprite = _viewBaseSprite;
-                return;
-            }
-
-            _viewRenderer.color = Color.Lerp(_viewBaseColor, ChargeYellow, progress);
-            _viewRenderer.sprite = ChargeSprite;
-        }
-
-        private Sprite ChargeSprite => _viewBaseSprite;
 
         private void WarnNoGroundedPoint()
         {
@@ -423,11 +391,7 @@ namespace Refraction.Presentation.Actor
             _viewBaseScale = view.localScale;
 
             _viewRenderer = view.GetComponent<SpriteRenderer>();
-            if (_viewRenderer != null)
-            {
-                _viewBaseColor = _viewRenderer.color;
-                _viewBaseSprite = _viewRenderer.sprite;
-            }
+            if (_viewRenderer != null) _viewBaseColor = _viewRenderer.color;
 
             // y 压成 0 就再也换不回来了，宁可不做缩放
             if (Mathf.Abs(_viewBaseScale.y) < 1e-4f)
