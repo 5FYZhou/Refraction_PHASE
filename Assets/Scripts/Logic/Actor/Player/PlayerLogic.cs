@@ -33,6 +33,7 @@ namespace Refraction.Logic.Actor
         private Vector2 _lastGroundedPos;
         private bool _hasGroundedPos;
         private Vector2 _curScale = Vector2.one;
+        private float _moveX;
 
         private DoorEntry _pendingEntry;
         private MovementStateTag _pendingEntryTag;
@@ -69,6 +70,8 @@ namespace Refraction.Logic.Actor
         }
 
         public MovementStateTag CurrentTag => _moveGroup.CurrentTag;
+
+        public float MoveX => _moveX;
 
         public PostureStateTag PostureTag => _postureGroup.Current;
 
@@ -152,6 +155,7 @@ namespace Refraction.Logic.Actor
             }
 
             LogicContext tick = _transit.Apply(in ctx);
+            _moveX = tick.InputSnapshot.Move.x;
 
             // 入缓冲的必须是最终生效的输入
             _buffer.Push(in tick.InputSnapshot, tick.GameTime.now);

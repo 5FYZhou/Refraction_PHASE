@@ -52,7 +52,6 @@ namespace Refraction.Presentation.Actor
         private int _hurtExclude;
         private bool _phasing;
         private PlayerAniView _aniView;
-        private float _moveX;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
@@ -202,7 +201,6 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
-            _moveX = snapshot.Move.x;
             // 世界信息由 PlayerMotor 的物理探测给出，本层只负责组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
@@ -293,7 +291,7 @@ namespace Refraction.Presentation.Actor
             if (_aniView != null)
             {
                 _aniView.PlayJump(_logic.CurrentTag);
-                _aniView.PlayMove(_logic.CurrentTag, _moveX, _logic.IsHurt);
+                _aniView.PlayMove(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt);
             }
         }
 

@@ -93,11 +93,15 @@ namespace Refraction.Logic.Actor
                 }
                 case Mode.Launch:
                 {
-                    // 状态机在 Tick 里会按“跳跃键是否按住”砍竖直速度、按上升/顶点换重力，
-                    // 过门期间这些都不该生效：在它之后把抛物线钉回来，再判到达
+                    // 状态机按跳跃键砍 vy、按上升/顶点换重力，过门期间都要在它之后盖回来
                     if (!_launchApplied)
                     {
                         _launchApplied = true;
+
+                        // 朝上的门出门即当一次起跳：不在这里切 Jump，这一帧还是 Fall，动画也跟着错
+                        _moveGroup.ChangeState(MovementStateTag.Jump, ctx);
+
+                        // Enter 会写 jumpSpeed 与起跳重力，必须用解出来的抛物线速度盖掉
                         _motor.SetVelocityY(_launchVy);
                     }
 
