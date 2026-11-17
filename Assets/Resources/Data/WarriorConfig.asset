@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc8b119bce48218449f18847f6ee2b36, type: 3}
+  m_Name: WarriorConfig
+  m_EditorClassIdentifier: 
+  moveSpeed: 10
+  moveAcceleration: 50
+  moveDeceleration: 60
+  turnAcceleration: 80
+  externalDeceleration: 40
+  maxHealth: 3
+  invulnerableTime: 0.4
+  KnockbackDecay: 30
+  enableGravity: 1
+  maxFallSpeed: 20
+  maxRiseSpeed: 20
+  fallGravity: 70
+  patrolSpeed: 2
+  pounceTriggerRange: 6
+  pounceApexHeight: 2.5
+  pounceSpeed: 9
+  pounceCooldown: 1.5
+  windupTime: 0.35
+  recoverTime: 0.4
+  hoverTime: 0.5
+  bulletSpeed: 12
+  bulletDamage: 1
+  bulletKnockback: 5
+  bulletMuzzle: {x: 0.5, y: 0.3}
+  reboundCooldown: 1
+  contactDamage: 1
+  contactInterval: 1
+  contactKnockback: 7
