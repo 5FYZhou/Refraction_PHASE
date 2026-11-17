@@ -1,12 +1,10 @@
 ﻿using Refraction.Logic.Events;
-using Refraction.Logic.Level;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Refraction.Presentation.UI
 {
-    /// <summary>场景级玩法面板：血图标有血=亮、无血=暗，反转互换；极性条宽度 = 满宽 × 当前值/上限</summary>
-    /// <remarks>血量与极性各走一个事件，面板不持有玩家</remarks>
+    /// <summary>场景级玩法面板：血图标按 Lose 播碎裂动画，极性条宽度 = 满宽 × 当前值/上限</summary>
     public sealed class GameplayPanel : BasePanel
     {
         public override E_UILayer Layer => E_UILayer.Scene;
@@ -15,23 +13,21 @@ namespace Refraction.Presentation.UI
 
         public override bool LiveWithScene => true;
 
-        /// <summary>图标名 ImgH1..ImgH5，序号小的先掉</summary>
+        /// <summary>图标名 ImgH1..ImgH5，从左往右排，序号大的先碎</summary>
         private const string IconPrefix = "ImgH";
 
         private const int IconCount = 5;
+
+        private const string LoseParam = "Lose";
 
         private const string PolarityNumName = "ImgPolarityNum";
 
         private readonly Image[] _icons = new Image[IconCount];
 
+        private readonly Animator[] _anims = new Animator[IconCount];
+
         private RectTransform _polarityNum;
         private float _polarityFullWidth;
-
-        private Color _whiteIcon = Color.white;
-
-        private Color _blackIcon = Color.black;
-
-        private bool _blackWorld;
 
         private int _alive = IconCount;
 
@@ -42,6 +38,7 @@ namespace Refraction.Presentation.UI
             for (int i = 0; i < IconCount; i++)
             {
                 _icons[i] = GetComponent<Image>(IconPrefix + (i + 1));
+                if (_icons[i] != null) _anims[i] = _icons[i].GetComponent<Animator>();
             }
 
             Image num = GetComponent<Image>(PolarityNumName);
@@ -52,6 +49,7 @@ namespace Refraction.Presentation.UI
             }
 
             ApplyPolarity(0, 1);
+            ApplyHealth(_alive);
         }
 
         protected override void RegisterSelf()
@@ -72,18 +70,14 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPolarityChanged);
-            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
 
-            // 晚于进关广播才显示时，这里补一次
-            _blackWorld = root != null && root.World == WorldPolarity.Black;
-            ApplyColors();
+            ApplyHealth(_alive);
         }
 
         private void OnDisable()
         {
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Unsubscribe(OnPolarityChanged);
-            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
         private void OnPolarityChanged(PlayerPolarityChanged evt)
@@ -104,26 +98,18 @@ namespace Refraction.Presentation.UI
 
         private void OnHealthChanged(PlayerHealthChanged evt)
         {
-            _alive = Mathf.Clamp(evt.cur, 0, IconCount);
-            ApplyColors();
+            ApplyHealth(evt.cur);
         }
 
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
+        private void ApplyHealth(int cur)
         {
-            _blackWorld = evt.World == WorldPolarity.Black;
-            ApplyColors();
-        }
-
-        private void ApplyColors()
-        {
-            Color alive = _blackWorld ? _blackIcon : _whiteIcon;
-            Color empty = _blackWorld ? _whiteIcon : _blackIcon;
+            _alive = Mathf.Clamp(cur, 0, IconCount);
 
             for (int i = 0; i < IconCount; i++)
             {
-                if (_icons[i] == null) continue;
+                if (_anims[i] == null) continue;
 
-                _icons[i].color = i < _alive ? alive : empty;
+                _anims[i].SetBool(LoseParam, i >= _alive);
             }
         }
     }
