@@ -244,7 +244,7 @@ namespace Refraction.Logic.Actor
             ResetHealth();
             Announce();
             AnnouncePolarity();
-            EventBus<WorldReversed>.Publish(default);
+            EventBus<RequestWorldReverse>.Publish(default);
         }
 
         protected override void OnTick(in LogicContext ctx)

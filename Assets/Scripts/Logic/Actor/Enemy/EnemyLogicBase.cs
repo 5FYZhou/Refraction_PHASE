@@ -2,7 +2,6 @@ using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
-using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 using UnityEngine;
 
@@ -23,12 +22,12 @@ namespace Refraction.Logic.Actor
         private Vector2 _lastSeenPos;
         private float _lostTime;
 
-        protected EnemyLogicBase(IMoveMotor motor, CharacterConfig config, bool aiEnabled, WorldPolarity world)
+        protected EnemyLogicBase(IMoveMotor motor, CharacterConfig config, bool aiEnabled, bool black)
             : base(motor, config)
         {
             Motor = motor;
             _aiEnabled = aiEnabled;
-            _black = world == WorldPolarity.Black;
+            _black = black;
 
             EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
@@ -130,6 +129,6 @@ namespace Refraction.Logic.Actor
             _lostTime += ctx.GameTime.deltaTime;
         }
 
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = evt.World == WorldPolarity.Black;
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = !_black;
     }
 }

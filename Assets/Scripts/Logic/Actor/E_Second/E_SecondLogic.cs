@@ -24,10 +24,10 @@ namespace Refraction.Logic.Actor
             E_SecondConfig config,
             in EnemyArea patrolArea,
             in EnemyArea chaseArea,
-            bool black,
+            bool black = false,
             bool aiEnabled = true,
             Vector2 muzzle = default)
-            : base(motor, config, aiEnabled, black ? WorldPolarity.Black : WorldPolarity.White)
+            : base(motor, config, aiEnabled, black)
         {
             _config = config;
             _patrolArea = patrolArea;

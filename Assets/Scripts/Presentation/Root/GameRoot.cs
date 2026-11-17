@@ -81,14 +81,14 @@ namespace Refraction.Presentation
             if (_inputProvider == null) return;
 
             _inputProvider.Init();
-            EventBus<WorldReversed>.Subscribe(OnWorldReversed);
+            EventBus<RequestWorldReverse>.Subscribe(OnRequestWorldReverse);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            EventBus<WorldReversed>.Unsubscribe(OnWorldReversed);
+            EventBus<RequestWorldReverse>.Unsubscribe(OnRequestWorldReverse);
 
             DisposeServices();
 
@@ -106,7 +106,7 @@ namespace Refraction.Presentation
             _levelPending = false;
         }
 
-        private void OnWorldReversed(WorldReversed evt)
+        private void OnRequestWorldReverse(RequestWorldReverse evt)
         {
             _scenectx.ReverseWorld();
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));

@@ -1,8 +1,7 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
-using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 using UnityEngine;
 
@@ -29,7 +28,7 @@ namespace Refraction.Tests
             _motor = new FakeMotor();
             _area = EnemyArea.SpanX(-2f, 2f);
 
-            _logic = new E_FirstLogic(_motor, _config, true, WorldPolarity.White);
+            _logic = new E_FirstLogic(_motor, _config, true);
         }
 
         [TearDown]
@@ -114,6 +113,7 @@ namespace Refraction.Tests
             public void SetBodyScale(float scale) { }
             public void BeginStep(float now, float deltaTime) { }
             public void Commit() { }
+            public void ApplyExternal() { }
             public void FaceTowards(Vector2 dir) { }
             public void ApplyGravity(in LogicContext ctx) { }
             public void SpawnAt(Vector2 position, Vector2 velocity) { }

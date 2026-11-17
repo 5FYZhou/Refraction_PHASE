@@ -65,9 +65,9 @@
   - 重定位时**追击框按同一段位移一起平移**（尺寸不变、相对关系不变）：家搬到哪，缰绳就跟到哪，否则安家之后立刻脱战。追击框宽度留 0（无界）时不动它。
 - 返回途中玩家进视线 → 抢占进追击。
 
-## 七、攻击（按当前世界极性二选一）
+## 七、攻击（按敌人自身形态二选一）
 
-极性来自 `GameRoot.World`，构造时注入，之后订阅 `WorldPolarityChanged` 跟随。
+形态来自控制器 Inspector 的 `blackForm`（勾上 = 黑形态），构造时注入 `EnemyLogicBase`；世界每换一次极性它翻到另一态，所以「世界黑、敌人白」是成立的。
 
 **黑（冲刺）**
 1. 前摇 `blackWindupTime`：悬停、跟着玩家转身。
@@ -107,7 +107,7 @@
 
 ## 八、颜色（平时用初始色，只有攻击三段读资产）
 
-平时不配色：`View` 里摆的就是最终色，世界反转为黑时 `rgb = 1 - rgb` 取反（alpha 不动），回白世界还原。初始色由 `EnemyTint` 在 Awake 缓存一次，缓存的是「设计态」颜色，反复反转不会越取越偏。
+平时不配色：`View` 里摆的就是最终色，敌人是黑形态时 `rgb = 1 - rgb` 取反（alpha 不动），回白形态还原。初始色由 `EnemyTint` 在 Awake 缓存一次，缓存的是「设计态」颜色，反复反转不会越取越偏。
 
 只有攻击三段查 `Assets/Resources/Data/Enemy/EnemyVisualConfig.asset`（与另外两只共用）：
 
@@ -117,7 +117,7 @@
 | 攻击 | `strikeWhite` 近白 | `strikeBlack` 深灰 |
 | 后摇 | `recoverWhite` 灰蓝 | `recoverBlack` 墨青 |
 
-巡逻 / 追击 / 返回不查资产，用初始色（黑世界取反）。只在展示态或极性变化时写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质；`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
+巡逻 / 追击 / 返回不查资产，用初始色（黑形态取反）。只在展示态或极性变化时写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质；`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
 
 ## 九、预制体接线（本次只写了脚本）
 
@@ -125,7 +125,7 @@
 - `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data` 下新建），装配时注入给 `E_SecondMotor`。
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
-- `bulletPrefab` 留空 = 白极性不开火（仍然走完前摇与后摇）；出膛点 `bulletMuzzle` 在同一个组件上（局部坐标，x 随朝向镜像），不进 `E_SecondConfig`。
+- `bulletPrefab` 留空 = 白形态不开火（仍然走完前摇与后摇）；出膛点 `bulletMuzzle` 在同一个组件上（局部坐标，x 随朝向镜像），不进 `E_SecondConfig`。
 - **必须有 `DetectCollider` 子物体**：名字必须是这个（`EnemyColliderConfig.detectChildName`）；Is Trigger 与层不用手勾，`EnemyColliderSetup` 会在 Awake 里按资产设成「触发器 + 只认 Player(7) 层」；`E_SecondController` 按名字找它并补挂转发器，找不到只警告，这只敌人会永远看不见玩家。
 - 三只敌人共用的两份资产要在 `Assets/Resources/Data/` 下建（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider / EnemyVisual），文件名必须正好是 `EnemyColliderConfig` / `EnemyVisualConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
 - 两个框都在 controller 的 Inspector 上画（`EnemyGizmos` 统一绘制）：`patrolOffset / patrolSize` 是绿框，`chaseOffset / chaseSize` 是橙红框，`Reset()` 会给默认值（12×4 与 20×6）；另有一圈青色的 `DetectCollider` 视线范围框。

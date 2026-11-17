@@ -60,6 +60,10 @@ namespace Refraction.Logic.Events
             this.force = force;
         }
     }
+
+    public readonly struct RequestWorldReverse
+    {
+    }
     #endregion
 
     #region 事实
@@ -75,10 +79,6 @@ namespace Refraction.Logic.Events
             this.cur = cur;
             this.max = max;
         }
-    }
-
-    public readonly struct WorldReversed
-    {
     }
 
     public readonly struct WorldPolarityChanged

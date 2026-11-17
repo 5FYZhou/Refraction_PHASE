@@ -16,8 +16,13 @@ namespace Refraction.Logic.Actor
 
         private EnemyArea _activeArea;
 
-        public E_FirstLogic(IMoveMotor motor, E_FirstConfig config, bool aiEnabled, WorldPolarity world, Vector2 muzzle = default)
-            : base(motor, config, aiEnabled, world)
+        public E_FirstLogic(
+            IMoveMotor motor,
+            E_FirstConfig config,
+            bool aiEnabled,
+            Vector2 muzzle = default,
+            bool black = false)
+            : base(motor, config, aiEnabled, black)
         {
             _config = config;
             _muzzle = muzzle;

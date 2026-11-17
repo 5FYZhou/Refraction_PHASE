@@ -44,8 +44,6 @@ namespace Refraction.Logic.Level
         {
             EventBus<RequestNextDoor>.Subscribe(OnRequestNextLevel);
             EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
-
-            EventBus<WorldPolarityChanged>.Publish(new(_world));
         }
 
         public void Dispose()

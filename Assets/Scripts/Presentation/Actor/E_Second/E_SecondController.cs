@@ -4,7 +4,6 @@ using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
-using Refraction.Logic.Level;
 using Refraction.Presentation.Combat;
 using UnityEngine;
 
@@ -22,6 +21,10 @@ namespace Refraction.Presentation.Actor
         [Tooltip("驱动刚体的执行器。")]
         [SerializeField]
         private E_SecondMotor moveMotor;
+
+        [Tooltip("这只敌人的固有形态：勾上 = 黑形态，黑 / 白攻击与实体换色都跟它走，与当前世界极性无关。\n世界每换一次极性它会翻到另一态。")]
+        [SerializeField]
+        private bool blackForm;
 
         [Tooltip("白色攻击的子弹预制体：留空则白极性不开火。")]
         [SerializeField]
@@ -98,11 +101,7 @@ namespace Refraction.Presentation.Actor
 
             moveMotor.BindConfig(config);
 
-            _root ??= GameRoot.Instance;
-
-            WorldPolarity world = _root != null ? _root.World : WorldPolarity.White;
-
-            _logic = new E_SecondLogic(moveMotor, config, _patrolArea, _chaseArea, world == WorldPolarity.Black, true, bulletMuzzle);
+            _logic = new E_SecondLogic(moveMotor, config, _patrolArea, _chaseArea, blackForm, true, bulletMuzzle);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);

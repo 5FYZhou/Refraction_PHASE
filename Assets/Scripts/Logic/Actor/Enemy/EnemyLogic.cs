@@ -18,8 +18,13 @@ namespace Refraction.Logic.Actor
         private EnemyArea _patrolArea;
         private bool _visibleLast;
 
-        public EnemyLogic(IMoveMotor motor, EnemyConfig config, bool aiEnabled, WorldPolarity world = WorldPolarity.White, Vector2 muzzle = default)
-            : base(motor, config, aiEnabled, world)
+        public EnemyLogic(
+            IMoveMotor motor,
+            EnemyConfig config,
+            bool aiEnabled,
+            Vector2 muzzle = default,
+            bool black = false)
+            : base(motor, config, aiEnabled, black)
         {
             _config = config;
             _muzzle = muzzle;
