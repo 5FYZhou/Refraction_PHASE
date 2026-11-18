@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Refraction.Logic.Actor
 {
     /// <summary>下蹲前摇：身体高度与移速乘数在 crouchPrepareTime 内共用一条线性曲线，走完交给 CrouchState</summary>
-    /// <remarks>松键、离地或被 InterruptToStand 打断都立刻回站立，身体与缩放瞬间恢复，不播回弹过渡</remarks>
+    /// <remarks>松键、被 InterruptToStand 打断时去向由 PostureGroup.Fallback 按头顶空间定：站不直就地蹲下，不硬回站高</remarks>
     public sealed class CrouchingTransitionState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.CrouchingTransition;
@@ -30,8 +30,8 @@ namespace Refraction.Logic.Actor
         /// <summary>过渡进度：0 = 完全站立，1 = 完全蹲下。</summary>
         public float Progress => _progress;
 
-        /// <summary>走完进蹲姿，被打断回站立；只在 IsDone 为 true 时读，未走完就一定是被打断了</summary>
-        public PostureStateTag NextTag => _finished ? PostureStateTag.Crouch : PostureStateTag.Stand;
+        /// <summary>进度是否走满；未走满就结束一定是被打断，去向由 PostureGroup 按头顶空间决定</summary>
+        public bool Finished => _finished;
 
         public override void Enter(in LogicContext ctx)
         {

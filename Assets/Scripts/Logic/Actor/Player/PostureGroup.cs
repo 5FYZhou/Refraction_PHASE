@@ -99,12 +99,18 @@ namespace Refraction.Logic.Actor
 
         private float CrouchHeight => _motor.BodyHeight * _config.crouchHeightRatio;
 
+        /// <summary>兜底：前摇走满进蹲，其余先问头顶，站不直就留在蹲姿——硬回站高会顶进天花板</summary>
         protected override PostureStateTag Fallback(in LogicContext ctx)
         {
-            if (machine.CurrentState?.Tag == PostureStateTag.CrouchingTransition)
-                return _transitionState.NextTag;
+            PostureStateTag current = Current;
 
-            return PostureStateTag.Stand;
+            if (current == PostureStateTag.None || current == PostureStateTag.Stand)
+                return PostureStateTag.Stand;
+
+            if (current == PostureStateTag.CrouchingTransition && _transitionState.Finished)
+                return PostureStateTag.Crouch;
+
+            return CanStandUp(ctx) ? PostureStateTag.Stand : PostureStateTag.Crouch;
         }
 
         /// <summary>必须在移动组之前调用，否则同帧读到的禁令会晚一帧。</summary>
@@ -166,10 +172,11 @@ namespace Refraction.Logic.Actor
         }
 
         /// <summary>打断前摇回站立：乘数与身体 / View 缩放立刻恢复，不播回弹过渡</summary>
-        /// <remarks>不在前摇里调用无副作用；打断后要松手才能重新蹲（_needReleaseToCrouch）；头顶空间不在这里检查</remarks>
+        /// <remarks>头顶站不直就不打断并返回 false（Exit 的站高复原会顶进天花板）；打断后要松手才能重新蹲</remarks>
         public bool InterruptToStand(in LogicContext ctx)
         {
             if (Current != PostureStateTag.CrouchingTransition) return false;
+            if (!CanStandUp(ctx)) return false;
 
             // Exit 已把身体推回站高；乘数再补一次，否则本帧移动组还读上一帧的过渡值
             ChangeState(PostureStateTag.Stand, ctx);

@@ -4,7 +4,7 @@ using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
 {
-    /// <summary>已完全蹲下：身体与移速停在蹲姿值；起身由 PostureGroup 判（松键且头顶有空间），本态只在自己离地时结束</summary>
+    /// <summary>已完全蹲下：身体与移速停在蹲姿值；松键起身走 PostureGroup 抢占，离地结束走 Fallback 的头顶检测</summary>
     public sealed class CrouchState : BaseState<PostureStateTag, LogicContext>
     {
         public override PostureStateTag Tag => PostureStateTag.Crouch;
@@ -32,7 +32,7 @@ namespace Refraction.Logic.Actor
             _motor.SetSpeedScaleX(_config.crouchMoveSpeedScale);
         }
 
-        /// <summary>离地即结束（空中不给蹲）；判定走 crouchGroundGrace 宽限，否则会被踢回站姿又立刻蹲下、每两帧抽一次</summary>
+        /// <summary>离地即结束（空中不给蹲）；宽限走 crouchGroundGrace，否则踩地掉一帧就被踢回站姿又蹲下</summary>
         public override bool IsDone(in LogicContext ctx)
         {
             return !_ground.Grounded;
