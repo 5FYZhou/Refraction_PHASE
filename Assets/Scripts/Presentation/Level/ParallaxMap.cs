@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Level
 {
-    /// <summary>x 方向视差背景：按镜头位移把各层往后拖，第一层最近（跟世界 1:1），越往后越跟不上镜头；世界转黑时整图取反</summary>
+    /// <summary>视差背景：按镜头位移把各层往后拖（x 主拖、y 微量），第一层最近（跟世界 1:1），越往后越跟不上镜头；世界转黑时整图取反</summary>
     /// <remarks>层就是本物体的直接子物体，锚点取各自的 localPosition.x，所以这个物体本身不能跟着动。镜头位置读在 Update，比 Cinemachine 的 LateUpdate 慢一帧：背景整体慢一帧但不会抖</remarks>
     public sealed class ParallaxMap : MonoBehaviour, ISceneRoot, IRenderTicked
     {
@@ -17,18 +17,27 @@ namespace Refraction.Presentation.Level
         [SerializeField]
         private float farthestFollow = 0.75f;
 
+        [Tooltip("最远那一层在 y 方向跟着镜头走多少（比例同 x，但取值要小，否则跳跃时背景整幅上下甩）。第一层固定 0。")]
+        [Range(0f, 0.5f)]
+        [SerializeField]
+        private float farthestFollowY = 0.06f;
+
         public int Order => SceneOrder.World;
 
         private GameRoot _root;
         private Transform _camera;
         private Transform[] _layers;
         private float[] _anchorX;
+        private float[] _anchorY;
         private float[] _follow;
+        private float[] _followY;
         private SpriteRenderer[] _sprites;
         private Color[] _spriteColors;
 
         private float _cameraStartX;
-        private float _lastOffset = float.NaN;
+        private float _cameraStartY;
+        private float _lastOffsetX = float.NaN;
+        private float _lastOffsetY = float.NaN;
         private bool _black;
 
         private void Awake()
@@ -61,15 +70,18 @@ namespace Refraction.Presentation.Level
         {
             if (!EnsureCamera()) return;
 
-            float offset = _camera.position.x - _cameraStartX;
-            if (Mathf.Approximately(offset, _lastOffset)) return;
+            float offsetX = _camera.position.x - _cameraStartX;
+            float offsetY = _camera.position.y - _cameraStartY;
+            if (Mathf.Approximately(offsetX, _lastOffsetX) && Mathf.Approximately(offsetY, _lastOffsetY)) return;
 
-            _lastOffset = offset;
+            _lastOffsetX = offsetX;
+            _lastOffsetY = offsetY;
 
             for (int i = 0; i < _layers.Length; i++)
             {
                 Vector3 pos = _layers[i].localPosition;
-                pos.x = _anchorX[i] + offset * _follow[i];
+                pos.x = _anchorX[i] + offsetX * _follow[i];
+                pos.y = _anchorY[i] + offsetY * _followY[i];
                 _layers[i].localPosition = pos;
             }
         }
@@ -80,7 +92,9 @@ namespace Refraction.Presentation.Level
 
             _layers = new Transform[count];
             _anchorX = new float[count];
+            _anchorY = new float[count];
             _follow = new float[count];
+            _followY = new float[count];
 
             for (int i = 0; i < count; i++)
             {
@@ -88,9 +102,12 @@ namespace Refraction.Presentation.Level
 
                 _layers[i] = layer;
                 _anchorX[i] = layer.localPosition.x;
+                _anchorY[i] = layer.localPosition.y;
 
                 // 第一层（最近）跟世界 1:1 不动，最远那层按 farthestFollow 拖，中间线性过渡
-                _follow[i] = count <= 1 ? 0f : farthestFollow * i / (count - 1);
+                float ratio = count <= 1 ? 0f : (float)i / (count - 1);
+                _follow[i] = farthestFollow * ratio;
+                _followY[i] = farthestFollowY * ratio;
             }
         }
 
@@ -111,7 +128,9 @@ namespace Refraction.Presentation.Level
             if (_camera == null) return false;
 
             _cameraStartX = _camera.position.x;
-            _lastOffset = float.NaN;
+            _cameraStartY = _camera.position.y;
+            _lastOffsetX = float.NaN;
+            _lastOffsetY = float.NaN;
 
             return true;
         }
