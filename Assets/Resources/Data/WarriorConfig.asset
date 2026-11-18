@@ -17,26 +17,24 @@ MonoBehaviour:
   moveDeceleration: 60
   turnAcceleration: 80
   externalDeceleration: 40
-  maxHealth: 3
-  invulnerableTime: 0.4
+  maxHealth: 100
+  invulnerableTime: 0
   KnockbackDecay: 30
   enableGravity: 1
   maxFallSpeed: 20
   maxRiseSpeed: 20
   fallGravity: 70
-  patrolSpeed: 2
-  pounceTriggerRange: 6
-  pounceApexHeight: 2.5
-  pounceSpeed: 9
-  pounceCooldown: 1.5
-  windupTime: 0.35
-  recoverTime: 0.4
-  hoverTime: 0.5
-  bulletSpeed: 12
-  bulletDamage: 1
-  bulletKnockback: 5
-  bulletMuzzle: {x: 0.5, y: 0.3}
-  reboundCooldown: 1
+  patrolSpeed: 2.2
+  pounceApexHeight: 2.8
+  pounceSpeed: 11
+  pounceCooldown: 1.8
+  windupTime: 0.2
+  recoverTime: 0.35
+  hoverTime: 0.65
+  bulletSpeed: 24
+  bulletDamage: 35
+  bulletKnockback: 18
+  reboundCooldown: 1.2
   contactDamage: 1
   contactInterval: 1
-  contactKnockback: 7
+  contactKnockback: 12
