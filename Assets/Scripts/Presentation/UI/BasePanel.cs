@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Refraction.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -65,6 +66,10 @@ namespace Refraction.Presentation.UI
         protected virtual void OnSliderValueChange(string sliderName, float value) { }
 
 
+        [Tooltip("覆盖编辑器里写的文本：勾上后每个 TMP 文本按 SetInitialTxt 重置，否则保留预制体内容")]
+        [SerializeField]
+        protected bool overrideTxt;
+
         protected virtual string SetInitialTxt(string name)
         {
             return "Empty";
@@ -100,7 +105,7 @@ namespace Refraction.Presentation.UI
                 }
                 else if (component is TMP_Text text)
                 {
-                    if (!KeepAuthoredTxt(component.name))
+                    if (overrideTxt && !KeepAuthoredTxt(component.name))
                         text.text = SetInitialTxt(component.name);
                 }
                 else if (component is Graphic)
@@ -156,11 +161,15 @@ namespace Refraction.Presentation.UI
             // 没有文本就别加载字资产
             if (texts.Length == 0) return;
 
-            TMP_FontAsset font = root.UIMgr.GetFont(txtStyle);
+            UIStyleConfig.Entry entry = root.UIMgr.GetStyle(txtStyle);
+
+            if (entry == null) return;
+
+            TMP_FontAsset font = root.UIMgr.GetFont(entry);
 
             for (int i = 0; i < texts.Length; i++)
             {
-                UIStyle.SetTxtStyle(texts[i], txtStyle, font);
+                UIStyle.Apply(texts[i], entry, font);
             }
         }
 

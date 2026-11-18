@@ -827,4 +827,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb61cc5f0b3c9334bb0de3c1ec8e1fe5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  overrideTxt: 0
   txtStyle: 2

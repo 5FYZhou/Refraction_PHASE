@@ -8,6 +8,7 @@ using Refraction.Logic.Level;
 using Refraction.Presentation.UI;
 using Refraction.Presentation;
 using UnityEngine.TextCore.Text;
+using Refraction.Data;
 
 namespace Refraction.Presentation.UI
 {
@@ -77,15 +78,13 @@ namespace Refraction.Presentation.UI
         private const string UI_EVENT_SYS_KEY = "ui/EventSystem";
         private const string UI_PANEL_PREFIX = "ui/Panel/";
 
-        // 标题暂无独立字资产，先与正文共用
-        private static readonly Dictionary<TxtStyle, string> fontResPaths = new()
-        {
-            { TxtStyle.Body, "Font/SIMHEI SDF" },
-            { TxtStyle.Title, "Font/SIMHEI SDF" },
-        };
+        // 样式表与字资产只取一次：ResMgr.Load 每次都加引用计数
+        private const string UI_STYLE_KEY = "Data/UIStyleConfig";
 
-        // ResMgr.Load 每次都加引用计数，必须缓存
-        private readonly Dictionary<TxtStyle, TMP_FontAsset> fontCache = new();
+        private UIStyleConfig styleConfig;
+        private bool warnedStyleConfig;
+
+        private readonly Dictionary<string, TMP_FontAsset> fontCache = new();
 
         private readonly Dictionary<string, BasePanelInfo> panelDic = new Dictionary<string, BasePanelInfo>();
 
@@ -161,16 +160,32 @@ namespace Refraction.Presentation.UI
         }
 
 
-        /// Default 与未登记的样式返回 null，调用方保留原字体
-        public TMP_FontAsset GetFont(TxtStyle style)
+        /// 未登记返回 null
+        public UIStyleConfig.Entry GetStyle(TxtStyle style)
         {
-            if (fontCache.TryGetValue(style, out TMP_FontAsset cached)) return cached;
+            if (styleConfig == null)
+            {
+                styleConfig = GameRoot.Instance.ResMgr.Load<UIStyleConfig>(UI_STYLE_KEY);
 
-            TMP_FontAsset font = null;
-            if (fontResPaths.TryGetValue(style, out string path))
-                font = GameRoot.Instance.ResMgr.Load<TMP_FontAsset>(path);
+                if (styleConfig == null && !warnedStyleConfig)
+                {
+                    warnedStyleConfig = true;
+                    Debug.LogWarning($"[UI] 缺少样式表 Resources/{UI_STYLE_KEY}.asset，面板将保留预制体字体");
+                }
+            }
 
-            fontCache[style] = font;
+            return styleConfig != null ? styleConfig.Find(style) : null;
+        }
+
+        /// 条目没写路径或资产缺失就返回 null，调用方保留原字体
+        public TMP_FontAsset GetFont(UIStyleConfig.Entry entry)
+        {
+            if (entry == null || string.IsNullOrEmpty(entry.fontResPath)) return null;
+
+            if (fontCache.TryGetValue(entry.fontResPath, out TMP_FontAsset cached)) return cached;
+
+            TMP_FontAsset font = GameRoot.Instance.ResMgr.Load<TMP_FontAsset>(entry.fontResPath);
+            fontCache[entry.fontResPath] = font;
             return font;
         }
 
