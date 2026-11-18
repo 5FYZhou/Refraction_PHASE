@@ -285,11 +285,7 @@ namespace Refraction.Presentation.Actor
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
 
-            if (_aniView != null)
-            {
-                _aniView.PlayJump(_logic.CurrentTag);
-                _aniView.PlayMove(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt);
-            }
+            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt);
         }
 
         private void ApplyBlinkVisual(float deltaTime)
