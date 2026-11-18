@@ -2,7 +2,7 @@
 
 namespace Refraction.Presentation
 {
-    /// <summary>Warrior 执行器：探地面并贴回、探墙、探前方悬崖；身体按名字找 BodyCollider，脚底优先 View/Bottom</summary>
+    /// <summary>Warrior 执行器：探地面并贴回、探墙、探前方悬崖；身体是 BodyCollider 下所有启用碰撞体的并集，脚底优先 View/Bottom</summary>
     public sealed class WarriorMotor : MoveMotor
     {
         private const string BodyChildName = "BodyCollider";
@@ -10,9 +10,9 @@ namespace Refraction.Presentation
         private const string BottomChildName = "Bottom";
         private const string TopChildName = "Top";
 
-        [Tooltip("身体碰撞体：留空按名字找 BodyCollider 子物体。")]
+        [Tooltip("身体根节点：它自身与它下面所有启用的 Collider2D 合起来才算是身体。\n留空按名字找 BodyCollider 子物体。")]
         [SerializeField]
-        private Collider2D bodyCollider;
+        private Transform bodyRoot;
 
         [Tooltip("脚底参考点（View/Bottom）：地面探测、贴地、悬崖探针都以它为基准。\n留空按名字找，再找不到退回碰撞体底边（贴地会有偏差）。")]
         [SerializeField]
@@ -74,6 +74,7 @@ namespace Refraction.Presentation
 
         private float _feetOffset;
         private float _bodyHeight;
+        private bool _hasBody;
 
         private readonly RaycastHit2D[] _hits = new RaycastHit2D[8];
 
@@ -117,55 +118,43 @@ namespace Refraction.Presentation
 
         private void CacheBody()
         {
-            if (bodyCollider == null)
-            {
-                Transform body = transform.Find(BodyChildName);
-                if (body != null) bodyCollider = body.GetComponent<Collider2D>();
-            }
+            if (bodyRoot == null) bodyRoot = transform.Find(BodyChildName);
 
-            if (bodyCollider == null)
+            if (bodyRoot != null && BodySpan(bodyRoot, out float minY, out float maxY))
             {
-                Debug.LogError($"[WarriorMotor] 找不到 {BodyChildName} 子物体上的碰撞体：地面与墙面探测全部失效，人会直接往下掉。");
+                _hasBody = true;
+                _feetOffset = minY - Body.position.y;
+
+                _bodyHeight = feetRef != null && headRef != null
+                    ? Mathf.Abs(headRef.position.y - feetRef.position.y)
+                    : maxY - minY;
+
                 return;
             }
 
-            Vector2 size = ReadColliderSize(bodyCollider);
-            Vector2 offset = ReadColliderOffset(bodyCollider);
-
-            Transform bodyT = bodyCollider.transform;
-            float childScaleY = Mathf.Abs(bodyT.lossyScale.y);
-            float rootScaleY = Mathf.Abs(transform.lossyScale.y);
-            float bottomLocal = offset.y - size.y * 0.5f;
-
-            _feetOffset = bodyT == transform
-                ? bottomLocal * rootScaleY
-                : bodyT.localPosition.y * rootScaleY + bottomLocal * childScaleY;
-
-            _bodyHeight = feetRef != null && headRef != null
-                ? Mathf.Abs(headRef.position.y - feetRef.position.y)
-                : size.y * childScaleY;
+            _hasBody = false;
+            Debug.LogError($"[WarriorMotor] {BodyChildName} 下没有任何启用的 Collider2D：地面与墙面探测全部失效，人会直接往下掉。");
         }
 
-        private static Vector2 ReadColliderSize(Collider2D col)
+        /// <summary>身体是所有启用碰撞体的并集：其中最下与最上的点决定脚底偏移与站立高度</summary>
+        private static bool BodySpan(Transform root, out float minY, out float maxY)
         {
-            switch (col)
-            {
-                case CapsuleCollider2D capsule: return capsule.size;
-                case BoxCollider2D box: return box.size;
-                case CircleCollider2D circle: return Vector2.one * (circle.radius * 2f);
-                default: return Vector2.one;
-            }
-        }
+            minY = float.MaxValue;
+            maxY = float.MinValue;
 
-        private static Vector2 ReadColliderOffset(Collider2D col)
-        {
-            switch (col)
+            Collider2D[] parts = root.GetComponentsInChildren<Collider2D>();
+
+            for (int i = 0; i < parts.Length; i++)
             {
-                case CapsuleCollider2D capsule: return capsule.offset;
-                case BoxCollider2D box: return box.offset;
-                case CircleCollider2D circle: return circle.offset;
-                default: return Vector2.zero;
+                Collider2D part = parts[i];
+                if (!part.enabled) continue;
+
+                Bounds box = part.bounds;
+                if (box.min.y < minY) minY = box.min.y;
+                if (box.max.y > maxY) maxY = box.max.y;
             }
+
+            return maxY > minY;
         }
 
         /// <summary>脚底世界高度：基准取刚体而不是 transform，贴地写的是刚体，Transform 要等物理步结束才跟上</summary>
@@ -175,7 +164,7 @@ namespace Refraction.Presentation
         /// <summary>探地面并贴回：踩地后逻辑层不再施加重力，不贴回就会悬在探针允许的间隙里</summary>
         protected override bool SampleGround()
         {
-            if (bodyCollider == null) return false;
+            if (!_hasBody) return false;
 
             Vector2 center = new(Body.position.x, FeetWorldY() + groundProbe.lift + groundProbe.radius);
             float travel = groundProbe.lift + groundProbe.distance;
@@ -232,7 +221,7 @@ namespace Refraction.Presentation
 
         protected override bool SampleWall(int side)
         {
-            if (bodyCollider == null) return false;
+            if (!_hasBody) return false;
 
             Vector2 origin = (Vector2)Body.position + new Vector2(wallProbe.origin.x * side, wallProbe.origin.y);
             Vector2 dir = new(side, 0f);
@@ -266,7 +255,7 @@ namespace Refraction.Presentation
         /// <summary>探悬崖：脚底前方这个深度内没有任何朝上的面就算悬崖，平台侧壁不算</summary>
         protected override bool SampleLedge(int side)
         {
-            if (bodyCollider == null) return false;
+            if (!_hasBody) return false;
 
             Vector2 origin = new(
                 Body.position.x + ledgeAhead * side,
@@ -295,10 +284,20 @@ namespace Refraction.Presentation
             return true;
         }
 
+        /// <summary>编辑态没跑过 Awake，脚底要现场按碰撞体算，否则探针会画在枢轴上</summary>
+        private float GizmoFeetY(Vector2 basePos)
+        {
+            if (Application.isPlaying) return Body.position.y + _feetOffset;
+
+            Transform root = bodyRoot != null ? bodyRoot : transform.Find(BodyChildName);
+
+            return root != null && BodySpan(root, out float minY, out _) ? minY : basePos.y;
+        }
+
         private void OnDrawGizmosSelected()
         {
             Vector2 basePos = Application.isPlaying ? Body.position : (Vector2)transform.position;
-            float feetY = feetRef != null ? feetRef.position.y : basePos.y + _feetOffset;
+            float feetY = feetRef != null ? feetRef.position.y : GizmoFeetY(basePos);
 
             Vector2 start = new(basePos.x, feetY + groundProbe.lift + groundProbe.radius);
             Vector2 end = start + Vector2.down * (groundProbe.lift + groundProbe.distance);

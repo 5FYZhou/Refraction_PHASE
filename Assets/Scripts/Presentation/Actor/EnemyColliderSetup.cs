@@ -1,4 +1,4 @@
-using Refraction.Data;
+﻿using Refraction.Data;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
@@ -19,7 +19,11 @@ namespace Refraction.Presentation.Actor
 
             Collider2D[] boxes = BoxesOf(root, config.bodyChildName);
 
-            for (int i = 0; i < boxes.Length; i++) boxes[i].excludeLayers = config.BodyExcludeMask;
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                boxes[i].isTrigger = false;
+                boxes[i].excludeLayers = config.BodyExcludeMask;
+            }
 
             boxes = BoxesOf(root, config.attackChildName);
 
@@ -49,7 +53,7 @@ namespace Refraction.Presentation.Actor
                 return Empty;
             }
 
-            return child.GetComponents<Collider2D>();
+            return child.GetComponentsInChildren<Collider2D>();
         }
     }
 }

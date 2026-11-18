@@ -35,6 +35,8 @@
 - 攻击**不被抢占**：起手后一定走完自己那套阶段。
 - 距离用两个中心之间的欧氏距离，不是横向距离。
 
+巡逻态只在踩地时沿 x 推进；到巡逻框的左右边界、贴墙、前方悬崖，三者任一就掉头。框在 `Start` 里快照成世界坐标，掉头不再因为一帧越界就丢框（容差 = 掉头刹停的滑行 + 一帧位移）；但**被扑击或击退带出框外就永久退回整平台**，之后按墙与悬崖巡逻，不再回到框里。`patrolSize` 两个分量都是 0 时从一开始就走整平台。
+
 ## 四、黑形态：扑击
 
 阶段 `Windup → Pounce → Recover`，全部由 `WarriorAttackState` 内部计时。
@@ -108,6 +110,7 @@
 
 - 根节点：`Rigidbody2D` + `WarriorMotor` + `WarriorController`；`config` 指到新建的 `WarriorConfig`。
 - 子物体按名字找：`View`（含 `Bottom` / `Top`）、`BodyCollider`（非触发器）、`DetectCollider`（触发器，视线）、`AttackCollider`（触发器，接触伤害）、**`ReboundCollider`（触发器，弹反范围）**。
+- **身体 = `BodyCollider` 自身与其下所有启用的 `Collider2D` 的并集**：脚底偏移取并集的最低点，站立高度取并集的上下跨度（有 `View/Top` 与 `View/Bottom` 时优先量这两点）。想拼出多块形状就把碰撞体挂在 `BodyCollider` 下面，禁用的（`enabled = false`）不参与。`WarriorMotor.bodyRoot` 留空即按名字找，也可以直接拖节点。
 - `pounceRange` 与 `bulletMuzzle` 都在 `WarriorController` 上，不进配置资产：选中敌人就能在 Scene 视图看到扑击半径的圆和枪口十字，边拖数值边对。
 - `WarriorController.blackForm` 决定这只怪起始是黑还是白；世界每换一次极性它会翻一态（基类 `_black = !_black`）。
 - `WarriorMotor` 的 `groundProbe.layerMask` 与 `wallProbe.layerMask` **必须分开勾**（Ground / Wall）。默认 `Everything` 会把玩家和别的敌人当成地面。
