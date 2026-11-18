@@ -12,7 +12,10 @@ namespace Refraction.Presentation.Combat
     /// 三只盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
     /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down 并且整段跟着玩家跑。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
-    /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹</remarks>
+    /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹
+    /// 命中回报有两条路，别混：ProduceDamage 里的 _onHit 取伤害那一刻就回调、不看扣血结果，只给逻辑用
+    /// （普攻换命中后坐力 / 突进提前结束）；IHitLanded 要等 AttackBox 确认 TakeDamage 返回 true 才回调，
+    /// 接到 PlayerLogic.OnMeleeHitLanded 涨极性并发顿帧。白攻击的子弹不经过本类，所以子弹命中不顿帧</remarks>
     public sealed class BlackAttackView : IBlackAttackView, IReboundView, IAttacker, IHitLanded
     {
         private const string ReboundRootPath = "BlackRebound";
@@ -412,6 +415,7 @@ namespace Refraction.Presentation.Combat
         private static float Cross(Vector2 o, Vector2 a, Vector2 b)
             => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
+        /// <summary>攻击盒真扣到目标身上之后才回调：涨极性与顿帧全挂这条路上，子弹命中不经过本类</summary>
         public void OnHitLanded() => _onHitLanded?.Invoke();
 
         private static void SetActive(Component target, bool active)

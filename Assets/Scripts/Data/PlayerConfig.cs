@@ -218,9 +218,27 @@ namespace Refraction.Data
         [Min(0f)]
         public float meleeHitStopTime = 0.06f;
 
-        [Tooltip("被怪物撞到（接触伤害）的顿帧时长（秒）：真扣到血才触发，被无敌窗挡掉的那次不顿帧。\n0 表示不顿帧。")]
+        [Tooltip("被敌人撞到或吃到敌弹（Contact / EnemyBullet）的顿帧时长（秒）：真扣到血才触发，被无敌窗挡掉的那次不顿帧。\n0 表示不顿帧。")]
         [Min(0f)]
         public float contactHitStopTime = 0.1f;
+
+        [Header("打击感 · 震屏")]
+        [Tooltip("受击震屏的冲量强度（倍率，1 = Cinemachine 标准冲量）：乘以受击击退方向得到冲量向量。0 表示不震屏。")]
+        [Min(0f)]
+        public float cameraShakeIntensity = 0.5f;
+
+        [Tooltip("受击震屏的持续时间（秒）：从受击那帧起震这么久。0 表示沿用冲量源自己的时长。")]
+        [Min(0f)]
+        public float cameraShakeDuration = 0.2f;
+
+        [Tooltip("世界黑白反转时的震屏强度（倍率，1 = Cinemachine 标准冲量）：方向固定朝上。0 表示不震屏。")]
+        [Min(0f)]
+        public float worldShakeIntensity = 0.8f;
+
+        [Tooltip("世界黑白反转时的震屏持续时间（秒）：0 表示沿用冲量源自己的时长。")]
+        [Min(0f)]
+        public float worldShakeDuration = 0.3f;
+
 
         [Header("极性值")]
         [Tooltip("极性值上限（点）：每次有效攻击累加 polarityPerHit，涨到上限就停，不会溢出。")]

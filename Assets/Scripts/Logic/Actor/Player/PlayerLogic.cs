@@ -245,6 +245,13 @@ namespace Refraction.Logic.Actor
             Announce();
             AnnouncePolarity();
             EventBus<RequestWorldReverse>.Publish(default);
+
+            if (_config.worldShakeIntensity <= 0f) return;
+
+            EventBus<RequestCameraShake>.Publish(new(
+                Vector2.up * _config.worldShakeIntensity,
+                _config.worldShakeDuration,
+                CameraShakeMode.Omni));
         }
 
         protected override void OnTick(in LogicContext ctx)
@@ -339,7 +346,13 @@ namespace Refraction.Logic.Actor
 
             Announce();
 
-            if (hit.Source == DamageSource.Contact) EventBus<RequestHitStop>.Publish(new(_config.contactHitStopTime));
+            if (hit.Source == DamageSource.Contact || hit.Source == DamageSource.EnemyBullet) 
+                EventBus<RequestHitStop>.Publish(new(_config.contactHitStopTime));
+
+            Vector2 shakeDir = hit.Direction.sqrMagnitude > 1e-6f ? hit.Direction.normalized : Vector2.up;
+
+            if(hit.Source != DamageSource.Fall)
+                EventBus<RequestCameraShake>.Publish(new(shakeDir * _config.cameraShakeIntensity, _config.cameraShakeDuration));
 
             return true;
         }

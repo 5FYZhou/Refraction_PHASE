@@ -739,8 +739,8 @@ MonoBehaviour:
       serializedVersion: 2
       m_Bits: 64
   headProbe:
-    radius: 0.4
-    offset: {x: 0, y: -0.7}
+    radius: 0.52
+    offset: {x: 0.04, y: -0.93}
     layerMask:
       serializedVersion: 2
       m_Bits: 64

@@ -51,13 +51,26 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public enum CameraShakeMode
+    {
+        Directional = 0,
+
+        Omni = 1,
+    }
+
     public readonly struct RequestCameraShake
     {
-        public readonly float force;
+        public readonly Vector2 impulse;
 
-        public RequestCameraShake(float force)
+        public readonly float duration;
+
+        public readonly CameraShakeMode mode;
+
+        public RequestCameraShake(Vector2 impulse, float duration, CameraShakeMode mode = CameraShakeMode.Directional)
         {
-            this.force = force;
+            this.impulse = impulse;
+            this.duration = duration;
+            this.mode = mode;
         }
     }
 
