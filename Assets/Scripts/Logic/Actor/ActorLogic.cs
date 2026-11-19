@@ -11,15 +11,17 @@ namespace Refraction.Logic.Actor
     {
         private readonly IMoveMotor _motor;
         private readonly CharacterConfig _config;
+        private readonly IHurtView _hurtView;
 
         private int _curHealth;
 
         protected readonly ConditionGroup Conditions;
 
-        public ActorLogic(IMoveMotor motor, CharacterConfig config)
+        public ActorLogic(IMoveMotor motor, CharacterConfig config, IHurtView hurtView = null)
         {
             _motor = motor;
             _config = config;
+            _hurtView = hurtView;
             Conditions = new ConditionGroup(motor, config);
             _curHealth = Mathf.Max(1, config.maxHealth);
         }
@@ -45,6 +47,9 @@ namespace Refraction.Logic.Actor
             if (amount > 0) _curHealth = Mathf.Max(0, _curHealth - amount);
 
             Conditions.RegisterHit(in damage, amount > 0);
+
+            // 零伤害也算受击：站桩敌人的接触伤害被抹成 0，闪白仍要照常给
+            _hurtView?.OnHurt(amount);
 
             return amount > 0;
         }

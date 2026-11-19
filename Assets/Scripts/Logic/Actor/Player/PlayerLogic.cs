@@ -40,7 +40,8 @@ namespace Refraction.Logic.Actor
         private int _pendingEntryFace;
         private bool _hasPendingEntry;
 
-        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, IBulletLauncher launcher, IBlackAttackView blackAttack = null) : base(motor, config)
+        public PlayerLogic(IMoveMotor motor, PlayerConfig config, InputBuffer buffer, 
+            IBulletLauncher launcher, IHurtView hurtView, IBlackAttackView blackAttack = null) : base(motor, config, hurtView)
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);

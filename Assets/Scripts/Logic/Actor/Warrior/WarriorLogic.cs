@@ -23,11 +23,12 @@ namespace Refraction.Logic.Actor
         public WarriorLogic(
             IMoveMotor motor,
             WarriorConfig config,
+            IHurtView hurtView,
             bool aiEnabled,
             float pounceRange,
             Vector2 muzzle = default,
             bool black = false)
-            : base(motor, config, aiEnabled, black)
+            : base(motor, config, hurtView, aiEnabled, black)
         {
             _config = config;
             _pounceRange = pounceRange;

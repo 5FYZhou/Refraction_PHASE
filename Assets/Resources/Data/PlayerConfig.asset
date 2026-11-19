@@ -19,6 +19,7 @@ MonoBehaviour:
   externalDeceleration: 40
   maxHealth: 5
   invulnerableTime: 0.6
+  flashTime: 0.12
   KnockbackDecay: 80
   enableGravity: 1
   maxFallSpeed: 26

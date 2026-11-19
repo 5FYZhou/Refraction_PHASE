@@ -28,7 +28,7 @@ namespace Refraction.Tests
             _motor = new FakeMotor();
             _area = EnemyArea.SpanX(-2f, 2f);
 
-            _logic = new E_FirstLogic(_motor, _config, true);
+            _logic = new E_FirstLogic(_motor, _config, null, true);
         }
 
         [TearDown]

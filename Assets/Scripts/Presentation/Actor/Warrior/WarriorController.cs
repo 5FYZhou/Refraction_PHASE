@@ -4,6 +4,7 @@ using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
 using Refraction.Presentation.Combat;
+using Refraction.Presentation.Effects;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
@@ -58,6 +59,7 @@ namespace Refraction.Presentation.Actor
         private BulletField _bulletField;
 
         private EnemyTint _tint;
+        private HurtFlash _hurtFlash;
         private EnemyVisual _visual = (EnemyVisual)(-1);
         private bool _visualBlack;
 
@@ -98,7 +100,8 @@ namespace Refraction.Presentation.Actor
 
             moveMotor.BindConfig(config);
 
-            _logic = new WarriorLogic(moveMotor, config, true, pounceRange, bulletMuzzle, blackForm);
+            _hurtFlash = new(_root.Effects, transform, config.flashTime);
+            _logic = new WarriorLogic(moveMotor, config, _hurtFlash, true, pounceRange, bulletMuzzle, blackForm);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
             if (hurtBox != null) hurtBox.SetIAttackable(_logic);

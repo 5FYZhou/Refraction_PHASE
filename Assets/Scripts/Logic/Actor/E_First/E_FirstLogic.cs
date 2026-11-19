@@ -19,10 +19,11 @@ namespace Refraction.Logic.Actor
         public E_FirstLogic(
             IMoveMotor motor,
             E_FirstConfig config,
+            IHurtView hurtView,
             bool aiEnabled,
             Vector2 muzzle = default,
             bool black = false)
-            : base(motor, config, aiEnabled, black)
+            : base(motor, config, hurtView, aiEnabled, black)
         {
             _config = config;
             _muzzle = muzzle;

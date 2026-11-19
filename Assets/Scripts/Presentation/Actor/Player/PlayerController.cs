@@ -7,13 +7,14 @@ using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Combat;
+using Refraction.Presentation.Effects;
 using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
 using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked
+    public sealed class PlayerController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked, IHurtView
     {
         private const float BlinkHz = 5f;
         private const float BlinkMinAlpha = 0.3f;
@@ -125,7 +126,7 @@ namespace Refraction.Presentation.Actor
 
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded());
 
-            _logic = new(moveMotor, config, _buffer, _launcher, _blackAttack);
+            _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
@@ -185,14 +186,6 @@ namespace Refraction.Presentation.Actor
 
         public IHitLanded HitSink => _logic;
 
-        private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
-        {
-            Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
-
-            _logic.SpawnTo(pivot);
-            _logic.BeginTransit(in entry, enterTag, enterFace);
-        }
-
         public void FixedTick(float deltaTime)
         {
             if (!_attached) return;
@@ -244,6 +237,11 @@ namespace Refraction.Presentation.Actor
             }
 
             if (context.InputSnapshot.SavePressed) TrySaveCheckpoint();
+        }
+
+        public void OnHurt(int damage)
+        {
+            _root?.Effects?.Play(EffectType.DamageFlash, view, config.flashTime);
         }
 
         private void HandleDeath()
@@ -343,6 +341,15 @@ namespace Refraction.Presentation.Actor
 
             SpawnAtEntry(in evt.Entry, evt.EnterTag, evt.EnterFace);
         }
+
+        private void SpawnAtEntry(in DoorEntry entry, MovementStateTag enterTag, int enterFace)
+        {
+            Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
+
+            _logic.SpawnTo(pivot);
+            _logic.BeginTransit(in entry, enterTag, enterFace);
+        }
+
 
         #region View
         /// <summary>应用逻辑层给的 View 缩放：枢轴在身体中心，只改 scale 脚会离地（蹲下抬起 0.65），所以同时下移 (1 − scale.y) × 脚底到枢轴的距离</summary>

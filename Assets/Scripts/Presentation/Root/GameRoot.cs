@@ -8,6 +8,7 @@ using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
+using Refraction.Presentation.Effects;
 using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
 using UnityEngine;
@@ -31,6 +32,7 @@ namespace Refraction.Presentation
         private PauseService _pauseService;
         private HitStopService _hitStopService;
         private LevelManager _levelMgr;
+        private EffectModule _effects;
 
         private bool _warnedNoLevel;
         private bool _levelPending;
@@ -50,6 +52,8 @@ namespace Refraction.Presentation
         public PauseService Pause => _pauseService;
 
         public HitStopService HitStop => _hitStopService;
+
+        public EffectModule Effects => _effects;
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -104,6 +108,8 @@ namespace Refraction.Presentation
             _levelMgr?.Dispose();
             _levelMgr = null;
             _levelPending = false;
+
+            _effects?.Destroy();
         }
 
         private void OnRequestWorldReverse(RequestWorldReverse evt)
@@ -122,6 +128,9 @@ namespace Refraction.Presentation
 
             _hitStopService = new HitStopService(_pauseService);
             RegisterService(_hitStopService);
+
+            _effects = new EffectModule();
+            _effects.Init();
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
@@ -419,6 +428,7 @@ namespace Refraction.Presentation
             AttachLevel();
             _inputProvider?.Tick();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
+            _effects?.Tick(Time.deltaTime);
             TickSceneRootsRender(Time.deltaTime);
         }
 

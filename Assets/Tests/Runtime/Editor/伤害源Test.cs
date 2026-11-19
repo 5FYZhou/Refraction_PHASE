@@ -48,7 +48,7 @@ namespace Refraction.Tests
         [Test]
         public void 玩家子弹_伤敌人()
         {
-            EnemyLogic enemy = new(_motor, _enemyConfig, true);
+            EnemyLogic enemy = new(_motor, _enemyConfig, null, true);
 
             Assert.IsTrue(enemy.TakeDamage(new Damage(1f, DamageSource.PlayerBullet, Vector2.right)), "玩家子弹应该能打掉敌人的血");
             Assert.AreEqual(Health - 1, enemy.CurHealth, "扣血量 = Damage.Amount");
@@ -59,7 +59,7 @@ namespace Refraction.Tests
         [Test]
         public void 敌人子弹_不伤敌人()
         {
-            EnemyLogic enemy = new(_motor, _enemyConfig, true);
+            EnemyLogic enemy = new(_motor, _enemyConfig, null, true);
 
             Assert.IsFalse(enemy.TakeDamage(new Damage(2f, DamageSource.EnemyBullet, Vector2.right)), "同籍子弹不许伤到敌人，两只怪对射不能互相掉血");
             Assert.AreEqual(Health, enemy.CurHealth, "血量一点不动");

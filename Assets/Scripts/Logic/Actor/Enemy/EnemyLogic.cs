@@ -21,10 +21,11 @@ namespace Refraction.Logic.Actor
         public EnemyLogic(
             IMoveMotor motor,
             EnemyConfig config,
+            IHurtView hurtView,
             bool aiEnabled,
             Vector2 muzzle = default,
             bool black = false)
-            : base(motor, config, aiEnabled, black)
+            : base(motor, config, hurtView, aiEnabled, black)
         {
             _config = config;
             _muzzle = muzzle;

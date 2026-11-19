@@ -22,8 +22,8 @@ namespace Refraction.Logic.Actor
         private Vector2 _lastSeenPos;
         private float _lostTime;
 
-        protected EnemyLogicBase(IMoveMotor motor, CharacterConfig config, bool aiEnabled, bool black)
-            : base(motor, config)
+        protected EnemyLogicBase(IMoveMotor motor, CharacterConfig config, IHurtView hurtView, bool aiEnabled, bool black)
+            : base(motor, config, hurtView)
         {
             Motor = motor;
             _aiEnabled = aiEnabled;

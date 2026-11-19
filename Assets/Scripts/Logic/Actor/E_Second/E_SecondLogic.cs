@@ -22,12 +22,13 @@ namespace Refraction.Logic.Actor
         public E_SecondLogic(
             IMoveMotor motor,
             E_SecondConfig config,
+            IHurtView hurtView,
             in EnemyArea patrolArea,
             in EnemyArea chaseArea,
             bool black = false,
             bool aiEnabled = true,
             Vector2 muzzle = default)
-            : base(motor, config, aiEnabled, black)
+            : base(motor, config, hurtView, aiEnabled, black)
         {
             _config = config;
             _patrolArea = patrolArea;

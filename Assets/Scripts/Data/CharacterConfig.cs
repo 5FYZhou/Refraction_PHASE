@@ -33,6 +33,11 @@ namespace Refraction.Data
         [Min(0f)]
         public float invulnerableTime = 0.4f;
 
+        [Header("受击 · 闪白")]
+        [Tooltip("受击闪白的时长（秒）：命中当帧整身压成纯白，随后线性褪回原色。\n0 表示不闪。与 invulnerableTime 无关，闪完不等于无敌结束。")]
+        [Min(0f)]
+        public float flashTime = 0.12f;
+
         [Header("受击 · 击退")]
         [Tooltip("受击滑停减速度（单位/秒²）：击退初速度由 Damage 给出，这里只决定它衰减多快。\n越大停得越快、滑得越近（位移 = v0² / (2 × 本值)）。")]
         [Min(0f)]
