@@ -6,7 +6,8 @@ namespace Refraction.Presentation.Effects
     public enum EffectType
     {
         None = 0,
-        DamageFlash
+        DamageFlash,
+        Invert
     }
 
     public readonly struct EffectContext
@@ -25,26 +26,30 @@ namespace Refraction.Presentation.Effects
     {
         private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
         private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
+        private static readonly int OpenInvertId = Shader.PropertyToID("_OpenInvert");
 
-        private readonly Dictionary<Transform, FlashState> _flashes = new();
+        private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
+
+        private bool _warnedNoFlash;
+        private bool _warnedNoInvert;
 
         public void Init() { }
         public void Destroy() => Clear();
 
         public void Tick(float deltaTime)
         {
-            if (_flashes.Count == 0) return;
+            if (_states.Count == 0) return;
 
-            foreach (KeyValuePair<Transform, FlashState> pair in _flashes)
+            foreach (KeyValuePair<Transform, TargetState> pair in _states)
             {
                 if (pair.Value.Tick(deltaTime)) _expired.Add(pair.Key);
             }
 
             for (int i = 0; i < _expired.Count; i++)
             {
-                _flashes[_expired[i]].Restore();
-                _flashes.Remove(_expired[i]);
+                _states[_expired[i]].Restore();
+                _states.Remove(_expired[i]);
             }
 
             _expired.Clear();
@@ -61,32 +66,54 @@ namespace Refraction.Presentation.Effects
             if (type == EffectType.DamageFlash) PlayFlash(target, duration);
         }
 
+        /// <summary>极性反转是常驻态、没有时长，所以不进闪白那套计时；和闪白共用同一份材质实例</summary>
+        public void SetInvert(Transform target, bool open)
+        {
+            if (target == null) return;
+
+            TargetState state = GetState(target);
+
+            if (!state.HasInvertProperty && !_warnedNoInvert)
+            {
+                _warnedNoInvert = true;
+                Debug.LogWarning($"[EffectModule] 目标 {target.name} 材质没有 _OpenInvert 属性！");
+            }
+
+            state.SetInvert(open);
+        }
+
         private void PlayFlash(Transform target, float duration)
         {
             if (target == null || duration <= 0f) return;
 
-            if (!_flashes.TryGetValue(target, out FlashState state))
-            {
-                state = new FlashState(target);
-                _flashes[target] = state;
+            TargetState state = GetState(target);
 
-                if (!state.HasFlashProperty)
-                {
-                    Debug.LogWarning($"[EffectModule] 目标 {target.name} 材质没有 _FlashAmount 属性！");
-                }
+            if (!state.HasFlashProperty && !_warnedNoFlash)
+            {
+                _warnedNoFlash = true;
+                Debug.LogWarning($"[EffectModule] 目标 {target.name} 材质没有 _FlashAmount 属性！");
             }
 
             state.Restart(duration);
         }
 
+        private TargetState GetState(Transform target)
+        {
+            if (_states.TryGetValue(target, out TargetState state)) return state;
+
+            state = new TargetState(target);
+            _states[target] = state;
+            return state;
+        }
+
         private void Clear()
         {
-            foreach (FlashState state in _flashes.Values) state.Restore();
-            _flashes.Clear();
+            foreach (TargetState state in _states.Values) state.Restore();
+            _states.Clear();
             _expired.Clear();
         }
 
-        private sealed class FlashState
+        private sealed class TargetState
         {
             private readonly SpriteRenderer[] _renderers;
             private readonly Material[] _materials;
@@ -95,10 +122,12 @@ namespace Refraction.Presentation.Effects
 
             private float _duration;
             private float _elapsed;
+            private bool _flashing;
 
             public bool HasFlashProperty { get; }
+            public bool HasInvertProperty { get; }
 
-            public FlashState(Transform target)
+            public TargetState(Transform target)
             {
                 _renderers = target.GetComponentsInChildren<SpriteRenderer>(true);
                 _materials = new Material[_renderers.Length];
@@ -112,10 +141,10 @@ namespace Refraction.Presentation.Effects
                     _materials[i] = _renderers[i].material;
                     _originalColors[i] = _renderers[i].color;
 
-                    if (_materials[i] != null && _materials[i].HasProperty(FlashAmountId))
-                    {
-                        HasFlashProperty = true;
-                    }
+                    if (_materials[i] == null) continue;
+
+                    if (_materials[i].HasProperty(FlashAmountId)) HasFlashProperty = true;
+                    if (_materials[i].HasProperty(OpenInvertId)) HasInvertProperty = true;
                 }
             }
 
@@ -123,16 +152,35 @@ namespace Refraction.Presentation.Effects
             {
                 _duration = duration;
                 _elapsed = 0f;
+                _flashing = true;
                 Apply(1f);
             }
 
             public bool Tick(float deltaTime)
             {
+                if (!_flashing) return false;
+
                 _elapsed += deltaTime;
-                if (_elapsed >= _duration) return true;
+                if (_elapsed >= _duration)
+                {
+                    _flashing = false;
+                    return true;
+                }
 
                 Apply(1f - _elapsed / _duration);
                 return false;
+            }
+
+            public void SetInvert(bool open)
+            {
+                float value = open ? 1f : 0f;
+
+                for (int i = 0; i < _renderers.Length; i++)
+                {
+                    if (_renderers[i] == null || _materials[i] == null) continue;
+
+                    _materials[i].SetFloat(OpenInvertId, value);
+                }
             }
 
             public void Restore()
@@ -140,6 +188,7 @@ namespace Refraction.Presentation.Effects
                 // 先收颜色，再归零材质：反过来会先把颜色刷白，判断就失去依据了
                 RestoreColors();
                 ApplyMaterial(0f);
+                _flashing = false;
             }
 
             private void Apply(float amount)
@@ -150,8 +199,8 @@ namespace Refraction.Presentation.Effects
                 {
                     if (_renderers[i] == null) continue;
 
-                    // 只压 rgb，alpha 留着——半透明的表现别被闪白顺手改成不透明
-                    _renderers[i].color = new Color(1f, 1f, 1f, _originalColors[i].a);
+                    // 只压 rgb，alpha 留给无敌闪烁这类自己驱动透明度的表现
+                    _renderers[i].color = new Color(1f, 1f, 1f, _renderers[i].color.a);
                 }
             }
 
@@ -176,7 +225,8 @@ namespace Refraction.Presentation.Effects
                     Color cur = _renderers[i].color;
                     if (cur.r < 0.999f || cur.g < 0.999f || cur.b < 0.999f) continue;
 
-                    _renderers[i].color = _originalColors[i];
+                    Color original = _originalColors[i];
+                    _renderers[i].color = new Color(original.r, original.g, original.b, cur.a);
                 }
             }
         }

@@ -95,10 +95,12 @@ namespace Refraction.Presentation.Actor
         private void OnEnable()
         {
             EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
         private void OnDisable()
         {
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
         /// <summary>场景根装配：接上输入源，再按上一场景那扇门指定的落点摆好；GameRoot 在注册后的下一个驱动帧调用，必须幂等</summary>
@@ -146,6 +148,8 @@ namespace Refraction.Presentation.Actor
             }
 
             _attached = true;
+
+            ApplyInvert(_root.World == WorldPolarity.Black);
 
             // 跨关回档的落点优先于门；首关两者都没有，保持场景里摆的位置
             if (_root.TryConsumeRespawnPoint(out Vector2 respawn))
@@ -242,6 +246,18 @@ namespace Refraction.Presentation.Actor
         public void OnHurt(int damage)
         {
             _root?.Effects?.Play(EffectType.DamageFlash, view, config.flashTime);
+        }
+
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
+        {
+            ApplyInvert(evt.World == WorldPolarity.Black);
+        }
+
+        private void ApplyInvert(bool black)
+        {
+            if (_root == null || view == null) return;
+
+            _root.Effects?.SetInvert(view, black);
         }
 
         private void HandleDeath()
