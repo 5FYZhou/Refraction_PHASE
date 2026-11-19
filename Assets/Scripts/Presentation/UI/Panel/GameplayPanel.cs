@@ -1,10 +1,11 @@
 ﻿using Refraction.Logic.Events;
+using Refraction.Logic.Level;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Refraction.Presentation.UI
 {
-    /// <summary>场景级玩法面板：血图标按 Lose 播碎裂动画，极性条宽度 = 满宽 × 当前值/上限</summary>
+    /// <summary>场景级玩法面板：血图标按 Lose 播碎裂动画，极性条 = 满宽 × 当前值/上限；世界变黑时条底取反、血图标走特效 _OpenInvert</summary>
     public sealed class GameplayPanel : BasePanel
     {
         public override E_UILayer Layer => E_UILayer.Scene;
@@ -13,7 +14,7 @@ namespace Refraction.Presentation.UI
 
         public override bool LiveWithScene => true;
 
-        /// <summary>图标名 ImgH1..ImgH5，从左往右排，序号大的先碎</summary>
+        /// <summary>ImgH1..ImgH5 从左往右排，序号大的先碎</summary>
         private const string IconPrefix = "ImgH";
 
         private const int IconCount = 5;
@@ -22,12 +23,17 @@ namespace Refraction.Presentation.UI
 
         private const string PolarityNumName = "ImgPolarityNum";
 
+        private const string PolarityBgName = "ImgPolarityBG";
+
         private readonly Image[] _icons = new Image[IconCount];
 
         private readonly Animator[] _anims = new Animator[IconCount];
 
         private RectTransform _polarityNum;
         private float _polarityFullWidth;
+
+        private Image _polarityBg;
+        private Color _polarityBgColor;
 
         private int _alive = IconCount;
 
@@ -48,6 +54,10 @@ namespace Refraction.Presentation.UI
                 _polarityFullWidth = _polarityNum.sizeDelta.x;
             }
 
+            _polarityBg = GetComponent<Image>(PolarityBgName);
+            if (_polarityBg != null) _polarityBgColor = _polarityBg.color;
+
+            ApplyInvert(root != null && root.World == WorldPolarity.Black);
             ApplyPolarity(0, 1);
             ApplyHealth(_alive);
         }
@@ -70,6 +80,7 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerHealthChanged>.Subscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPolarityChanged);
+            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
 
             ApplyHealth(_alive);
         }
@@ -78,6 +89,29 @@ namespace Refraction.Presentation.UI
         {
             EventBus<PlayerHealthChanged>.Unsubscribe(OnHealthChanged);
             EventBus<PlayerPolarityChanged>.Unsubscribe(OnPolarityChanged);
+            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
+        }
+
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
+        {
+            ApplyInvert(evt.World == WorldPolarity.Black);
+        }
+
+        private void ApplyInvert(bool black)
+        {
+            if (_polarityBg != null)
+            {
+                _polarityBg.color = black
+                    ? new Color(1f - _polarityBgColor.r, 1f - _polarityBgColor.g, 1f - _polarityBgColor.b, _polarityBgColor.a)
+                    : _polarityBgColor;
+            }
+
+            if (root == null) return;
+
+            for (int i = 0; i < IconCount; i++)
+            {
+                root.Effects?.SetInvert(_icons[i], black);
+            }
         }
 
         private void OnPolarityChanged(PlayerPolarityChanged evt)

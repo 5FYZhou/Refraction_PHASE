@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Refraction.Presentation.Effects
 {
@@ -30,9 +31,11 @@ namespace Refraction.Presentation.Effects
 
         private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
+        private readonly Dictionary<Graphic, UiState> _uiStates = new();
 
         private bool _warnedNoFlash;
         private bool _warnedNoInvert;
+        private bool _warnedNoInvertUi;
 
         public void Init() { }
         public void Destroy() => Clear();
@@ -82,6 +85,26 @@ namespace Refraction.Presentation.Effects
             state.SetInvert(open);
         }
 
+        /// <summary>UI Image 没有 SpriteRenderer：材质带 _OpenInvert 才走材质，否则退回顶点色取反</summary>
+        public void SetInvert(Graphic graphic, bool open)
+        {
+            if (graphic == null) return;
+
+            if (!_uiStates.TryGetValue(graphic, out UiState state))
+            {
+                state = new UiState(graphic);
+                _uiStates[graphic] = state;
+
+                if (state.Material == null && !_warnedNoInvertUi)
+                {
+                    _warnedNoInvertUi = true;
+                    Debug.LogWarning($"[EffectModule] {graphic.name} 的材质没有 _OpenInvert，改走顶点色取反");
+                }
+            }
+
+            state.Apply(open);
+        }
+
         private void PlayFlash(Transform target, float duration)
         {
             if (target == null || duration <= 0f) return;
@@ -111,6 +134,49 @@ namespace Refraction.Presentation.Effects
             foreach (TargetState state in _states.Values) state.Restore();
             _states.Clear();
             _expired.Clear();
+
+            foreach (UiState state in _uiStates.Values) state.Dispose();
+            _uiStates.Clear();
+        }
+
+        private sealed class UiState
+        {
+            private readonly Graphic _graphic;
+            private readonly Color _authored;
+
+            public Material Material { get; }
+
+            public UiState(Graphic graphic)
+            {
+                _graphic = graphic;
+                _authored = graphic.color;
+
+                Material source = graphic.material;
+
+                if (source == null || !source.HasProperty(OpenInvertId)) return;
+
+                Material instance = new(source) { name = source.name + "(Instance)" };
+                graphic.material = instance;
+                Material = instance;
+            }
+
+            public void Apply(bool open)
+            {
+                if (Material != null)
+                {
+                    Material.SetFloat(OpenInvertId, open ? 1f : 0f);
+                    return;
+                }
+
+                _graphic.color = open
+                    ? new Color(1f - _authored.r, 1f - _authored.g, 1f - _authored.b, _authored.a)
+                    : _authored;
+            }
+
+            public void Dispose()
+            {
+                if (Material != null) Object.Destroy(Material);
+            }
         }
 
         private sealed class TargetState
