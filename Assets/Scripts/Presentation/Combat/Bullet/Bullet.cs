@@ -21,6 +21,8 @@ namespace Refraction.Presentation.Combat
 
         private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << GroundLayer) | (1 << EnemyLayer);
 
+        [SerializeField] private TrailRenderer _trail;
+
         private BulletField _home;
         private BulletLogic _system;
         private AfterimageField _afterimage;
@@ -39,6 +41,8 @@ namespace Refraction.Presentation.Combat
         private HurtBox _hurtBox;
         private bool _bound;
         private bool _hit;
+        private bool _trailPending;
+        private int _trailFrame;
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
 
@@ -73,6 +77,10 @@ namespace Refraction.Presentation.Combat
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             if (_colliders == null) _colliders = GetComponents<Collider2D>();
+
+            if (_trail == null) _trail = GetComponentInChildren<TrailRenderer>(true);
+
+            ResetTrail();
 
             ApplyHitMask();
 
@@ -115,7 +123,13 @@ namespace Refraction.Presentation.Combat
 
             if (!_bound || _state != pose.State)
             {
-                if (!_bound) _rb.position = pose.Pos;
+                if (!_bound)
+                {
+                    _rb.position = pose.Pos;
+                    _velocity = pose.State == BulletState.Transporting ? Vector2.zero : pose.Dir * pose.Speed;
+                    _rb.velocity = _velocity;
+                    Physics2D.SyncTransforms();
+                }
 
                 _bound = true;
                 _state = pose.State;
@@ -126,11 +140,21 @@ namespace Refraction.Presentation.Combat
 
                 _rb.bodyType = transporting ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
 
-                _velocity = transporting ? Vector2.zero : pose.Dir * pose.Speed;
-                _rb.velocity = _velocity;
+                if (!transporting) _rb.velocity = _velocity;
+
+                // 换状态必然伴随瞬移：先停发清点，等这一帧渲染过去再重开
+                HoldTrail();
+            }
+            else if (_trailPending && pose.State == BulletState.Flying && Time.frameCount > _trailFrame)
+            {
+                ArmTrail();
             }
 
-            if (pose.State == BulletState.Transporting) _rb.position = pose.Pos;
+            if (pose.State == BulletState.Transporting)
+            {
+                _rb.position = pose.Pos;
+                Physics2D.SyncTransforms();
+            }
 
             if (pose.Dir.sqrMagnitude > 1e-8f)
             {
@@ -143,14 +167,42 @@ namespace Refraction.Presentation.Combat
         public void Kill()
         {
             SyncSegment(-1, -1);
+            ResetTrail();
 
             if (_home != null) _home.Recycle(this);
             else Destroy(gameObject);
         }
 
+        public void ResetTrail() => HoldTrail();
+
+        private void HoldTrail()
+        {
+            _trailPending = true;
+            _trailFrame = Time.frameCount;
+
+            if (_trail == null) return;
+
+            _trail.emitting = false;
+            _trail.Clear();
+            _trail.enabled = false;
+        }
+
+        private void ArmTrail()
+        {
+            _trailPending = false;
+
+            if (_trail == null) return;
+
+            _trail.enabled = true;
+            _trail.emitting = false;
+            _trail.Clear();
+            _trail.emitting = true;
+        }
+
         /// <summary>回池复位：别把上一发的伤害与连线热度带到下一次</summary>
         public void Reset()
         {
+            ResetTrail();
             _system = null;
             _afterimage = null;
             _owner = null;
