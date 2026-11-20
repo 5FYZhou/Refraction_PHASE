@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace Refraction.Presentation.UI
 {
-    /// <summary>场景级玩法面板：血图标按 Lose 播碎裂动画，极性条 = 满宽 × 当前值/上限；世界变黑时条底取反、血图标走特效 _OpenInvert</summary>
+    /// <summary>场景级玩法面板：血图标按 Lose 播碎裂动画，极性条 = Mask 宽 × 当前值/上限；世界变黑时血图标与条底走特效 _OpenInvert</summary>
     public sealed class GameplayPanel : BasePanel
     {
         public override E_UILayer Layer => E_UILayer.Scene;
@@ -25,15 +25,16 @@ namespace Refraction.Presentation.UI
 
         private const string PolarityBgName = "ImgPolarityBG";
 
+        private const string PolarityBgExtraName = "ImgPolarityBG (1)";
+
         private readonly Image[] _icons = new Image[IconCount];
 
         private readonly Animator[] _anims = new Animator[IconCount];
 
-        private RectTransform _polarityNum;
-        private float _polarityFullWidth;
+        private readonly Image[] _invertibles = new Image[IconCount + 2];
 
-        private Image _polarityBg;
-        private Color _polarityBgColor;
+        private RectTransform _polarityMask;
+        private float _polarityFullWidth;
 
         private int _alive = IconCount;
 
@@ -45,17 +46,17 @@ namespace Refraction.Presentation.UI
             {
                 _icons[i] = GetComponent<Image>(IconPrefix + (i + 1));
                 if (_icons[i] != null) _anims[i] = _icons[i].GetComponent<Animator>();
+
+                _invertibles[i] = _icons[i];
             }
 
             Image num = GetComponent<Image>(PolarityNumName);
-            if (num != null)
-            {
-                _polarityNum = num.rectTransform;
-                _polarityFullWidth = _polarityNum.sizeDelta.x;
-            }
 
-            _polarityBg = GetComponent<Image>(PolarityBgName);
-            if (_polarityBg != null) _polarityBgColor = _polarityBg.color;
+            if (num != null) _polarityMask = num.rectTransform.parent as RectTransform;
+            if (_polarityMask != null) _polarityFullWidth = _polarityMask.sizeDelta.x;
+
+            _invertibles[IconCount] = GetComponent<Image>(PolarityBgName);
+            _invertibles[IconCount + 1] = GetComponent<Image>(PolarityBgExtraName);
 
             ApplyInvert(root != null && root.World == WorldPolarity.Black);
             ApplyPolarity(0, 1);
@@ -99,18 +100,11 @@ namespace Refraction.Presentation.UI
 
         private void ApplyInvert(bool black)
         {
-            if (_polarityBg != null)
-            {
-                _polarityBg.color = black
-                    ? new Color(1f - _polarityBgColor.r, 1f - _polarityBgColor.g, 1f - _polarityBgColor.b, _polarityBgColor.a)
-                    : _polarityBgColor;
-            }
-
             if (root == null) return;
 
-            for (int i = 0; i < IconCount; i++)
+            for (int i = 0; i < _invertibles.Length; i++)
             {
-                root.Effects?.SetInvert(_icons[i], black);
+                root.Effects?.SetInvert(_invertibles[i], black);
             }
         }
 
@@ -121,13 +115,13 @@ namespace Refraction.Presentation.UI
 
         private void ApplyPolarity(int cur, int max)
         {
-            if (_polarityNum == null) return;
+            if (_polarityMask == null) return;
 
             float ratio = max > 0 ? Mathf.Clamp01((float)cur / max) : 0f;
 
-            Vector2 size = _polarityNum.sizeDelta;
+            Vector2 size = _polarityMask.sizeDelta;
             size.x = _polarityFullWidth * ratio;
-            _polarityNum.sizeDelta = size;
+            _polarityMask.sizeDelta = size;
         }
 
         private void OnHealthChanged(PlayerHealthChanged evt)
