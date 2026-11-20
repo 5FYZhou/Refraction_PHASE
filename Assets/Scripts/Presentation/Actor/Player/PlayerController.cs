@@ -39,6 +39,8 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Transform spawnT;
 
+        private LogicContext _context;
+
         private GameRoot _root;
         private bool _attached = false;
         private bool _warnedNoGrounded;
@@ -126,7 +128,7 @@ namespace Refraction.Presentation.Actor
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
 
-            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded());
+            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects);
 
             _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 
@@ -198,18 +200,18 @@ namespace Refraction.Presentation.Actor
             // 世界信息由 PlayerMotor 的物理探测给出，本层只负责组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
-            LogicContext context = new(snapshot, worldInfo, gameTime);
+            _context = new(snapshot, worldInfo, gameTime);
 
-            _logic.FixedTick(context);
+            _logic.FixedTick(_context);
             ApplyPhase();
 
             _blackAttack?.ReboundTick();
 
             EventBus<PlayerDebugSnapshotTaken>.Publish(new(
-                context.WorldInfo.FrameStartVelocity,
+                _context.WorldInfo.FrameStartVelocity,
                 moveMotor.LedgerVelocity,
                 _logic.HurtVelocity,
-                context.WorldInfo.Grounded,
+                _context.WorldInfo.Grounded,
                 _logic.ConditionTag,
                 _logic.CurrentTag,
                 _logic.PostureTag,
@@ -225,7 +227,7 @@ namespace Refraction.Presentation.Actor
             }
 
             // 掉出世界：扣坠落伤害并回上次落脚点，扣到没血就走死亡分支
-            if (context.WorldInfo.Pos.y < _spawnY)
+            if (_context.WorldInfo.Pos.y < _spawnY)
             {
                 if (!_logic.HasGroundedPos)
                 {
@@ -240,7 +242,7 @@ namespace Refraction.Presentation.Actor
                 }
             }
 
-            if (context.InputSnapshot.SavePressed) TrySaveCheckpoint();
+            if (_context.InputSnapshot.SavePressed) TrySaveCheckpoint();
         }
 
         public void OnHurt(int damage)
@@ -299,7 +301,8 @@ namespace Refraction.Presentation.Actor
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
 
-            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt);
+            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt,
+                _context.WorldInfo.FrameStartVelocity.y);
         }
 
         private void ApplyBlinkVisual(float deltaTime)

@@ -4,20 +4,24 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>玩家状态到动画的翻译器：状态怎么变成动画参数只在这里落笔，改规则不必动 PlayerController</summary>
-    /// <remarks>动画器认四个 bool（Move / Jump / Fall / Dash）与一个触发（Land）；名字与 Animator 里必须一致，改一边等于静默失效</remarks>
+    /// <remarks>动画器认五个 bool（Move / Jump / Fall / Dash / Rising）与两个触发（Land / AirJump）；名字与 Animator 里必须一致，改一边等于静默失效</remarks>
     public sealed class PlayerAniView : MonoBehaviour
     {
         private const string MoveParam = "Move";
         private const string JumpParam = "Jump";
         private const string FallParam = "Fall";
         private const string DashParam = "Dash";
+        private const string RisingParam = "Rising";
         private const string LandParam = "Land";
+        private const string AirJumpParam = "AirJump";
 
         private static readonly int MoveId = Animator.StringToHash(MoveParam);
         private static readonly int JumpId = Animator.StringToHash(JumpParam);
         private static readonly int FallId = Animator.StringToHash(FallParam);
         private static readonly int DashId = Animator.StringToHash(DashParam);
+        private static readonly int RisingId = Animator.StringToHash(RisingParam);
         private static readonly int LandId = Animator.StringToHash(LandParam);
+        private static readonly int AirJumpId = Animator.StringToHash(AirJumpParam);
 
         [Tooltip("播放玩家动画的动画器。留空则从自身或子物体上找（预制体里挂在 View 上）。")]
         [SerializeField]
@@ -31,6 +35,9 @@ namespace Refraction.Presentation.Actor
         private bool _fallApplied;
         private bool _dash;
         private bool _dashApplied;
+        private bool _rising;
+        private bool _risingApplied;
+        private MovementStateTag _lastTag;
         private bool _wasAirborne;
         private bool _warnedNoAnimator;
 
@@ -44,19 +51,26 @@ namespace Refraction.Presentation.Actor
             if (animator == null) WarnNoAnimator();
         }
 
-        /// <summary>按玩家状态一次写完四个参数，并在空中转地面那一帧补一次 Land 触发</summary>
-        /// <remarks>四个 bool 必须同一帧一起写：过渡条件按互斥写（idle→jump 要 Move 与 Fall 都为 false），分开调会互相打架</remarks>
-        public void PlayLocomotion(MovementStateTag tag, float inputX, bool hurt)
+        /// <summary>按玩家状态一次写完五个参数，并在空中转地面那一帧补一次 Land 触发</summary>
+        /// <remarks>五个 bool 必须同一帧一起写：过渡条件按互斥写（起跳要 Move 与 Fall 都为 false），分开调会互相打架</remarks>
+        public void PlayLocomotion(MovementStateTag tag, float inputX, bool hurt, float velocityY)
         {
             bool dash = tag == MovementStateTag.Dash;
             bool jump = tag == MovementStateTag.Jump || tag == MovementStateTag.AirJump;
             bool fall = tag == MovementStateTag.Fall;
             bool move = tag == MovementStateTag.Move && !hurt && Mathf.Abs(inputX) > 0f;
+            bool rising = velocityY > 0f;
 
             PlayMove(move);
             PlayJump(jump);
             PlayFall(fall);
             PlayDash(dash);
+            PlayRising(rising);
+
+            // 二段跳是事件不是状态：AirJump 整段都为真，只能靠标签翻转那一帧发一次触发
+            if (tag == MovementStateTag.AirJump && _lastTag != MovementStateTag.AirJump) Trigger(AirJumpId);
+
+            _lastTag = tag;
 
             // 冲刺期间不判落地：空中转地面会置上 Land，而 dash 没有接它的边，触发会挂到下次进 jump 误播落地
             if (dash) return;
@@ -78,6 +92,9 @@ namespace Refraction.Presentation.Actor
 
         /// <summary>直接开关冲刺动画：单帧 clip 停在冲刺姿势，靠 Dash 保持整段冲刺</summary>
         public void PlayDash(bool dashing) => Write(DashId, dashing, ref _dash, ref _dashApplied);
+
+        /// <summary>速度向上：上突进与攻击把 y 推成正数时也要走上升姿势，与是否按过跳无关</summary>
+        public void PlayRising(bool rising) => Write(RisingId, rising, ref _rising, ref _risingApplied);
 
         private void Write(int id, bool value, ref bool cache, ref bool applied)
         {
@@ -111,7 +128,7 @@ namespace Refraction.Presentation.Actor
             if (_warnedNoAnimator) return;
 
             _warnedNoAnimator = true;
-            Debug.LogWarning($"[PlayerAniView] 找不到 Animator：不会播任何动作（需要参数 {MoveParam} / {JumpParam} / {FallParam} / {DashParam} / {LandParam}）。");
+            Debug.LogWarning($"[PlayerAniView] 找不到 Animator：不会播任何动作（需要参数 {MoveParam} / {JumpParam} / {FallParam} / {DashParam} / {RisingParam} / {LandParam} / {AirJumpParam}）。");
         }
     }
 }
