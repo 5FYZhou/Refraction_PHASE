@@ -130,7 +130,7 @@ namespace Refraction.Presentation
             RegisterService(_hitStopService);
 
             _effects = new EffectModule();
-            _effects.Init();
+            _effects.Init(transform);
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());

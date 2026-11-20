@@ -1,5 +1,6 @@
 ﻿using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
+using Refraction.Presentation.Effects;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace Refraction.Presentation.Combat
 
         private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << GroundLayer) | (1 << EnemyLayer);
 
-        [SerializeField] private TrailRenderer _trail;
+        [SerializeField] private Color particleColor;
 
         private BulletField _home;
         private BulletLogic _system;
@@ -39,10 +40,12 @@ namespace Refraction.Presentation.Combat
         private int _segTo = -1;
         private Collider2D _hurtOther;
         private HurtBox _hurtBox;
+        private Collider2D _hitCollider;
         private bool _bound;
         private bool _hit;
         private bool _trailPending;
         private int _trailFrame;
+        private TrailRenderer[] _trails;
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
 
@@ -77,8 +80,6 @@ namespace Refraction.Presentation.Combat
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             if (_colliders == null) _colliders = GetComponents<Collider2D>();
-
-            if (_trail == null) _trail = GetComponentInChildren<TrailRenderer>(true);
 
             ResetTrail();
 
@@ -175,28 +176,43 @@ namespace Refraction.Presentation.Combat
 
         public void ResetTrail() => HoldTrail();
 
+        private void Awake()
+        {
+            _trails = GetComponentsInChildren<TrailRenderer>(true);
+        }
+
+        private void OnEnable() => HoldTrail();
+
         private void HoldTrail()
         {
             _trailPending = true;
             _trailFrame = Time.frameCount;
 
-            if (_trail == null) return;
+            if (_trails == null) _trails = GetComponentsInChildren<TrailRenderer>(true);
 
-            _trail.emitting = false;
-            _trail.Clear();
-            _trail.enabled = false;
+            for (int i = 0; i < _trails.Length; i++)
+            {
+                TrailRenderer trail = _trails[i];
+
+                trail.emitting = false;
+                trail.Clear();
+                trail.enabled = false;
+            }
         }
 
         private void ArmTrail()
         {
             _trailPending = false;
 
-            if (_trail == null) return;
+            for (int i = 0; i < _trails.Length; i++)
+            {
+                TrailRenderer trail = _trails[i];
 
-            _trail.enabled = true;
-            _trail.emitting = false;
-            _trail.Clear();
-            _trail.emitting = true;
+                trail.enabled = true;
+                trail.emitting = false;
+                trail.Clear();
+                trail.emitting = true;
+            }
         }
 
         /// <summary>回池复位：别把上一发的伤害与连线热度带到下一次</summary>
@@ -210,6 +226,7 @@ namespace Refraction.Presentation.Combat
             _id = -1;
             _hurtOther = null;
             _hurtBox = null;
+            _hitCollider = null;
             _bound = false;
             _state = BulletState.Flying;
             _velocity = Vector2.zero;
@@ -238,6 +255,28 @@ namespace Refraction.Presentation.Combat
             }
         }
 
+        private void PlayHitSpark(Collider2D other)
+        {
+            EffectModule effects = GameRoot.Instance != null ? GameRoot.Instance.Effects : null;
+
+            if (effects == null) return;
+
+            effects.PlayHitSpark(Position, SparkDirection(other), particleColor);
+        }
+
+        // 取外法线，不跟弹道走
+        private Vector2 SparkDirection(Collider2D other)
+        {
+            if (other != null && other.enabled)
+            {
+                Vector2 normal = Position - other.ClosestPoint(Position);
+
+                if (normal.sqrMagnitude > 1e-6f) return normal.normalized;
+            }
+
+            return _velocity.sqrMagnitude > 1e-6f ? -_velocity.normalized : Vector2.up;
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other == null || _system == null) return;
@@ -262,13 +301,19 @@ namespace Refraction.Presentation.Combat
 
             if (!PlayerOwned && hurt != null && hurt.Hurtable != null)
             {
+                _hitCollider = other;
                 hurt.Hurtable.TakeDamage(_damage);
                 OnHitLanded();
                 return;
             }
 
-            if (_attackBox != null && other.gameObject.layer == HitLayer) return;
+            if (_attackBox != null && other.gameObject.layer == HitLayer)
+            {
+                _hitCollider = other;
+                return;
+            }
 
+            PlayHitSpark(other);
             _system.Kill(_id);
         }
 
@@ -336,6 +381,7 @@ namespace Refraction.Presentation.Combat
 
             _hitSink?.OnHitLanded();
 
+            PlayHitSpark(_hitCollider);
             _system?.Kill(_id);
         }
     }

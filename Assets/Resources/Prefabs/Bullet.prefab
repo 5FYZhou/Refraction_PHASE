@@ -153,6 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _trail: {fileID: 2031080784422520389}
+  particleColor: {r: 0.23529413, g: 0.73333335, b: 1, a: 1}
 --- !u!114 &7550763708427544725
 MonoBehaviour:
   m_ObjectHideFlags: 0

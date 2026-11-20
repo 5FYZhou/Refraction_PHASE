@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Refraction.Foundation;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -29,19 +30,41 @@ namespace Refraction.Presentation.Effects
         private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
         private static readonly int OpenInvertId = Shader.PropertyToID("_OpenInvert");
 
+        private const string HitSparkPath = "Effects/HitSpark";
+        private const int HitSparkPoolSize = 16;
+        private const int HitSparkPrewarm = 4;
+        private const float HitSparkMaxLife = 5f;
+
         private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
+        private readonly List<Spark> _liveSparks = new();
+
+        private Transform _effectRoot;
+        private GameObject _sparkPrefab;
+        private Pool<Spark> _sparkPool;
 
         private bool _warnedNoFlash;
         private bool _warnedNoInvert;
         private bool _warnedNoInvertUi;
+        private bool _warnedNoSpark;
 
-        public void Init() { }
+        public void Init(Transform parent)
+        {
+            if (_effectRoot != null) return;
+
+            GameObject root = new("EffectField");
+            root.transform.SetParent(parent, false);
+
+            _effectRoot = root.transform;
+        }
+
         public void Destroy() => Clear();
 
         public void Tick(float deltaTime)
         {
+            TickSparks(deltaTime);
+
             if (_states.Count == 0) return;
 
             foreach (KeyValuePair<Transform, TargetState> pair in _states)
@@ -105,6 +128,76 @@ namespace Refraction.Presentation.Effects
             state.Apply(open);
         }
 
+        /// <summary>命中火花：位置是撞击点，方向是喷溅方向（一般为子弹来向的反向），颜色不传就用粒子自己的默认色</summary>
+        public void PlayHitSpark(Vector2 position, Vector2 direction, Color? color = null)
+        {
+            if (!EnsureSparkPool()) return;
+
+            if (!_sparkPool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, direction, color);
+            _liveSparks.Add(spark);
+        }
+
+        private void TickSparks(float deltaTime)
+        {
+            for (int i = _liveSparks.Count - 1; i >= 0; i--)
+            {
+                if (!_liveSparks[i].Tick(deltaTime)) continue;
+
+                _sparkPool?.Release(_liveSparks[i]);
+                _liveSparks.RemoveAt(i);
+            }
+        }
+
+        private bool EnsureSparkPool()
+        {
+            if (_sparkPool != null) return true;
+
+            _sparkPrefab = Resources.Load<GameObject>(HitSparkPath);
+
+            if (_sparkPrefab == null)
+            {
+                if (!_warnedNoSpark)
+                {
+                    _warnedNoSpark = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{HitSparkPath}，命中火花不播放。");
+                }
+
+                return false;
+            }
+
+            _sparkPool = new Pool<Spark>(
+                CreateSpark,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: HitSparkPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _sparkPool.Prewarm(HitSparkPrewarm);
+
+            return true;
+        }
+
+        private Spark CreateSpark()
+        {
+            GameObject go = Object.Instantiate(_sparkPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
+        private static void TakeSpark(Spark spark) => spark.Go.SetActive(true);
+
+        private static void PutSpark(Spark spark) => spark.Sleep();
+
+        private static void DestroySpark(Spark spark)
+        {
+            if (spark.Go != null) Object.Destroy(spark.Go);
+        }
+
         private void PlayFlash(Transform target, float duration)
         {
             if (target == null || duration <= 0f) return;
@@ -137,6 +230,15 @@ namespace Refraction.Presentation.Effects
 
             foreach (UiState state in _uiStates.Values) state.Dispose();
             _uiStates.Clear();
+
+            for (int i = 0; i < _liveSparks.Count; i++) _sparkPool?.Release(_liveSparks[i]);
+            _liveSparks.Clear();
+
+            _sparkPool?.Dispose();
+            _sparkPool = null;
+
+            if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
+            _effectRoot = null;
         }
 
         private sealed class UiState
@@ -294,6 +396,72 @@ namespace Refraction.Presentation.Effects
                     Color original = _originalColors[i];
                     _renderers[i].color = new Color(original.r, original.g, original.b, cur.a);
                 }
+            }
+        }
+
+        private sealed class Spark
+        {
+            private readonly GameObject _go;
+            private readonly ParticleSystem _ps;
+            // 预制体的默认起始色：不给颜色时按这份还原，否则复用会带着上一发的颜色
+            private readonly ParticleSystem.MinMaxGradient _defaultColor;
+
+            private float _elapsed;
+            private bool _settled;
+
+            public Spark(GameObject go)
+            {
+                _go = go;
+                _ps = go.GetComponent<ParticleSystem>();
+
+                if (_ps != null) _defaultColor = _ps.main.startColor;
+            }
+
+            public GameObject Go => _go;
+
+            public void Play(Vector2 position, Vector2 direction, Color? color)
+            {
+                _elapsed = 0f;
+                _settled = false;
+
+                Transform t = _go.transform;
+                t.position = new Vector3(position.x, position.y, 0f);
+
+                // 预制体初始朝 +Y：把上方向转到这次的喷溅方向
+                t.rotation = direction.sqrMagnitude > 1e-6f
+                    ? Quaternion.FromToRotation(Vector3.up, direction)
+                    : Quaternion.identity;
+
+                if (_ps == null) return;
+
+                ParticleSystem.MainModule main = _ps.main;
+                main.startColor = color.HasValue ? new ParticleSystem.MinMaxGradient(color.Value) : _defaultColor;
+
+                _ps.Clear(true);
+                _ps.Play(true);
+            }
+
+            public bool Tick(float deltaTime)
+            {
+                _elapsed += deltaTime;
+
+                if (_elapsed >= HitSparkMaxLife) return true;
+
+                // Play 的当帧粒子还没吐出来，IsAlive 必然是 false，跳过一帧再判
+                if (!_settled)
+                {
+                    _settled = true;
+                    return false;
+                }
+
+                return _ps == null || !_ps.IsAlive(true);
+            }
+
+            public void Sleep()
+            {
+                if (_ps != null) _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                _go.SetActive(false);
             }
         }
     }
