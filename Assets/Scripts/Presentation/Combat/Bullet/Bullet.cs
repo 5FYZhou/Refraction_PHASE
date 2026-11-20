@@ -8,7 +8,7 @@ namespace Refraction.Presentation.Combat
 {
     /// <summary>白色子弹的外壳：把逻辑层给的姿势落到刚体与碰撞体上，并把撞到谁报回 BulletLogic</summary>
     /// <remarks>没有驱动器也不做决策：开火、路径、验活、出射全在逻辑层，这里只负责触发器和表现</remarks>
-    public sealed class Bullet : MonoBehaviour, IAttacker, IBulletView, IHitLanded
+    public sealed class Bullet : MonoBehaviour, IAttacker, IBulletView, IHitLanded, IHitBodyLanded
     {
         private const string BoundTag = "Bound";
         private const int DefaultLayer = 0;
@@ -44,10 +44,8 @@ namespace Refraction.Presentation.Combat
         private bool _bound;
         private bool _hit;
         private bool _trailPending;
-        private bool _trailArming;
         private int _trailFrame;
         private TrailRenderer[] _trails;
-        private float[] _trailWidths;
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
 
@@ -96,6 +94,7 @@ namespace Refraction.Presentation.Combat
             }
         }
 
+        // 预制体上的 ExcludeLayers 会被覆盖
         private void ApplyHitMask()
         {
             if (_colliders == null) return;
@@ -127,15 +126,10 @@ namespace Refraction.Presentation.Combat
             {
                 if (!_bound)
                 {
-                    // 弹反在物理回调里开火，不复位插值会把渲染位置从池里那位插过来
-                    _rb.interpolation = RigidbodyInterpolation2D.None;
-
                     _rb.position = pose.Pos;
                     _velocity = pose.State == BulletState.Transporting ? Vector2.zero : pose.Dir * pose.Speed;
                     _rb.velocity = _velocity;
                     Physics2D.SyncTransforms();
-
-                    _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
                 }
 
                 _bound = true;
@@ -154,15 +148,7 @@ namespace Refraction.Presentation.Combat
             }
             else if (_trailPending && pose.State == BulletState.Flying && Time.frameCount > _trailFrame)
             {
-                _trailPending = false;
-                _trailArming = true;
-                _trailFrame = Time.frameCount;
                 ArmTrail();
-            }
-            else if (_trailArming && Time.frameCount > _trailFrame)
-            {
-                _trailArming = false;
-                SettleTrail();
             }
 
             if (pose.State == BulletState.Transporting)
@@ -193,9 +179,6 @@ namespace Refraction.Presentation.Combat
         private void Awake()
         {
             _trails = GetComponentsInChildren<TrailRenderer>(true);
-            _trailWidths = new float[_trails.Length];
-
-            for (int i = 0; i < _trails.Length; i++) _trailWidths[i] = _trails[i].widthMultiplier;
         }
 
         private void OnEnable() => HoldTrail();
@@ -203,7 +186,6 @@ namespace Refraction.Presentation.Combat
         private void HoldTrail()
         {
             _trailPending = true;
-            _trailArming = false;
             _trailFrame = Time.frameCount;
 
             if (_trails == null) _trails = GetComponentsInChildren<TrailRenderer>(true);
@@ -214,34 +196,22 @@ namespace Refraction.Presentation.Combat
 
                 trail.emitting = false;
                 trail.Clear();
-
-                if (_trailWidths != null && i < _trailWidths.Length) trail.widthMultiplier = _trailWidths[i];
+                trail.enabled = false;
             }
         }
 
-        // 开火帧宽度压 0：锚点照记但画不出来，下一帧连这段一起清掉
         private void ArmTrail()
         {
+            _trailPending = false;
+
             for (int i = 0; i < _trails.Length; i++)
             {
                 TrailRenderer trail = _trails[i];
 
                 trail.enabled = true;
-                trail.widthMultiplier = 0f;
+                trail.emitting = false;
                 trail.Clear();
                 trail.emitting = true;
-            }
-        }
-
-        private void SettleTrail()
-        {
-            for (int i = 0; i < _trails.Length; i++)
-            {
-                TrailRenderer trail = _trails[i];
-
-                trail.Clear();
-
-                if (_trailWidths != null && i < _trailWidths.Length) trail.widthMultiplier = _trailWidths[i];
             }
         }
 
@@ -249,7 +219,6 @@ namespace Refraction.Presentation.Combat
         public void Reset()
         {
             ResetTrail();
-            _trailArming = false;
             _system = null;
             _afterimage = null;
             _owner = null;
@@ -295,6 +264,7 @@ namespace Refraction.Presentation.Combat
             effects.PlayHitSpark(Position, SparkDirection(other), particleColor);
         }
 
+        // 取外法线，不跟弹道走
         private Vector2 SparkDirection(Collider2D other)
         {
             if (other != null && other.enabled)
@@ -402,6 +372,12 @@ namespace Refraction.Presentation.Combat
         }
 
         public Damage ProduceDamage() => _damage;
+
+        public void OnHitLanded(Collider2D other)
+        {
+            _hitCollider = other;
+            OnHitLanded();
+        }
 
         public void OnHitLanded()
         {

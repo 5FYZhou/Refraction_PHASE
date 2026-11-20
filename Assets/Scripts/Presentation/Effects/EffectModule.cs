@@ -31,23 +31,30 @@ namespace Refraction.Presentation.Effects
         private static readonly int OpenInvertId = Shader.PropertyToID("_OpenInvert");
 
         private const string HitSparkPath = "Effects/HitSpark";
+        private const string AttackSparkPath = "Effects/AttackSpark";
         private const int HitSparkPoolSize = 16;
+        private const int AttackSparkPoolSize = 8;
         private const int HitSparkPrewarm = 4;
-        private const float HitSparkMaxLife = 5f;
+        private const int AttackSparkPrewarm = 2;
+        private const float SparkMaxLife = 5f;
 
         private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
         private readonly List<Spark> _liveSparks = new();
+        private readonly List<Spark> _liveAttackSparks = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
         private Pool<Spark> _sparkPool;
+        private GameObject _attackSparkPrefab;
+        private Pool<Spark> _attackSparkPool;
 
         private bool _warnedNoFlash;
         private bool _warnedNoInvert;
         private bool _warnedNoInvertUi;
         private bool _warnedNoSpark;
+        private bool _warnedNoAttackSpark;
 
         public void Init(Transform parent)
         {
@@ -63,7 +70,8 @@ namespace Refraction.Presentation.Effects
 
         public void Tick(float deltaTime)
         {
-            TickSparks(deltaTime);
+            TickSparks(_liveSparks, _sparkPool, deltaTime);
+            TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
 
             if (_states.Count == 0) return;
 
@@ -139,14 +147,25 @@ namespace Refraction.Presentation.Effects
             _liveSparks.Add(spark);
         }
 
-        private void TickSparks(float deltaTime)
+        /// <summary>攻击火花：玩家黑攻击砍到实体时播，方向沿用被击表面的外法线</summary>
+        public void PlayAttackSpark(Vector2 position, Vector2 direction, Color? color = null)
         {
-            for (int i = _liveSparks.Count - 1; i >= 0; i--)
-            {
-                if (!_liveSparks[i].Tick(deltaTime)) continue;
+            if (!EnsureAttackSparkPool()) return;
 
-                _sparkPool?.Release(_liveSparks[i]);
-                _liveSparks.RemoveAt(i);
+            if (!_attackSparkPool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, direction, color);
+            _liveAttackSparks.Add(spark);
+        }
+
+        private void TickSparks(List<Spark> live, Pool<Spark> pool, float deltaTime)
+        {
+            for (int i = live.Count - 1; i >= 0; i--)
+            {
+                if (!live[i].Tick(deltaTime)) continue;
+
+                pool?.Release(live[i]);
+                live.RemoveAt(i);
             }
         }
 
@@ -184,6 +203,45 @@ namespace Refraction.Presentation.Effects
         private Spark CreateSpark()
         {
             GameObject go = Object.Instantiate(_sparkPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
+        private bool EnsureAttackSparkPool()
+        {
+            if (_attackSparkPool != null) return true;
+
+            _attackSparkPrefab = Resources.Load<GameObject>(AttackSparkPath);
+
+            if (_attackSparkPrefab == null)
+            {
+                if (!_warnedNoAttackSpark)
+                {
+                    _warnedNoAttackSpark = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{AttackSparkPath}，攻击火花不播放。");
+                }
+
+                return false;
+            }
+
+            _attackSparkPool = new Pool<Spark>(
+                CreateAttackSpark,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: AttackSparkPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _attackSparkPool.Prewarm(AttackSparkPrewarm);
+
+            return true;
+        }
+
+        private Spark CreateAttackSpark()
+        {
+            GameObject go = Object.Instantiate(_attackSparkPrefab, _effectRoot);
             go.SetActive(false);
 
             return new Spark(go);
@@ -234,8 +292,14 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _liveSparks.Count; i++) _sparkPool?.Release(_liveSparks[i]);
             _liveSparks.Clear();
 
+            for (int i = 0; i < _liveAttackSparks.Count; i++) _attackSparkPool?.Release(_liveAttackSparks[i]);
+            _liveAttackSparks.Clear();
+
             _sparkPool?.Dispose();
             _sparkPool = null;
+
+            _attackSparkPool?.Dispose();
+            _attackSparkPool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;
@@ -445,7 +509,7 @@ namespace Refraction.Presentation.Effects
             {
                 _elapsed += deltaTime;
 
-                if (_elapsed >= HitSparkMaxLife) return true;
+                if (_elapsed >= SparkMaxLife) return true;
 
                 // Play 的当帧粒子还没吐出来，IsAlive 必然是 false，跳过一帧再判
                 if (!_settled)

@@ -2,6 +2,7 @@
 using Refraction.Data;
 using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
+using Refraction.Presentation.Effects;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
@@ -16,7 +17,7 @@ namespace Refraction.Presentation.Combat
     /// 命中回报有两条路，别混：ProduceDamage 里的 _onHit 取伤害那一刻就回调、不看扣血结果，只给逻辑用
     /// （普攻换命中后坐力 / 突进提前结束）；IHitLanded 要等 AttackBox 确认 TakeDamage 返回 true 才回调，
     /// 接到 PlayerLogic.OnMeleeHitLanded 涨极性并发顿帧。白攻击的子弹不经过本类，所以子弹命中不顿帧</remarks>
-    public sealed class BlackAttackView : IBlackAttackView, IReboundView, IAttacker, IHitLanded
+    public sealed class BlackAttackView : IBlackAttackView, IReboundView, IAttacker, IHitLanded, IHitBodyLanded
     {
         private const string ReboundRootPath = "BlackRebound";
 
@@ -57,10 +58,12 @@ namespace Refraction.Presentation.Combat
         private readonly PlayerConfig _config;
         private readonly Func<int> _face;
         private readonly Action _onHitLanded;
+        private readonly EffectModule _effects;
 
         private static bool _warnedNoRebound;
 
         private Collider2D _reboundActive;
+        private AttackBox _activeBox;
         private Collider2D _hurt;
         private Func<IBulletLauncher> _launcher;
         private BlackAttackKind _kind;
@@ -71,11 +74,12 @@ namespace Refraction.Presentation.Combat
         private Mesh _sweepMesh;
 
         /// <summary>root 是玩家根节点，层级里按 BlackDash/xxxCollider 找；朝向开打那一帧取定</summary>
-        public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null)
+        public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null, EffectModule effects = null)
         {
             _config = config;
             _face = face;
             _onHitLanded = onHitLanded;
+            _effects = effects;
 
             _reboundAhead = FindRebound(root, ReboundAheadPath);
             _reboundUp = FindRebound(root, ReboundUpPath);
@@ -119,6 +123,7 @@ namespace Refraction.Presentation.Combat
             _dashHits.Clear();
             _dashAhead.transform.SetParent(null, true);
             SetActive(_dashAhead, true);
+            _activeBox = _dashAhead;
         }
 
         /// <summary>黑突进用：点亮对应突进盒与弹反盒，突进盒不摘下来，整段跟着玩家跑</summary>
@@ -132,6 +137,7 @@ namespace Refraction.Presentation.Combat
 
             _dashHits.Clear();
             SetActive(DashBoxOf(kind), true);
+            _activeBox = DashBoxOf(kind);
             PaintSweep(kind);
         }
 
@@ -143,6 +149,7 @@ namespace Refraction.Presentation.Combat
 
             ClearSweep();
             _dashMode = false;
+            _activeBox = null;
         }
 
         private static void Close(AttackBox box, in Anchor home)
@@ -416,7 +423,27 @@ namespace Refraction.Presentation.Combat
             => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
         /// <summary>攻击盒真扣到目标身上之后才回调：涨极性与顿帧全挂这条路上，子弹命中不经过本类</summary>
-        public void OnHitLanded() => _onHitLanded?.Invoke();
+        public void OnHitLanded() => OnHitLanded(null);
+
+        /// <summary>火花贴在被击表面的最近点上，朝向按外法线（朝攻击来源一侧）</summary>
+        public void OnHitLanded(Collider2D other)
+        {
+            PlayAttackSpark(other);
+            _onHitLanded?.Invoke();
+        }
+
+        private void PlayAttackSpark(Collider2D other)
+        {
+            if (_effects == null || other == null) return;
+
+            Vector2 origin = _activeBox != null ? (Vector2)_activeBox.transform.position : (Vector2)other.bounds.center;
+            Vector2 point = other.ClosestPoint(origin);
+            Vector2 normal = origin - point;
+
+            if (normal.sqrMagnitude < 1e-6f) normal = -DirectionOf();
+
+            _effects.PlayAttackSpark(point, normal.normalized);
+        }
 
         private static void SetActive(Component target, bool active)
         {

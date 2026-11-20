@@ -76,7 +76,9 @@ namespace Refraction.Presentation.Actor
             if (!target.Hurtable.TakeDamage(in damage)) return;
 
             if (interval != null) interval.MarkHit(Time.fixedTime);
-            if (Attacker is IHitLanded landed) landed.OnHitLanded();
+
+            if (Attacker is IHitBodyLanded bodyLanded) bodyLanded.OnHitLanded(other);
+            else if (Attacker is IHitLanded landed) landed.OnHitLanded();
         }
 
         private HurtBox TargetOf(Collider2D other)
