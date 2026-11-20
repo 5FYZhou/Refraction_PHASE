@@ -59,6 +59,8 @@ namespace Refraction.Logic.Actor
         /// <summary>正在后摇：别的攻击可以顶掉它</summary>
         public bool Cancelable => Phased != null && Phased.Cancelable;
 
+        public bool HoldsMoveFall => Phased is BlackDashState && Phased.BlocksMovement;
+
         public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
 
         public AttackStateTag Current => machine.CurrentState?.Tag ?? AttackStateTag.None;

@@ -173,6 +173,8 @@ namespace Refraction.Logic.Actor
 
             _attackGroup.Tick(in tick);
 
+            if (_attackGroup.HoldsMoveFall) _moveGroup.ChangeState(MovementStateTag.Fall, in tick);
+
             _rebound.Tick(in tick, _black);
 
             TickCharge(in tick, dashStarted);
