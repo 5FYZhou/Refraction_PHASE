@@ -17,6 +17,7 @@ namespace Refraction.Logic.Actor
 
         private EnemyArea _patrolArea;
         private EnemyArea _chaseArea;
+        private EnemyTargetInfo _target;
         private bool _hitLanded;
 
         public E_SecondLogic(
@@ -46,28 +47,6 @@ namespace Refraction.Logic.Actor
 
         public override float ChargingTime => _config.whiteWindupTime;
 
-        public EnemyVisual Visual
-        {
-            get
-            {
-                switch (CurrentTag)
-                {
-                    case EnemyStateTag.Chase: return EnemyVisual.Chase;
-                    case EnemyStateTag.Return: return EnemyVisual.Return;
-                    case EnemyStateTag.Attack:
-                        switch (_moveGroup.Phase)
-                        {
-                            case E_SecondAttackPhase.Windup: return EnemyVisual.Windup;
-                            case E_SecondAttackPhase.Strike: return EnemyVisual.Strike;
-                        }
-
-                        return EnemyVisual.Recover;
-                }
-
-                return EnemyVisual.Patrol;
-            }
-        }
-
         /// <summary>巡逻范围：也是返回态的落点</summary>
         public EnemyArea PatrolArea => _patrolArea;
 
@@ -86,9 +65,20 @@ namespace Refraction.Logic.Actor
         /// <summary>表现层唯一入口：写入本帧玩家信息，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target)
         {
+            _target = target;
             SetSight(target.Known, target.Visible, target.Pos);
             FixedTick(ctx);
         }
+
+        /// <summary>黑：只有冲刺段转向锁定角，后摇转回原位</summary>
+        public bool DashAiming =>
+            Black && CurrentTag == EnemyStateTag.Attack && _moveGroup.Phase == E_SecondAttackPhase.Strike;
+
+        /// <summary>白：攻击三段全程实时转向玩家</summary>
+        public bool AimAtTarget => !Black && CurrentTag == EnemyStateTag.Attack;
+
+        /// <summary>转向要看的点：优先受击盒中心，缺了退回玩家枢轴</summary>
+        public Vector2 AimPoint => _target.HalfSize.sqrMagnitude > 0f ? _target.BodyCenter : TargetPos;
 
         /// <summary>冲刺撞上玩家：只有真的扣到血才来，无敌窗与接触间隔挡住时不会触发，那两种情形由撞墙与超时收手</summary>
         public void OnHitLanded() => _hitLanded = true;

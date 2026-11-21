@@ -10,8 +10,8 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按展示态与黑白给 View 换色</summary>
-    public sealed class E_SecondController : MonoBehaviour, ISceneRoot, IPhysicsTicked
+    /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按黑白给 View 取色</summary>
+    public sealed class E_SecondController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked
     {
         public int Order => SceneOrder.World;
 
@@ -55,7 +55,14 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 chaseSize = new(20f, 6f);
 
+        [Tooltip("转 z 轴的那个视觉根：留空按名字找 View 子物体。\n黑冲刺转到前摇结束时锁定的角（±90° 内，冲刺起手才开始转），白攻击全程实时追玩家，其余时候转回它的初始角。")]
+        [SerializeField]
+        private Transform viewRoot;
+
         private const int BulletPoolSize = 4;
+        private const float DirEps = 1e-6f;
+        private const float MaxViewAngle = 90f;
+        private const string ViewChildName = "View";
 
         private readonly EnemySight _sight = new(false);
 
@@ -67,11 +74,15 @@ namespace Refraction.Presentation.Actor
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
-        private EnemyVisual _visual = (EnemyVisual)(-1);
-        private bool _visualBlack;
+        private bool _tintBlack;
 
         private EnemyArea _patrolArea;
         private EnemyArea _chaseArea;
+
+        private float _viewAngle;
+        private float _baseViewAngle;
+        private float _lockedViewAngle;
+        private bool _dashAimed;
 
         private void Awake()
         {
@@ -114,9 +125,10 @@ namespace Refraction.Presentation.Actor
 
             AttachBullets();
 
-            _visual = _logic.Visual;
-            _visualBlack = _logic.Black;
-            _tint.Apply(_visual, _visualBlack);
+            _tintBlack = _logic.Black;
+            _tint.Apply(_tintBlack);
+
+            CacheView();
 
             _attached = true;
         }
@@ -159,6 +171,68 @@ namespace Refraction.Presentation.Actor
             builder.Append(area.Center.x.ToString("F2")).Append(",").Append(area.Center.y.ToString("F2"));
         }
 
+        /// <summary>渲染帧转 z 轴：目标角随阶段变，逼近速率看 dashTurnSpeed；放物理帧里会被 50Hz 卡成跳格</summary>
+        public void RenderTick(float deltaTime)
+        {
+            if (!_attached || viewRoot == null) return;
+
+            float target = ResolveViewAngle();
+
+            if (config.dashTurnSpeed <= 0f) _viewAngle = target;
+            else
+            {
+                float step = config.dashTurnSpeed * deltaTime;
+                _viewAngle += Mathf.Clamp(Mathf.DeltaAngle(_viewAngle, target), -step, step);
+            }
+
+            viewRoot.localRotation = Quaternion.Euler(0f, 0f, _viewAngle);
+        }
+
+        /// <summary>黑冲刺只转向前摇锁死的那个角、白攻击全程追玩家、其余回初始角</summary>
+        private float ResolveViewAngle()
+        {
+            if (_logic.DashAiming) return _lockedViewAngle;
+            if (_logic.AimAtTarget) return ClampViewAngle(AimAngle());
+
+            return _baseViewAngle;
+        }
+
+        /// <summary>前摇结束那一帧锁角：之后玩家再换位也不再追，锁的是起冲那一刻的朝向</summary>
+        private void TickAimLock()
+        {
+            bool dashing = _logic.DashAiming;
+
+            if (dashing && !_dashAimed) _lockedViewAngle = ClampViewAngle(AimAngle());
+
+            _dashAimed = dashing;
+        }
+
+        private float ClampViewAngle(float angle) =>
+            _baseViewAngle + Mathf.Clamp(Mathf.DeltaAngle(_baseViewAngle, angle), -MaxViewAngle, MaxViewAngle);
+
+        /// <summary>View 的初始角当场记下：后摇要转回的是它，不是硬编码的 0</summary>
+        private void CacheView()
+        {
+            if (viewRoot == null) viewRoot = transform.Find(ViewChildName);
+            if (viewRoot == null) return;
+
+            _baseViewAngle = Mathf.DeltaAngle(0f, viewRoot.localEulerAngles.z);
+            _viewAngle = _baseViewAngle;
+            _lockedViewAngle = _baseViewAngle;
+        }
+
+        private float AimAngle()
+        {
+            Vector2 dir = _logic.AimPoint - (Vector2)transform.position;
+
+            if (dir.sqrMagnitude <= DirEps) return _baseViewAngle;
+
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+
+            // View 被根节点的 scale.x 翻号镜像着：镜像时本地角要按 180−角 反算，否则朝左时往下扑会朝上仰
+            return viewRoot.lossyScale.x < 0f ? 180f - angle : angle;
+        }
+
         public void FixedTick(float deltaTime)
         {
             if (!_attached) return;
@@ -168,24 +242,24 @@ namespace Refraction.Presentation.Actor
 
             _logic.FixedTick(context, _sight.Sense());
 
+            TickAimLock();
+
             _bullets?.Tick(deltaTime);
 
-            TickVisual();
+            TickTint();
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
             if (!_logic.IsAlive) Destroy(gameObject);
         }
 
-        private void TickVisual()
+        private void TickTint()
         {
-            EnemyVisual visual = _logic.Visual;
             bool black = _logic.Black;
 
-            if (visual == _visual && black == _visualBlack) return;
+            if (black == _tintBlack) return;
 
-            _visual = visual;
-            _visualBlack = black;
-            _tint.Apply(visual, black);
+            _tintBlack = black;
+            _tint.Apply(black);
         }
 
         private void AttachBullets()

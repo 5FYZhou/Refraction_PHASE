@@ -2,7 +2,7 @@
 
 > 依据代码：`E_SecondLogic`（目标 / 领地 / 极性）、`E_SecondMoveGroup`（四态切换）、`E_SecondPatrolState` / `E_SecondChaseState` / `E_SecondReturnState` / `E_SecondAttackState`。
 > 表现层：`E_SecondController`（装配、喂玩家位置、换色）、`E_SecondMotor`（飞行执行器，只探墙）。
-> 数值全在 `E_SecondConfig` 资产里；颜色在共用的 `EnemyVisualConfig` 资产里。
+> 数值全在 `E_SecondConfig` 资产里。
 
 这套逻辑与 `Enemy` 完全独立：不共用 `EnemyLogic` / `EnemyMoveGroup` / 任何 Enemy 状态，只共用 `ActorLogic`、`MoveMotor`、`StateGroup`、`BulletLogic` 这些框架件，以及探测触发器的转发器（`EnemyDetectZone` 认 `IDetectSink`，三只敌人统一由 `EnemySight` 实现，控制器不再各自管视线）。
 
@@ -92,6 +92,21 @@
 
 两段后摇结束时都做同一件事：看得见 → 重进前摇；看不见 → 结束攻击。
 
+### View 的 z 轴旋转（纯表现）
+
+**黑（冲刺）**
+- **前摇结束时锁定角度**：`E_SecondController.TickAimLock` 在「阶段刚变 `Strike` 的那一物理帧」（`DashAiming` 的上升沿）把当时的「自身 → 玩家受击盒中心」夹角算出来存下，之后玩家再换位也不追。
+- **冲刺起手才开始转**：目标角一直是那个锁定的角，按 `dashTurnSpeed` 度/秒逼近。前摇期间 `View` 一动不动。
+- 后摇一开始目标角变回初始角（装配时记下的 `localEulerAngles.z`，通常是 0），同样按 `dashTurnSpeed` 平滑转回，不会瞬间弹回。
+
+**白（子弹）**
+- 攻击三段（前摇 / 攻击 / 后摇）**全程实时转向玩家**：每帧重算夹角，玩家横移就跟着转，开火方向与朝向始终一致。
+
+**通用**
+- 角度一律**钳在初始角 ±90° 之内**（`MaxViewAngle`），再大就是头朝下，读起来像在飞而不是在扑。
+- 这一步放在**渲染帧**（`IRenderTicked`）里，物理帧 50Hz 会把转向卡成跳格。
+- 根节点的 `localScale.x` 会随朝向翻号（`MoveMotor.Face` 写的是根），`View` 因此是镜像的：镜像时本地角要按 `180° − 目标角` 反算（`AimAngle` 里按 `viewRoot.lossyScale.x < 0` 分叉），否则朝左时往下扑会朝上仰。
+
 ### 接触伤害（持续）
 
 身体上的 `AttackBox` 碰到玩家受击盒就结算一次，之后**按间隔反复结算**（与 `Enemy` 同一套：`AttackBox.OnTriggerStay2D` 问 `IIntervalAttacker.ReadyToHit`）：
@@ -107,19 +122,11 @@
 - `contactInterval = 0` 表示不设间隔：每个物理帧都试一次，实际节奏由玩家的无敌窗决定，不建议。
 - 伤害源是 `DamageSource.Contact`，`E_SecondLogic.TakeDamage` 直接丢弃这类伤害 —— 敌人之间挤在一起不会互相掉血。
 
-## 八、颜色（平时用初始色，只有攻击三段读资产）
+## 八、颜色（只按极性取反）
 
-平时不配色：`View` 里摆的就是最终色，敌人是黑形态时 `rgb = 1 - rgb` 取反（alpha 不动），回白形态还原。初始色由 `EnemyTint` 在 Awake 缓存一次，缓存的是「设计态」颜色，反复反转不会越取越偏。
+不做状态配色：`View` 里摆的就是最终色，敌人是黑形态时 `rgb = 1 - rgb` 取反（alpha 不动），回白形态还原。初始色由 `EnemyTint` 在 Awake 缓存一次，缓存的是「设计态」颜色，反复反转不会越取越偏。
 
-只有攻击三段查 `Assets/Resources/Data/Enemy/EnemyVisualConfig.asset`（与另外两只共用）：
-
-| 展示态 | 白 | 黑 |
-| --- | --- | --- |
-| 前摇 | `windupWhite` 橙 | `windupBlack` 暗红 |
-| 攻击 | `strikeWhite` 近白 | `strikeBlack` 深灰 |
-| 后摇 | `recoverWhite` 灰蓝 | `recoverBlack` 墨青 |
-
-巡逻 / 追击 / 返回不查资产，用初始色（黑形态取反）。只在展示态或极性变化时写一次（同时比对 `Visual` 与 `Black`），不会每帧刷材质；`View` 下所有 `SpriteRenderer`（含未激活的）都会被上色。
+`Apply` 只在极性变化时写一次，不会每帧刷材质；`View` 下所有 `SpriteRenderer`（含未激活的）都会跟着取反。巡逻、追击、返回、攻击前后摇都不再单独配色，唯一还能改色的只有受击闪白（材质 `_FlashAmount`，与这里无关）。
 
 ## 九、预制体接线（本次只写了脚本）
 
@@ -127,9 +134,10 @@
 - `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data` 下新建），装配时注入给 `E_SecondMotor`。
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
+- 冲刺转向的节点是控制器上的 `viewRoot`：留空自动按名字找 `View`；它当前的 `localEulerAngles.z` 会被记成「初始角」，所以想让怪物平时就有个倾角，直接摆 `View` 的旋转即可，不用改代码。
 - `bulletPrefab` 留空 = 白形态不开火（仍然走完前摇与后摇）；出膛点 `bulletMuzzle` 在同一个组件上（局部坐标，x 随朝向镜像），不进 `E_SecondConfig`。
 - **必须有 `DetectCollider` 子物体**：名字必须是这个（`EnemyColliderConfig.detectChildName`）；Is Trigger 与层不用手勾，`EnemyColliderSetup` 会在 Awake 里按资产设成「触发器 + 只认 Player(7) 层」；`E_SecondController` 按名字找它并补挂转发器，找不到只警告，这只敌人会永远看不见玩家。
-- 三只敌人共用的两份资产要在 `Assets/Resources/Data/` 下建（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider / EnemyVisual），文件名必须正好是 `EnemyColliderConfig` / `EnemyVisualConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
+- 三只敌人共用的碰撞体资产要在 `Assets/Resources/Data/Enemy/` 下建（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider），文件名必须正好是 `EnemyColliderConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
 - 两个框都在 controller 的 Inspector 上画（`EnemyGizmos` 统一绘制）：`patrolOffset / patrolSize` 是绿框，`chaseOffset / chaseSize` 是橙红框，`Reset()` 会给默认值（12×4 与 20×6）；另有一圈青色的 `DetectCollider` 视线范围框。
   - 运行中 gizmo 画的是逻辑里那份快照（`E_SecondLogic.PatrolArea` 与 `E_SecondLogic.ChaseArea`），钉在世界坐标上、不跟敌人走；只有 `Recenter` 成对平移两个框之后才会一起挪。没运行时画的才是 Inspector 参数框。
 - `E_SecondMotor` 的撞墙探针画出两个同心圆（`wallInnerRadius` / `wallOuterRadius`），两圈之间那圈就是撞墙判定区，见下一节。
