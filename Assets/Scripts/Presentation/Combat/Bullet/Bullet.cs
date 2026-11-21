@@ -49,6 +49,8 @@ namespace Refraction.Presentation.Combat
 
         public Vector2 Position => _rb != null ? _rb.position : (Vector2)transform.position;
 
+        public Vector2 ReflectDirection => _velocity.sqrMagnitude > 1e-6f ? -_velocity.normalized : Vector2.zero;
+
         public bool PlayerOwned { get; private set; }
 
         public static int LiveCount => LiveList.Count;
@@ -353,14 +355,14 @@ namespace Refraction.Presentation.Combat
             if (launcher == null || _system == null) return false;
             if (_state != BulletState.Flying) return false;
 
-            Vector2 velocity = _velocity;
+            Vector2 dir = ReflectDirection;
 
-            if (velocity.sqrMagnitude < 1e-6f) return false;
+            if (dir.sqrMagnitude < 1e-6f) return false;
 
             launcher.Launch(new BulletSpawn(
                 Position,
-                -velocity.normalized,
-                velocity.magnitude,
+                dir,
+                _velocity.magnitude,
                 damage,
                 knockback,
                 transferSpeed)

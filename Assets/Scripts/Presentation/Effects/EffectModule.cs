@@ -32,12 +32,15 @@ namespace Refraction.Presentation.Effects
 
         private const string HitSparkPath = "Effects/HitSpark";
         private const string AttackSparkPath = "Effects/AttackSpark";
+        private const string ReboundSparkPath = "Effects/ReboundSpark";
         private const string ChargeInPath = "Effects/ChargeIn";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
+        private const int ReboundSparkPoolSize = 8;
         private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
+        private const int ReboundSparkPrewarm = 2;
         private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
         private const float ChargeInMinDuration = 0.05f;
@@ -67,12 +70,15 @@ namespace Refraction.Presentation.Effects
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
         private readonly List<Spark> _liveSparks = new();
         private readonly List<Spark> _liveAttackSparks = new();
+        private readonly List<Spark> _liveReboundSparks = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
         private Pool<Spark> _sparkPool;
         private GameObject _attackSparkPrefab;
         private Pool<Spark> _attackSparkPool;
+        private GameObject _reboundSparkPrefab;
+        private Pool<Spark> _reboundSparkPool;
         private GameObject _chargeInPrefab;
         private Pool<ChargeInState> _chargeInPool;
 
@@ -81,6 +87,7 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoInvertUi;
         private bool _warnedNoSpark;
         private bool _warnedNoAttackSpark;
+        private bool _warnedNoReboundSpark;
         private bool _warnedNoChargeIn;
 
         public void Init(Transform parent)
@@ -99,6 +106,7 @@ namespace Refraction.Presentation.Effects
         {
             TickSparks(_liveSparks, _sparkPool, deltaTime);
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
+            TickSparks(_liveReboundSparks, _reboundSparkPool, deltaTime);
             TickShapes(deltaTime);
             TickChargeIns(deltaTime);
 
@@ -176,7 +184,7 @@ namespace Refraction.Presentation.Effects
             _liveSparks.Add(spark);
         }
 
-        /// <summary>攻击火花：玩家黑攻击砍到实体时播，方向沿用被击表面的外法线</summary>
+        /// <summary>攻击火花：玩家黑攻击砍到实体时播，方向按这一刀的攻击方向（不是被击表面的外法线）</summary>
         public void PlayAttackSpark(Vector2 position, Vector2 direction, Color? color = null)
         {
             if (!EnsureAttackSparkPool()) return;
@@ -185,6 +193,17 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, direction, color);
             _liveAttackSparks.Add(spark);
+        }
+
+        /// <summary>弹反火花：位置是弹反点，方向是子弹被打回去的朝向</summary>
+        public void PlayReboundSpark(Vector2 position, Vector2 direction, Color? color = null)
+        {
+            if (!EnsureReboundSparkPool()) return;
+
+            if (!_reboundSparkPool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, direction, color);
+            _liveReboundSparks.Add(spark);
         }
 
         /// <summary>受击挤压：目标自己的 localScale 做 X 压 Y 拉，要传 View 这类纯视觉节点，根上有碰撞体不能缩</summary>
@@ -378,6 +397,45 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsureReboundSparkPool()
+        {
+            if (_reboundSparkPool != null) return true;
+
+            _reboundSparkPrefab = Resources.Load<GameObject>(ReboundSparkPath);
+
+            if (_reboundSparkPrefab == null)
+            {
+                if (!_warnedNoReboundSpark)
+                {
+                    _warnedNoReboundSpark = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ReboundSparkPath}，弹反火花不播放。");
+                }
+
+                return false;
+            }
+
+            _reboundSparkPool = new Pool<Spark>(
+                CreateReboundSpark,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: ReboundSparkPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _reboundSparkPool.Prewarm(ReboundSparkPrewarm);
+
+            return true;
+        }
+
+        private Spark CreateReboundSpark()
+        {
+            GameObject go = Object.Instantiate(_reboundSparkPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
         private bool EnsureChargeInPool()
         {
             if (_chargeInPool != null) return true;
@@ -485,11 +543,17 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _liveAttackSparks.Count; i++) _attackSparkPool?.Release(_liveAttackSparks[i]);
             _liveAttackSparks.Clear();
 
+            for (int i = 0; i < _liveReboundSparks.Count; i++) _reboundSparkPool?.Release(_liveReboundSparks[i]);
+            _liveReboundSparks.Clear();
+
             _sparkPool?.Dispose();
             _sparkPool = null;
 
             _attackSparkPool?.Dispose();
             _attackSparkPool = null;
+
+            _reboundSparkPool?.Dispose();
+            _reboundSparkPool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;

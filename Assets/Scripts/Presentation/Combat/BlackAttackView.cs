@@ -245,7 +245,12 @@ namespace Refraction.Presentation.Combat
                 if (InHurtRange(pos)) continue;
                 if (!zone.OverlapPoint(pos)) continue;
 
-                if (bullet.TryReflect(launcher, damage, knockback, transfer)) _onReflected?.Invoke();
+                Vector2 reflectDir = bullet.ReflectDirection;
+
+                if (!bullet.TryReflect(launcher, damage, knockback, transfer)) continue;
+
+                _effects?.PlayReboundSpark(pos, reflectDir);
+                _onReflected?.Invoke();
             }
         }
 
@@ -428,7 +433,7 @@ namespace Refraction.Presentation.Combat
         /// <summary>攻击盒真扣到目标身上之后才回调：涨极性与顿帧全挂这条路上，子弹命中不经过本类</summary>
         public void OnHitLanded() => OnHitLanded(null);
 
-        /// <summary>火花贴在被击表面的最近点上，朝向按外法线（朝攻击来源一侧）</summary>
+        /// <summary>火花贴在命中表面的最近点上，朝向按这一刀的黑攻击方向</summary>
         public void OnHitLanded(Collider2D other)
         {
             PlayAttackSpark(other);
@@ -440,12 +445,8 @@ namespace Refraction.Presentation.Combat
             if (_effects == null || other == null) return;
 
             Vector2 origin = _activeBox != null ? (Vector2)_activeBox.transform.position : (Vector2)other.bounds.center;
-            Vector2 point = other.ClosestPoint(origin);
-            Vector2 normal = origin - point;
 
-            if (normal.sqrMagnitude < 1e-6f) normal = -DirectionOf();
-
-            _effects.PlayAttackSpark(point, normal.normalized);
+            _effects.PlayAttackSpark(other.ClosestPoint(origin), DirectionOf());
         }
 
         private static void SetActive(Component target, bool active)
