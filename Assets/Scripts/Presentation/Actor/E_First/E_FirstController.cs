@@ -99,10 +99,7 @@ namespace Refraction.Presentation.Actor
             _hurtFlash = new(_root.Effects, transform, config.flashTime);
             _logic = new E_FirstLogic(moveMotor, config, _hurtFlash, true, bulletMuzzle, blackForm);
 
-            var hurtBox = transform.GetComponentInChildren<HurtBox>();
-            if (hurtBox != null) hurtBox.SetIAttackable(_logic);
-            var attackBox = transform.GetComponentInChildren<AttackBox>();
-            if (attackBox != null) attackBox.SetAttack(_logic);
+            HitBoxBinder.Bind(transform, _logic, _logic);
 
             AttachBullets();
 
