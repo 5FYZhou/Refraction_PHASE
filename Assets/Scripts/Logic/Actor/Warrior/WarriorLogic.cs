@@ -47,24 +47,6 @@ namespace Refraction.Logic.Actor
 
         public override float ChargingTime => _config.hoverTime;
 
-        public EnemyVisual Visual
-        {
-            get
-            {
-                if (CurrentTag != EnemyStateTag.Attack) return EnemyVisual.Patrol;
-
-                switch (_moveGroup.Phase)
-                {
-                    case WarriorAttackPhase.Windup: return EnemyVisual.Windup;
-                    case WarriorAttackPhase.Pounce: return EnemyVisual.Strike;
-                    case WarriorAttackPhase.Recover: return EnemyVisual.Recover;
-                    case WarriorAttackPhase.Leap: return EnemyVisual.Windup;
-                }
-
-                return EnemyVisual.Strike;
-            }
-        }
-
         /// <summary>本帧生效的巡逻范围：无界 = 没画框或已经被甩出去，此时按整平台走</summary>
         public EnemyArea PatrolArea => _activeArea;
 

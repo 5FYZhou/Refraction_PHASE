@@ -34,9 +34,6 @@ namespace Refraction.Logic.Actor
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
-        /// <summary>这只敌人只有巡逻 / 追击，没有攻击三段</summary>
-        public EnemyVisual Visual => CurrentTag == EnemyStateTag.Chase ? EnemyVisual.Chase : EnemyVisual.Patrol;
-
         /// <summary>黑世界不追：转黑的当帧由 EnemyChaseState.IsDone 结束追击</summary>
         public override bool ChaseAllowed => !Black;
 

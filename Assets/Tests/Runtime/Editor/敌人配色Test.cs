@@ -1,6 +1,4 @@
 using NUnit.Framework;
-using Refraction.Data;
-using Refraction.Logic.Actor;
 using Refraction.Presentation.Actor;
 using UnityEngine;
 
@@ -31,13 +29,13 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 白世界_巡逻用初始色()
+        public void 白世界_用初始色()
         {
             EnemyTint tint = new(_root.transform);
 
-            tint.Apply(EnemyVisual.Patrol, false);
+            tint.Apply(false);
 
-            颜色应等于(Design, _view.color, "平时不读资产，摆什么就是什么");
+            颜色应等于(Design, _view.color, "白世界摆什么就是什么");
         }
 
         [Test]
@@ -45,7 +43,7 @@ namespace Refraction.Tests
         {
             EnemyTint tint = new(_root.transform);
 
-            tint.Apply(EnemyVisual.Chase, true);
+            tint.Apply(true);
 
             颜色应等于(new Color(0.8f, 0.6f, 0.4f, 0.5f), _view.color, "黑世界只反 rgb，alpha 保留");
         }
@@ -57,41 +55,26 @@ namespace Refraction.Tests
 
             for (int i = 0; i < 5; i++)
             {
-                tint.Apply(EnemyVisual.Patrol, true);
-                tint.Apply(EnemyVisual.Patrol, false);
+                tint.Apply(true);
+                tint.Apply(false);
             }
 
             颜色应等于(Design, _view.color, "缓存的是设计态颜色，取反不写回缓存");
         }
 
         [Test]
-        public void 攻击三段_读配置色()
+        public void 同一节点多个renderer_一起取反()
         {
-            EnemyTint tint = new(_root.transform);
-            EnemyVisualConfig config = EnemyVisualConfig.Default;
+            SpriteRenderer extra = Child("Extra").gameObject.AddComponent<SpriteRenderer>();
 
-            tint.Apply(EnemyVisual.Windup, false);
+            extra.color = new Color(1f, 0f, 0.25f, 1f);
 
-            颜色应等于(config.windupWhite, _view.color, "前摇读资产");
-
-            tint.Apply(EnemyVisual.Strike, true);
-
-            颜色应等于(config.strikeBlack, _view.color, "攻击读资产，黑世界取黑色那格");
-
-            tint.Apply(EnemyVisual.Recover, false);
-
-            颜色应等于(config.recoverWhite, _view.color, "后摇读资产");
-        }
-
-        [Test]
-        public void 攻击结束回巡逻_恢复初始色()
-        {
             EnemyTint tint = new(_root.transform);
 
-            tint.Apply(EnemyVisual.Strike, false);
-            tint.Apply(EnemyVisual.Patrol, false);
+            tint.Apply(true);
 
-            颜色应等于(Design, _view.color, "配置色只借用，不收招不留在身上");
+            颜色应等于(new Color(0.8f, 0.6f, 0.4f, 0.5f), _view.color, "View 下的 renderer 都算");
+            颜色应等于(new Color(0f, 1f, 0.75f, 1f), extra.color, "第二颗同样取反");
         }
 
         [Test]
@@ -105,7 +88,7 @@ namespace Refraction.Tests
 
             EnemyTint tint = new(_root.transform);
 
-            tint.Apply(EnemyVisual.Return, true);
+            tint.Apply(true);
 
             颜色应等于(new Color(0.8f, 0.6f, 0.4f, 0.5f), fallback.color, "找不到 View 就退回根节点，不能一个都不改");
         }

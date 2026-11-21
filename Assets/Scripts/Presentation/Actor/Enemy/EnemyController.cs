@@ -60,8 +60,7 @@ namespace Refraction.Presentation.Actor
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
-        private EnemyVisual _visual = (EnemyVisual)(-1);
-        private bool _visualBlack;
+        private bool _tintBlack;
 
         private void Awake()
         {
@@ -104,9 +103,8 @@ namespace Refraction.Presentation.Actor
 
             AttachBullets();
 
-            _visual = _logic.Visual;
-            _visualBlack = _logic.Black;
-            _tint.Apply(_visual, _visualBlack);
+            _tintBlack = _logic.Black;
+            _tint.Apply(_tintBlack);
 
             _attached = true;
         }
@@ -129,22 +127,20 @@ namespace Refraction.Presentation.Actor
 
             _bullets?.Tick(deltaTime);
 
-            TickVisual();
+            TickTint();
 
             // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
             if (!_logic.IsAlive) Destroy(gameObject);
         }
 
-        private void TickVisual()
+        private void TickTint()
         {
-            EnemyVisual visual = _logic.Visual;
             bool black = _logic.Black;
 
-            if (visual == _visual && black == _visualBlack) return;
+            if (black == _tintBlack) return;
 
-            _visual = visual;
-            _visualBlack = black;
-            _tint.Apply(visual, black);
+            _tintBlack = black;
+            _tint.Apply(black);
         }
 
         private void AttachBullets()

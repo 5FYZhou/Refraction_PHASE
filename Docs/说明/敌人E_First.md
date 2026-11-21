@@ -68,17 +68,9 @@
 
 ## 七、颜色
 
-平时不配色：`View` 里摆的是什么颜色就是什么颜色，**敌人是黑形态时按 `rgb = 1 - rgb` 取反**（alpha 不动），回到白形态原样还原。初始色在 `EnemyTint` 构造时（Awake）从 `View` 下所有 `SpriteRenderer` 缓存一次，之后只做取反、不改缓存值。
+不做状态配色：`View` 里摆的是什么颜色就是什么颜色，**敌人是黑形态时按 `rgb = 1 - rgb` 取反**（alpha 不动），回到白形态原样还原。初始色在 `EnemyTint` 构造时（Awake）从 `View` 下所有 `SpriteRenderer` 缓存一次，之后只做取反、不改缓存值，反复反转不会越取越偏。
 
-只有攻击三段读资产：`Assets/Resources/Data/Enemy/EnemyVisualConfig.asset`，前摇 / 攻击 / 后摇 × 黑白共 6 个字段，三只敌人共用一份。资产没建时用脚本里的默认值。
-
-| 展示态 | 白 | 黑 |
-| --- | --- | --- |
-| 前摇 Windup | `windupWhite` 橙 | `windupBlack` 暗红 |
-| 攻击 Strike | `strikeWhite` 近白 | `strikeBlack` 深灰 |
-| 后摇 Recover | `recoverWhite` 灰蓝 | `recoverBlack` 墨青 |
-
-巡逻 / 追击 / 返回一律走初始色（黑形态取反），**不查资产**。`EnemyTint.Apply` 只在展示态或极性变化时写一次，`View` 下所有 `SpriteRenderer`（含未激活）一起改。毛毛虫黑形态永远进不了攻击，所以它实际上用不到那 6 个字段，全程是初始色的取反。
+`EnemyTint.Apply` 只在极性变化时写一次，`View` 下所有 `SpriteRenderer`（含未激活）一起改；巡逻、追击、攻击前后摇都不会另外改颜色，唯一还能改色的只有受击闪白（走材质 `_FlashAmount`，与这里无关）。
 
 ## 八、预制体与配置（脚本之外要做的事）
 
@@ -86,7 +78,7 @@
 - **`E_FirstConfig.enableGravity` 必须勾上**：刚体的 `gravityScale` 被 `MoveMotor` 强制归零，没开逻辑重力这只虫子就永远悬在半空（离地不掉、踩不到地面判定）。
 - `maxFallSpeed` 建议 20 左右：它同时是下落速度上限，调太小会像羽毛一样飘下来。
 - 子物体按名字找，不在 Inspector 里连线：`View`（显示）、`BodyCollider`（身体，非触发器）、`DetectCollider`（**视线范围**）、`AttackCollider`（接触伤害，可选）。后三根的名字与层都由 `EnemyColliderConfig` 资产决定，`EnemyColliderSetup` 在 Awake 里按它统一改写（探测盒只认 Player 层、攻击盒排除 Enemy 层），预制体上勾什么都会被覆盖。
-- 三只敌人共用两份资产，**要在 `Assets/Resources/Data/Enemy/` 下建**（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider / EnemyVisual），文件名必须正好是 `EnemyColliderConfig` / `EnemyVisualConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
+- 三只敌人共用一份碰撞体资产，**要在 `Assets/Resources/Data/Enemy/` 下建**（右键 Create ▸ Refraction ▸ Settings ▸ EnemyCollider），文件名必须正好是 `EnemyColliderConfig`：代码按 Resources 路径加载，改名或换目录就退回脚本默认值并打 warning。
 - `View` 下建议放 `Bottom` / `Top` 两个空物体：脚底探测、贴地、悬崖探针都以 Bottom 为基准；缺了退回碰撞体底边（贴地有偏差，会打一条 warning）。
 - **`E_FirstMotor` 的 `groundProbe.layerMask` 与 `wallProbe.layerMask` 必须分开勾**：地面填 Ground、墙面填 Wall。留默认 `Everything` 会把玩家与其它敌人的碰撞体当成地面，虫子会踩在别人头上。
 - `bulletPrefab` 留空 = 不开火（前摇与后摇照走）。

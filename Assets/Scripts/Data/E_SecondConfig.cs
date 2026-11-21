@@ -29,6 +29,10 @@ namespace Refraction.Data
         [Min(0.01f)]
         public float blackDashMaxTime = 1f;
 
+        [Tooltip("冲刺时 z 轴转向玩家的角速度（度/秒）：后摇转回初始角也用这个值。0 表示瞬间对齐。")]
+        [Min(0f)]
+        public float dashTurnSpeed = 720f;
+
         [Tooltip("后摇上浮距离下限（单位）：每次后摇在这个区间里取一个随机值。")]
         [Min(0f)]
         public float riseMin = 1f;

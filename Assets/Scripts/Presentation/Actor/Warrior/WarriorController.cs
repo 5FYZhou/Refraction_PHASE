@@ -64,8 +64,7 @@ namespace Refraction.Presentation.Actor
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
-        private EnemyVisual _visual = (EnemyVisual)(-1);
-        private bool _visualBlack;
+        private bool _tintBlack;
 
         private EnemyArea _patrolArea;
 
@@ -111,9 +110,8 @@ namespace Refraction.Presentation.Actor
 
             AttachBullets();
 
-            _visual = _logic.Visual;
-            _visualBlack = _logic.Black;
-            _tint.Apply(_visual, _visualBlack);
+            _tintBlack = _logic.Black;
+            _tint.Apply(_tintBlack);
 
             _attached = true;
         }
@@ -131,7 +129,7 @@ namespace Refraction.Presentation.Actor
 
             _bullets?.Tick(deltaTime);
 
-            TickVisual();
+            TickTint();
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
             if (!_logic.IsAlive) Destroy(gameObject);
@@ -156,16 +154,14 @@ namespace Refraction.Presentation.Actor
             _logic.MarkRebounded(now);
         }
 
-        private void TickVisual()
+        private void TickTint()
         {
-            EnemyVisual visual = _logic.Visual;
             bool black = _logic.Black;
 
-            if (visual == _visual && black == _visualBlack) return;
+            if (black == _tintBlack) return;
 
-            _visual = visual;
-            _visualBlack = black;
-            _tint.Apply(visual, black);
+            _tintBlack = black;
+            _tint.Apply(black);
         }
 
         /// <summary>弹反范围是子物体上的触发器：就地补一个转发器，不去赌复合刚体的消息路由</summary>

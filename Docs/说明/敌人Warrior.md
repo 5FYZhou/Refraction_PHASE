@@ -1,7 +1,7 @@
 # 敌人 Warrior
 
 > 依据代码：`Logic/Actor/Warrior/WarriorLogic.cs`（继承 `EnemyLogicBase`）、`WarriorMoveGroup`、`WarriorAttackState`、`WarriorArc`。
-> 与 `Enemy` / `E_First` / `E_Second` 零共用逻辑，只复用 `EnemyLogicBase`、`EnemyTargetInfo`、`EnemyArea`、`EnemyStateTag`、`EnemyVisual`、`StateGroup`、`MoveMotor`、`BulletLogic` 这些框架件。
+> 与 `Enemy` / `E_First` / `E_Second` 零共用逻辑，只复用 `EnemyLogicBase`、`EnemyTargetInfo`、`EnemyArea`、`EnemyStateTag`、`StateGroup`、`MoveMotor`、`BulletLogic` 这些框架件。
 > 数值全在 `Assets/Resources/Data/WarriorConfig.asset`（需自己新建）。
 
 ## 一、文件

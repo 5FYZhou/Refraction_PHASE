@@ -25,7 +25,7 @@ namespace Refraction.Logic.Actor
         public EnemyStateTag Current =>
             machine.CurrentState == null ? EnemyStateTag.None : machine.CurrentState.Tag;
 
-        /// <summary>攻击内部走到哪一段：状态组只管动作进度，配色映射归 E_FirstLogic</summary>
+        /// <summary>攻击内部走到哪一段：状态组只管动作进度，不掺表现</summary>
         public E_FirstAttackPhase Phase => _attack.Phase;
 
         public void Tick(in LogicContext ctx) => TickStates(ctx);
