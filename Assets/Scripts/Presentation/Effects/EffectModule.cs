@@ -38,8 +38,16 @@ namespace Refraction.Presentation.Effects
         private const int AttackSparkPrewarm = 2;
         private const float SparkMaxLife = 5f;
 
+        // 受击挤压：X 压、Y 拉，余弦回弹一轮后线性收回；乘在 View 的设计缩放上，朝向翻号的负号不动
+        private const float SqueezeX = 0.08f;
+        private const float SqueezeY = 0.12f;
+        private const float SqueezeTime = 0.16f;
+        private const float SqueezeCycles = 1f;
+
         private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
+        private readonly Dictionary<Transform, SqueezeState> _squeezes = new();
+        private readonly List<Transform> _expiredSqueezes = new();
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
         private readonly List<Spark> _liveSparks = new();
         private readonly List<Spark> _liveAttackSparks = new();
@@ -72,6 +80,7 @@ namespace Refraction.Presentation.Effects
         {
             TickSparks(_liveSparks, _sparkPool, deltaTime);
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
+            TickSqueezes(deltaTime);
 
             if (_states.Count == 0) return;
 
@@ -156,6 +165,33 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, direction, color);
             _liveAttackSparks.Add(spark);
+        }
+
+        /// <summary>受击挤压：目标自己的 localScale 做 X 压 Y 拉，要传 View 这类纯视觉节点，根上有碰撞体不能缩</summary>
+        public void PlaySqueeze(Transform target)
+        {
+            if (target == null) return;
+
+            if (_squeezes.TryGetValue(target, out SqueezeState state)) state.Restart();
+            else _squeezes[target] = new SqueezeState(target);
+        }
+
+        private void TickSqueezes(float deltaTime)
+        {
+            if (_squeezes.Count == 0) return;
+
+            foreach (KeyValuePair<Transform, SqueezeState> pair in _squeezes)
+            {
+                if (pair.Value.Tick(deltaTime)) _expiredSqueezes.Add(pair.Key);
+            }
+
+            for (int i = 0; i < _expiredSqueezes.Count; i++)
+            {
+                _squeezes[_expiredSqueezes[i]].Restore();
+                _squeezes.Remove(_expiredSqueezes[i]);
+            }
+
+            _expiredSqueezes.Clear();
         }
 
         private void TickSparks(List<Spark> live, Pool<Spark> pool, float deltaTime)
@@ -285,6 +321,10 @@ namespace Refraction.Presentation.Effects
             foreach (TargetState state in _states.Values) state.Restore();
             _states.Clear();
             _expired.Clear();
+
+            foreach (SqueezeState squeeze in _squeezes.Values) squeeze.Restore();
+            _squeezes.Clear();
+            _expiredSqueezes.Clear();
 
             foreach (UiState state in _uiStates.Values) state.Dispose();
             _uiStates.Clear();
@@ -460,6 +500,57 @@ namespace Refraction.Presentation.Effects
                     Color original = _originalColors[i];
                     _renderers[i].color = new Color(original.r, original.g, original.b, cur.a);
                 }
+            }
+        }
+
+        private sealed class SqueezeState
+        {
+            private readonly Transform _target;
+            private readonly Vector3 _baseScale;
+
+            private float _elapsed;
+
+            public SqueezeState(Transform target)
+            {
+                _target = target;
+                _baseScale = target.localScale;
+
+                Restart();
+            }
+
+            public void Restart()
+            {
+                _elapsed = 0f;
+                Apply(1f);
+            }
+
+            public bool Tick(float deltaTime)
+            {
+                if (_target == null) return true;
+
+                _elapsed += deltaTime;
+
+                if (_elapsed >= SqueezeTime) return true;
+
+                float t = _elapsed / SqueezeTime;
+                Apply((1f - t) * Mathf.Cos(SqueezeCycles * Mathf.PI * t));
+
+                return false;
+            }
+
+            public void Restore()
+            {
+                if (_target != null) _target.localScale = _baseScale;
+            }
+
+            private void Apply(float k)
+            {
+                if (_target == null) return;
+
+                _target.localScale = new Vector3(
+                    _baseScale.x * (1f - SqueezeX * k),
+                    _baseScale.y * (1f + SqueezeY * k),
+                    _baseScale.z);
             }
         }
 
