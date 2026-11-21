@@ -39,6 +39,13 @@ namespace Refraction.Logic.Actor
 
         public EnemyStateTag CurrentTag => _moveGroup.Current;
 
+        /// <summary>只有白形态开火；黑形态前摇接的是近身突进，不该起鼓</summary>
+        public override bool ChargingShot =>
+            !Black && Launcher != null && _config.bulletSpeed > 0f &&
+            CurrentTag == EnemyStateTag.Attack && _moveGroup.Phase == E_SecondAttackPhase.Windup;
+
+        public override float ChargingTime => _config.whiteWindupTime;
+
         public EnemyVisual Visual
         {
             get

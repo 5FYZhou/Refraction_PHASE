@@ -27,5 +27,8 @@ namespace Refraction.Presentation.Effects
 
             if (_view != null) _effects?.PlaySqueeze(_view);
         }
+
+        /// <summary>蓄力起鼓与挤压共用 View 的缩放，由表现层按逻辑的 ChargingShot 每帧灌进来</summary>
+        public void SetCharging(bool on, float rampTime) => _effects?.SetCharge(_target, _view, on, rampTime);
     }
 }

@@ -54,6 +54,13 @@ namespace Refraction.Logic.Actor
         /// <summary>白世界才动手：黑世界对玩家没有反应，一直巡逻</summary>
         public bool Hostile => !Black;
 
+        /// <summary>开火就发生在前摇结束那一帧，所以前摇态本身就是蓄力窗口</summary>
+        public override bool ChargingShot =>
+            Launcher != null && _config.bulletSpeed > 0f &&
+            CurrentTag == EnemyStateTag.Attack && _moveGroup.Phase == E_FirstAttackPhase.Windup;
+
+        public override float ChargingTime => _config.windupTime;
+
         protected override float ContactDamage => _config.contactDamage;
 
         protected override float ContactInterval => _config.contactInterval;

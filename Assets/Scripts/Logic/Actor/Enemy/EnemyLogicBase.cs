@@ -62,6 +62,12 @@ namespace Refraction.Logic.Actor
 
         protected IBulletLauncher Launcher => _launcher;
 
+        /// <summary>发弹前摇进行中：表现层只读它决定起鼓与蓄力闪，开火那一帧变回 false</summary>
+        public virtual bool ChargingShot => false;
+
+        /// <summary>前摇时长（秒）：表现层拿它当起鼓的爬升时间，0 表示用表现层自己的默认值</summary>
+        public virtual float ChargingTime => 0f;
+
         public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
 
         public void BindLauncher(IBulletLauncher launcher) => _launcher = launcher;

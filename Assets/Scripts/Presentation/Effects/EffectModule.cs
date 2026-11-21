@@ -44,10 +44,20 @@ namespace Refraction.Presentation.Effects
         private const float SqueezeTime = 0.16f;
         private const float SqueezeCycles = 1f;
 
+        // 蓄力起鼓：X、Y 一起涨，乘在 View 的设计缩放上，和挤压相加后同时生效
+        private const float ChargeScaleX = 0.1f;
+        private const float ChargeScaleY = 0.12f;
+        // 爬升时间由前摇时长传进来，这里只是没给时长时的兜底
+        private const float ChargeRampTime = 0.12f;
+
+        // 蓄力闪烁：_FlashAmount 在 0 和这个峰值之间来回，每秒 ChargeFlashHz 次
+        private const float ChargeFlashMax = 0.5f;
+        private const float ChargeFlashHz = 5f;
+
         private readonly Dictionary<Transform, TargetState> _states = new();
         private readonly List<Transform> _expired = new();
-        private readonly Dictionary<Transform, SqueezeState> _squeezes = new();
-        private readonly List<Transform> _expiredSqueezes = new();
+        private readonly Dictionary<Transform, ShapeState> _shapes = new();
+        private readonly List<Transform> _expiredShapes = new();
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
         private readonly List<Spark> _liveSparks = new();
         private readonly List<Spark> _liveAttackSparks = new();
@@ -80,13 +90,13 @@ namespace Refraction.Presentation.Effects
         {
             TickSparks(_liveSparks, _sparkPool, deltaTime);
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
-            TickSqueezes(deltaTime);
+            TickShapes(deltaTime);
 
             if (_states.Count == 0) return;
 
             foreach (KeyValuePair<Transform, TargetState> pair in _states)
             {
-                if (pair.Value.Tick(deltaTime)) _expired.Add(pair.Key);
+                if (!pair.Value.Tick(deltaTime)) _expired.Add(pair.Key);
             }
 
             for (int i = 0; i < _expired.Count; i++)
@@ -172,26 +182,51 @@ namespace Refraction.Presentation.Effects
         {
             if (target == null) return;
 
-            if (_squeezes.TryGetValue(target, out SqueezeState state)) state.Restart();
-            else _squeezes[target] = new SqueezeState(target);
+            GetShape(target).Squeeze();
         }
 
-        private void TickSqueezes(float deltaTime)
+        /// <summary>蓄力起鼓：target 上挂材质闪白，view 上做缩放；rampTime 一般直接给前摇时长，关掉当帧就落回</summary>
+        public void SetCharge(Transform target, Transform view, bool on, float rampTime)
         {
-            if (_squeezes.Count == 0) return;
+            if (target == null) return;
 
-            foreach (KeyValuePair<Transform, SqueezeState> pair in _squeezes)
+            // 关的时候只在已有状态上收尾：每帧都新建会克隆材质，等于每帧一次 GC
+            if (on)
             {
-                if (pair.Value.Tick(deltaTime)) _expiredSqueezes.Add(pair.Key);
+                GetState(target).SetCharging(true);
+                if (view != null) GetShape(view).SetCharging(true, rampTime);
+                return;
             }
 
-            for (int i = 0; i < _expiredSqueezes.Count; i++)
+            if (_states.TryGetValue(target, out TargetState state)) state.SetCharging(false);
+            if (view != null && _shapes.TryGetValue(view, out ShapeState shape)) shape.SetCharging(false);
+        }
+
+        private ShapeState GetShape(Transform target)
+        {
+            if (_shapes.TryGetValue(target, out ShapeState state)) return state;
+
+            state = new ShapeState(target);
+            _shapes[target] = state;
+            return state;
+        }
+
+        private void TickShapes(float deltaTime)
+        {
+            if (_shapes.Count == 0) return;
+
+            foreach (KeyValuePair<Transform, ShapeState> pair in _shapes)
             {
-                _squeezes[_expiredSqueezes[i]].Restore();
-                _squeezes.Remove(_expiredSqueezes[i]);
+                if (!pair.Value.Tick(deltaTime)) _expiredShapes.Add(pair.Key);
             }
 
-            _expiredSqueezes.Clear();
+            for (int i = 0; i < _expiredShapes.Count; i++)
+            {
+                _shapes[_expiredShapes[i]].Restore();
+                _shapes.Remove(_expiredShapes[i]);
+            }
+
+            _expiredShapes.Clear();
         }
 
         private void TickSparks(List<Spark> live, Pool<Spark> pool, float deltaTime)
@@ -322,9 +357,9 @@ namespace Refraction.Presentation.Effects
             _states.Clear();
             _expired.Clear();
 
-            foreach (SqueezeState squeeze in _squeezes.Values) squeeze.Restore();
-            _squeezes.Clear();
-            _expiredSqueezes.Clear();
+            foreach (ShapeState shape in _shapes.Values) shape.Restore();
+            _shapes.Clear();
+            _expiredShapes.Clear();
 
             foreach (UiState state in _uiStates.Values) state.Dispose();
             _uiStates.Clear();
@@ -387,6 +422,7 @@ namespace Refraction.Presentation.Effects
 
         private sealed class TargetState
         {
+            private readonly Transform _target;
             private readonly SpriteRenderer[] _renderers;
             private readonly Material[] _materials;
             // 闪白期间 color 会被压成白色，结束要按这份还原
@@ -395,12 +431,17 @@ namespace Refraction.Presentation.Effects
             private float _duration;
             private float _elapsed;
             private bool _flashing;
+            private float _chargeElapsed;
+            private bool _charging;
+            // 只有闪白把 color 压白过才需要还原，纯蓄力态不能碰 EnemyTint 已经写好的前摇色
+            private bool _whitened;
 
             public bool HasFlashProperty { get; }
             public bool HasInvertProperty { get; }
 
             public TargetState(Transform target)
             {
+                _target = target;
                 _renderers = target.GetComponentsInChildren<SpriteRenderer>(true);
                 _materials = new Material[_renderers.Length];
                 _originalColors = new Color[_renderers.Length];
@@ -425,22 +466,47 @@ namespace Refraction.Presentation.Effects
                 _duration = duration;
                 _elapsed = 0f;
                 _flashing = true;
-                Apply(1f);
+
+                ApplyMaterial(FlashAmount());
+                ApplyWhite();
             }
 
+            /// <summary>蓄力闪烁：峰值只有 ChargeFlashMax，所以挨打时的 1 会盖住它，两者同占 _FlashAmount</summary>
+            public void SetCharging(bool on)
+            {
+                if (_charging == on) return;
+
+                _charging = on;
+                _chargeElapsed = 0f;
+
+                if (!on) ApplyMaterial(FlashAmount());
+            }
+
+            /// <summary>返回 false 表示闪白与蓄力都不再需要，状态可以摘掉了</summary>
             public bool Tick(float deltaTime)
             {
-                if (!_flashing) return false;
+                // 敌人被击杀后 Transform 会先走掉，蓄力态得跟着结束，否则字典里永久留一条
+                if (_target == null) return false;
 
-                _elapsed += deltaTime;
-                if (_elapsed >= _duration)
+                if (_flashing)
                 {
-                    _flashing = false;
-                    return true;
+                    _elapsed += deltaTime;
+
+                    if (_elapsed >= _duration)
+                    {
+                        _flashing = false;
+                        RestoreColors();
+                    }
                 }
 
-                Apply(1f - _elapsed / _duration);
-                return false;
+                if (_charging) _chargeElapsed += deltaTime;
+
+                if (!_flashing && !_charging) return false;
+
+                ApplyMaterial(FlashAmount());
+                if (_flashing) ApplyWhite();
+
+                return true;
             }
 
             public void SetInvert(bool open)
@@ -460,12 +526,26 @@ namespace Refraction.Presentation.Effects
                 // 先收颜色，再归零材质：反过来会先把颜色刷白，判断就失去依据了
                 RestoreColors();
                 ApplyMaterial(0f);
+
                 _flashing = false;
+                _charging = false;
+                _chargeElapsed = 0f;
             }
 
-            private void Apply(float amount)
+            private float FlashAmount()
             {
-                ApplyMaterial(amount);
+                float amount = _flashing ? 1f - _elapsed / _duration : 0f;
+
+                if (!_charging) return amount;
+
+                float blink = Mathf.Abs(Mathf.Sin(_chargeElapsed * ChargeFlashHz * Mathf.PI)) * ChargeFlashMax;
+
+                return Mathf.Max(amount, blink);
+            }
+
+            private void ApplyWhite()
+            {
+                _whitened = true;
 
                 for (int i = 0; i < _renderers.Length; i++)
                 {
@@ -489,6 +569,10 @@ namespace Refraction.Presentation.Effects
 
             private void RestoreColors()
             {
+                if (!_whitened) return;
+
+                _whitened = false;
+
                 for (int i = 0; i < _renderers.Length; i++)
                 {
                     if (_renderers[i] == null) continue;
@@ -503,39 +587,57 @@ namespace Refraction.Presentation.Effects
             }
         }
 
-        private sealed class SqueezeState
+        /// <summary>View 缩放的唯一写入口：挤压与蓄力各算一个系数，相加后乘在首次记录的设计缩放上，互相不覆盖</summary>
+        private sealed class ShapeState
         {
             private readonly Transform _target;
             private readonly Vector3 _baseScale;
 
-            private float _elapsed;
+            private float _squeezeElapsed;
+            private bool _squeezing;
+            private float _chargeElapsed;
+            private bool _charging;
+            private float _rampTime = ChargeRampTime;
 
-            public SqueezeState(Transform target)
+            public ShapeState(Transform target)
             {
                 _target = target;
                 _baseScale = target.localScale;
-
-                Restart();
             }
 
-            public void Restart()
+            public void Squeeze()
             {
-                _elapsed = 0f;
-                Apply(1f);
+                _squeezeElapsed = 0f;
+                _squeezing = true;
+                Apply();
+            }
+
+            public void SetCharging(bool on, float rampTime = 0f)
+            {
+                if (on && rampTime > 0f) _rampTime = rampTime;
+
+                if (_charging == on) return;
+
+                _charging = on;
+                _chargeElapsed = 0f;
+                Apply();
             }
 
             public bool Tick(float deltaTime)
             {
-                if (_target == null) return true;
+                if (_target == null) return false;
 
-                _elapsed += deltaTime;
+                if (_squeezing)
+                {
+                    _squeezeElapsed += deltaTime;
+                    if (_squeezeElapsed >= SqueezeTime) _squeezing = false;
+                }
 
-                if (_elapsed >= SqueezeTime) return true;
+                if (_charging) _chargeElapsed += deltaTime;
+                if (!_squeezing && !_charging) return false;
 
-                float t = _elapsed / SqueezeTime;
-                Apply((1f - t) * Mathf.Cos(SqueezeCycles * Mathf.PI * t));
-
-                return false;
+                Apply();
+                return true;
             }
 
             public void Restore()
@@ -543,13 +645,29 @@ namespace Refraction.Presentation.Effects
                 if (_target != null) _target.localScale = _baseScale;
             }
 
-            private void Apply(float k)
+            private void Apply()
             {
                 if (_target == null) return;
 
+                float squeeze = 0f;
+
+                if (_squeezing)
+                {
+                    float t = _squeezeElapsed / SqueezeTime;
+                    squeeze = (1f - t) * Mathf.Cos(SqueezeCycles * Mathf.PI * t);
+                }
+
+                float charge = 0f;
+
+                if (_charging)
+                {
+                    float t = Mathf.Clamp01(_chargeElapsed / _rampTime);
+                    charge = t * t * (3f - 2f * t);
+                }
+
                 _target.localScale = new Vector3(
-                    _baseScale.x * (1f - SqueezeX * k),
-                    _baseScale.y * (1f + SqueezeY * k),
+                    _baseScale.x * (1f - SqueezeX * squeeze + ChargeScaleX * charge),
+                    _baseScale.y * (1f + SqueezeY * squeeze + ChargeScaleY * charge),
                     _baseScale.z);
             }
         }

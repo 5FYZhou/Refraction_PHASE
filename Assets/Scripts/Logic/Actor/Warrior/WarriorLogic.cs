@@ -40,6 +40,13 @@ namespace Refraction.Logic.Actor
 
         public WarriorAttackPhase Phase => _moveGroup.Phase;
 
+        /// <summary>白形态在悬停那一段蓄力，悬停结束那一帧开火；黑形态扑击不开火</summary>
+        public override bool ChargingShot =>
+            !Black && Launcher != null && _config.bulletSpeed > 0f &&
+            CurrentTag == EnemyStateTag.Attack && _moveGroup.Phase == WarriorAttackPhase.Hover;
+
+        public override float ChargingTime => _config.hoverTime;
+
         public EnemyVisual Visual
         {
             get

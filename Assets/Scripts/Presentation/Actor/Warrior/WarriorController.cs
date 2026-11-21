@@ -131,6 +131,7 @@ namespace Refraction.Presentation.Actor
             _bullets?.Tick(deltaTime);
 
             TickVisual();
+            _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime);
 
             if (!_logic.IsAlive) Destroy(gameObject);
         }
