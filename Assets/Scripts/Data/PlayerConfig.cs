@@ -212,6 +212,10 @@ namespace Refraction.Data
         [Min(0)]
         public int blackDashAirCount = 1;
 
+        [Tooltip("黑突进的土狼时间（秒）：离地后这段时间内起手仍按地面算——不吃空中次数，斜下突进也照旧不给。\n一次离地只借一次，落地才还回来；跳跃那份是 coyoteTime，两者互不影响。0 表示离地即算空中。")]
+        [Min(0f)]
+        public float blackDashCoyoteTime = 0.12f;
+
         [Tooltip("空中突进劈到敌人返还的次数（次）：每命中一个受击盒加回这么多，钳在上限内不会累积超过 blackDashAirCount。\n0 表示命中不返还。")]
         [Min(0)]
         public int blackDashHitRefund = 1;

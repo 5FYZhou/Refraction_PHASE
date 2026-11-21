@@ -81,9 +81,57 @@ namespace Refraction.Tests
 
             float now = 推进到空闲(0f, true, true);
 
+            now += 0.2f;
             _group.Tick(Ctx(now, true, false, grounded: false));
             Assert.AreEqual(AttackStateTag.BlackDashUp, _group.Current, "落地补满后空中那一份还在");
             Assert.AreEqual(0, _group.AirDash, "空中起手才扣");
+        }
+
+        [Test]
+        public void 离地宽限内起手不扣次数()
+        {
+            _config.blackDashCoyoteTime = 0.12f;
+
+            _group.Tick(Ctx(0f, false, false, grounded: true));
+            _group.Tick(Ctx(0.06f, true, false, grounded: false));
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _group.Current, "刚离地还在宽限内，斜上突进照常起手");
+            Assert.AreEqual(1, _group.AirDash, "宽限内按地面起手算，不吃空中次数");
+        }
+
+        [Test]
+        public void 离地宽限过期后起手要扣次数()
+        {
+            _config.blackDashCoyoteTime = 0.12f;
+
+            _group.Tick(Ctx(0f, false, false, grounded: true));
+            _group.Tick(Ctx(0.2f, true, false, grounded: false));
+
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _group.Current, "过了宽限就按空中起手");
+            Assert.AreEqual(0, _group.AirDash, "过期之后起手要扣空中次数");
+        }
+
+        [Test]
+        public void 离地宽限内不给斜下突进()
+        {
+            _group.Tick(Ctx(0f, false, false, grounded: true));
+            _group.Tick(Ctx(0.06f, true, false, grounded: false, moveY: -1f));
+
+            Assert.AreEqual(AttackStateTag.None, _group.Current, "宽限内仍算踩地，斜下突进跟站着一样不给");
+        }
+
+        [Test]
+        public void 一次离地只借一次宽限()
+        {
+            _group.Tick(Ctx(0f, false, false, grounded: true));
+            _group.Tick(Ctx(0.02f, true, false, grounded: false));
+            Assert.AreEqual(1, _group.AirDash, "第一次借宽限起手不扣次数");
+
+            float now = 推进到空闲(0.02f, false);
+
+            _group.Tick(Ctx(now + 0.01f, true, false, grounded: false));
+            Assert.AreEqual(AttackStateTag.BlackDashUp, _group.Current, "同一次离地的第二次起手仍然给");
+            Assert.AreEqual(0, _group.AirDash, "第二次已经按空中算，要扣次数");
         }
 
         [Test]

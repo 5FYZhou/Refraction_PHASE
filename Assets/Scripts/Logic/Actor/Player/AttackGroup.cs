@@ -24,6 +24,9 @@ namespace Refraction.Logic.Actor
         private readonly ConditionGroup _conditions;
         private bool _black;
         private int _airDash;
+        private float _lastGroundedTime = float.NegativeInfinity;
+        private bool _coyoteUsed;
+        private bool _wasGrounded;
 
         public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null, ConditionGroup conditions = null)
         {
@@ -71,13 +74,28 @@ namespace Refraction.Logic.Actor
 
         public void Tick(in LogicContext ctx)
         {
-            if (ctx.WorldInfo.Grounded) _airDash = _config.blackDashAirCount;
+            TrackGround(in ctx);
 
             AbortOnHurt(in ctx);
 
             Phased?.Advance(in ctx);
 
             TickStates(ctx);
+        }
+
+        private void TrackGround(in LogicContext ctx)
+        {
+            bool grounded = ctx.WorldInfo.Grounded;
+
+            if (grounded)
+            {
+                _airDash = _config.blackDashAirCount;
+                _lastGroundedTime = ctx.GameTime.now;
+
+                if (!_wasGrounded) _coyoteUsed = false;
+            }
+
+            _wasGrounded = grounded;
         }
 
         public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
@@ -147,17 +165,27 @@ namespace Refraction.Logic.Actor
                 return true;
             }
 
-            target = BlackTarget(ctx.InputSnapshot.Move.y, ctx.WorldInfo.Grounded);
+            target = BlackTarget(ctx.InputSnapshot.Move.y, GroundLike(in ctx));
 
             return target != EmptyTag && CooldownOf(target).CanUse(ctx.GameTime.now)
-                && (target == AttackStateTag.FlatAttack || ctx.WorldInfo.Grounded || _airDash > 0);
+                && (target == AttackStateTag.FlatAttack || GroundLike(in ctx) || _airDash > 0);
+        }
+
+        private bool GroundLike(in LogicContext ctx)
+        {
+            if (ctx.WorldInfo.Grounded) return true;
+
+            return !_coyoteUsed && ctx.GameTime.now - _lastGroundedTime <= _config.blackDashCoyoteTime;
         }
 
         protected override bool TryCommitPreempt(in LogicContext ctx, AttackStateTag target)
         {
             CooldownOf(target).MarkUsed(ctx.GameTime.now, CooldownTimeOf(target));
 
-            if (target != AttackStateTag.FlatAttack && !ctx.WorldInfo.Grounded) _airDash--;
+            bool dashStart = target != AttackStateTag.FlatAttack;
+
+            if (dashStart && !GroundLike(in ctx)) _airDash--;
+            if (dashStart && !ctx.WorldInfo.Grounded) _coyoteUsed = true;
 
             return true;
         }

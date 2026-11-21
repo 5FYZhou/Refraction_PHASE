@@ -76,6 +76,7 @@ MonoBehaviour:
   blackDashKnockback: 10
   blackDashBounceSpeed: 16.5
   blackDashAirCount: 1
+  blackDashCoyoteTime: 0.12
   blackDashHitRefund: 1
   blackDashReboundRefund: 1
   destruction: 1
