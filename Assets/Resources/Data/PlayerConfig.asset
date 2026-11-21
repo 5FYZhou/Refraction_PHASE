@@ -36,7 +36,7 @@ MonoBehaviour:
   airJumpSpeed: 12
   dashSpeed: 14.7
   dashDuration: 0.22
-  dashCooldown: 0.12
+  dashCooldown: 0.32
   maxAirDashes: 1
   dashBufferTime: 0.12
   inputBufferTime: 0.12
@@ -64,8 +64,8 @@ MonoBehaviour:
   flatAttackKnockback: 4
   flatAttackMissRecoil: 3
   flatAttackHitRecoil: 10
-  blackDashPrepareTime: 0.1
-  blackDashRecoverTime: 0.12
+  blackDashPrepareTime: 0.045
+  blackDashRecoverTime: 0.055
   blackDashUpCooldown: 0.5
   blackDashDownCooldown: 0.5
   blackDashSpeedUp: 19
@@ -74,7 +74,7 @@ MonoBehaviour:
   blackDashTimeDown: 0.18
   blackDashDamage: 18
   blackDashKnockback: 10
-  blackDashBounceSpeed: 14
+  blackDashBounceSpeed: 16.5
   destruction: 1
   meleeHitStopTime: 0.06
   contactHitStopTime: 0.035

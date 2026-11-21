@@ -1149,7 +1149,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: 09168d4ad3df1644fbcb0b2def91d125, type: 2}
   moveMotor: {fileID: 9200744565869371569}
+  blackForm: 1
   bulletPrefab: {fileID: 6832848243399639401, guid: 0f6c9cd5a0012cd439faad8739e36c73, type: 3}
+  bulletMuzzle: {x: 0, y: 0}
   patrolOffset: {x: 0, y: 0}
   patrolSize: {x: 7.29, y: 4}
   chaseOffset: {x: 0, y: 0}

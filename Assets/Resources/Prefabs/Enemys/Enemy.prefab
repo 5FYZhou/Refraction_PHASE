@@ -603,10 +603,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: 2ccb0524aff70d846b4c7ba02661fce2, type: 2}
   moveMotor: {fileID: 58551293848153998}
+  blackForm: 0
   OpenAI: 1
   patrolOffset: {x: 0, y: 0}
   patrolSize: {x: 17.5, y: 1.15}
   bulletPrefab: {fileID: 6832848243399639401, guid: 0f6c9cd5a0012cd439faad8739e36c73, type: 3}
+  bulletMuzzle: {x: 1.6, y: 0}
 --- !u!114 &58551293848153998
 MonoBehaviour:
   m_ObjectHideFlags: 0

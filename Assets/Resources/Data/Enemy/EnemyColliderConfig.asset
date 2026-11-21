@@ -17,4 +17,4 @@ MonoBehaviour:
   detectChildName: DetectCollider
   playerLayer: 7
   enemyLayer: 8
-  bodyExcludeEnemy: 0
+  bodyExcludeEnemy: 1
