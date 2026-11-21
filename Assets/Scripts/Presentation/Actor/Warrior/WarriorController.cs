@@ -34,6 +34,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 bulletMuzzle = new(0.5f, 0.3f);
 
+        [Tooltip("蓄力吸入粒子的颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color chargeInColor = Color.red;
+
         [Tooltip("扑击触发距离（单位，两个中心之间）：进了这个圈且冷却好了才起手。\nScene 视图里以此半径为圆画出来。")]
         [Min(0f)]
         [SerializeField]
@@ -131,7 +135,7 @@ namespace Refraction.Presentation.Actor
             _bullets?.Tick(deltaTime);
 
             TickVisual();
-            _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign));
+            _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
             if (!_logic.IsAlive) Destroy(gameObject);
         }

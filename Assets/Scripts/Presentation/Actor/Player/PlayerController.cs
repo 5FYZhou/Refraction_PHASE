@@ -39,6 +39,14 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Transform spawnT;
 
+        [Tooltip("黑攻击命中的火花颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color attackSparkColor = Color.white;
+
+        [Tooltip("弹反成功的火花颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color reboundSparkColor = Color.white;
+
         private LogicContext _context;
 
         private GameRoot _root;
@@ -129,6 +137,8 @@ namespace Refraction.Presentation.Actor
                 );
 
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, () => _logic?.OnReboundReflected());
+
+            _blackAttack.SetSparkColors(attackSparkColor, reboundSparkColor);
 
             _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 

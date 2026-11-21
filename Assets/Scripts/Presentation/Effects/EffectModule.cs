@@ -232,7 +232,7 @@ namespace Refraction.Presentation.Effects
         }
 
         /// <summary>蓄力吸入：每帧贴到 follow 的枪口，播放时长（粒子 duration）就是前摇时长，开火当帧 on = false 收掉</summary>
-        public void SetChargeIn(Transform follow, Vector2 offset, bool on, float duration)
+        public void SetChargeIn(Transform follow, Vector2 offset, bool on, float duration, Color color)
         {
             if (follow == null) return;
 
@@ -247,7 +247,7 @@ namespace Refraction.Presentation.Effects
                     _chargeIns[follow] = state;
                 }
 
-                state.Play(follow, offset, duration);
+                state.Play(follow, offset, duration, color);
                 return;
             }
 
@@ -871,7 +871,7 @@ namespace Refraction.Presentation.Effects
 
             public GameObject Go => _go;
 
-            public void Play(Transform follow, Vector2 offset, float duration)
+            public void Play(Transform follow, Vector2 offset, float duration, Color color)
             {
                 _offset = offset;
                 _duration = Mathf.Max(duration, ChargeInMinDuration);
@@ -890,6 +890,7 @@ namespace Refraction.Presentation.Effects
                 // 粒子的发射窗口就是前摇时长，蓄满恰好播完
                 ParticleSystem.MainModule main = _ps.main;
                 main.duration = _duration;
+                main.startColor = new ParticleSystem.MinMaxGradient(color);
 
                 _ps.Clear(true);
                 _ps.Play(true);

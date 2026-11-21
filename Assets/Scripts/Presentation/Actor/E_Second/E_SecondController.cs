@@ -35,6 +35,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 bulletMuzzle = Vector2.zero;
 
+        [Tooltip("蓄力吸入粒子的颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color chargeInColor = Color.red;
+
         [Tooltip("巡逻框相对敌人的偏移（局部坐标）：编辑器里跟着敌人显示，运行时以进入游戏那一刻的站位固化成世界坐标。")]
         [SerializeField]
         private Vector2 patrolOffset;
@@ -170,7 +174,7 @@ namespace Refraction.Presentation.Actor
             _bullets?.Tick(deltaTime);
 
             TickVisual();
-            _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign));
+            _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
             if (!_logic.IsAlive) Destroy(gameObject);
         }

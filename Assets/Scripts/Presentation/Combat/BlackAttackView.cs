@@ -69,6 +69,8 @@ namespace Refraction.Presentation.Combat
         private Func<IBulletLauncher> _launcher;
         private BlackAttackKind _kind;
         private Action _onHit;
+        private Color _attackSparkColor = Color.white;
+        private Color _reboundSparkColor = Color.white;
         private int _swingFace = 1;
         private bool _dashMode;
         private GameObject _sweep;
@@ -111,6 +113,12 @@ namespace Refraction.Presentation.Combat
 
             End();
             HideRebound();
+        }
+
+        public void SetSparkColors(Color attack, Color rebound)
+        {
+            _attackSparkColor = attack;
+            _reboundSparkColor = rebound;
         }
 
         /// <summary>普攻用：点亮 BlackDash 下的正前方盒，开打那一帧摘下来冻在原地，直到 End 才装回去</summary>
@@ -249,7 +257,7 @@ namespace Refraction.Presentation.Combat
 
                 if (!bullet.TryReflect(launcher, damage, knockback, transfer)) continue;
 
-                _effects?.PlayReboundSpark(pos, reflectDir);
+                _effects?.PlayReboundSpark(pos, reflectDir, _reboundSparkColor);
                 _onReflected?.Invoke();
             }
         }
@@ -446,7 +454,7 @@ namespace Refraction.Presentation.Combat
 
             Vector2 origin = _activeBox != null ? (Vector2)_activeBox.transform.position : (Vector2)other.bounds.center;
 
-            _effects.PlayAttackSpark(other.ClosestPoint(origin), DirectionOf());
+            _effects.PlayAttackSpark(other.ClosestPoint(origin), DirectionOf(), _attackSparkColor);
         }
 
         private static void SetActive(Component target, bool active)
