@@ -120,6 +120,9 @@ namespace Refraction.Logic.Actor
             _phase = E_SecondAttackPhase.Strike;
             _phaseStart = ctx.GameTime.now;
 
+            // 清掉追击/前摇里接触伤害留下的旧标记，否则一起手就当场收招
+            _owner.ConsumeHitLanded();
+
             _motor.FaceTowards(new Vector2(_lockedDir.x, 0f));
 
             if (_owner.Black)
@@ -145,8 +148,8 @@ namespace Refraction.Logic.Actor
 
             _motor.SnapVelocity(_lockedDir * _config.blackDashSpeed);
 
-            // 撞到就进后摇：圆环不分方向，斜冲、竖冲都算；人看受击盒相交，不断言伤害是否真扣
-            if (ctx.WorldInfo.TouchingWall || _owner.TouchingTarget(ctx.WorldInfo.Pos))
+            // 主判据是真实命中：扣到血那一帧才收；撞墙与超时只是兜底
+            if (_owner.ConsumeHitLanded() || ctx.WorldInfo.TouchingWall)
             {
                 BeginRecover(in ctx);
                 return;
@@ -160,7 +163,13 @@ namespace Refraction.Logic.Actor
             _phase = E_SecondAttackPhase.Recover;
             _phaseStart = ctx.GameTime.now;
 
-            if (_owner.Black) _riseTime = _owner.RollRiseDistance() / Mathf.Max(0.01f, _config.riseSpeed);
+            if (!_owner.Black) return;
+
+            _riseTime = _owner.RollRiseDistance() / Mathf.Max(0.01f, _config.riseSpeed);
+
+            // 进后摇当帧就换成上浮速度，不等下一帧：命中那一帧的身体还在冲刺速度上
+            _motor.SetVelocityX(0f);
+            _motor.SetVelocityY(_config.riseSpeed);
         }
 
         private void TickRecover(in LogicContext ctx, float elapsed)

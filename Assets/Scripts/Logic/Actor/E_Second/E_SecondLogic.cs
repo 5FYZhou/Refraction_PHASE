@@ -8,16 +8,16 @@ namespace Refraction.Logic.Actor
 {
     /// <summary>飞行敌人 E_Second：持有玩家身体盒、巡逻领地与追击框，状态推进交给 E_SecondMoveGroup</summary>
     /// <remarks>领地是编辑器画的追击框，玩家出框即脱战，所以 Alert 不看丢目标计时</remarks>
-    public sealed class E_SecondLogic : EnemyLogicBase
+    public sealed class E_SecondLogic : EnemyLogicBase, IHitLanded
     {
         private readonly E_SecondConfig _config;
         private readonly E_SecondMoveGroup _moveGroup;
         private readonly System.Random _rng = new();
         private readonly Vector2 _muzzle;
 
-        private EnemyTargetInfo _target;
         private EnemyArea _patrolArea;
         private EnemyArea _chaseArea;
+        private bool _hitLanded;
 
         public E_SecondLogic(
             IMoveMotor motor,
@@ -86,20 +86,21 @@ namespace Refraction.Logic.Actor
         /// <summary>表现层唯一入口：写入本帧玩家信息，再走基类帧序</summary>
         public void FixedTick(in LogicContext ctx, in EnemyTargetInfo target)
         {
-            _target = target;
             SetSight(target.Known, target.Visible, target.Pos);
             FixedTick(ctx);
         }
 
-        /// <summary>冲刺撞上玩家：身体圆与玩家受击盒相交；不看伤害回报，无敌窗里也算撞到</summary>
-        public bool TouchingTarget(Vector2 pos)
+        /// <summary>冲刺撞上玩家：只有真的扣到血才来，无敌窗与接触间隔挡住时不会触发，那两种情形由撞墙与超时收手</summary>
+        public void OnHitLanded() => _hitLanded = true;
+
+        /// <summary>取一次本帧的命中标记并清零：冲刺靠它进后摇，不清会连累下一轮</summary>
+        public bool ConsumeHitLanded()
         {
-            if (!_target.Known) return false;
+            if (!_hitLanded) return false;
 
-            float reach = Mathf.Max(0.01f, Motor.BodyHeight * 0.5f);
+            _hitLanded = false;
 
-            return Mathf.Abs(pos.x - _target.BodyCenter.x) <= _target.HalfSize.x + reach
-                && Mathf.Abs(pos.y - _target.BodyCenter.y) <= _target.HalfSize.y + reach;
+            return true;
         }
 
         /// <summary>返回态撞墙：把当前位置当新的巡逻中心，宽度不变；追击框按同一段位移跟着平移</summary>

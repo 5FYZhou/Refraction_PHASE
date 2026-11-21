@@ -19,6 +19,7 @@ MonoBehaviour:
   externalDeceleration: 40
   maxHealth: 70
   invulnerableTime: 0
+  flashTime: 0.12
   KnockbackDecay: 30
   enableGravity: 0
   maxFallSpeed: 20
@@ -28,7 +29,7 @@ MonoBehaviour:
   chaseStopDistance: 3.5
   blackWindupTime: 0.8
   blackDashSpeed: 12
-  blackDashMaxTime: 1
+  blackDashMaxTime: 5
   riseMin: 1
   riseMax: 3
   riseSpeed: 5
