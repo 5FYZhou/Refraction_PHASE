@@ -33,14 +33,18 @@ namespace Refraction.Presentation.Effects
         private const string HitSparkPath = "Effects/HitSpark";
         private const string AttackSparkPath = "Effects/AttackSpark";
         private const string ReboundSparkPath = "Effects/ReboundSpark";
+        private const string LandPath = "Effects/Land";
+        private const string MoveDustPath = "Effects/MoveDust";
         private const string ChargeInPath = "Effects/ChargeIn";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
         private const int ReboundSparkPoolSize = 8;
+        private const int LandPoolSize = 4;
         private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
         private const int ReboundSparkPrewarm = 2;
+        private const int LandPrewarm = 1;
         private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
         private const float ChargeInMinDuration = 0.05f;
@@ -71,6 +75,7 @@ namespace Refraction.Presentation.Effects
         private readonly List<Spark> _liveSparks = new();
         private readonly List<Spark> _liveAttackSparks = new();
         private readonly List<Spark> _liveReboundSparks = new();
+        private readonly List<Spark> _liveLands = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
@@ -79,6 +84,9 @@ namespace Refraction.Presentation.Effects
         private Pool<Spark> _attackSparkPool;
         private GameObject _reboundSparkPrefab;
         private Pool<Spark> _reboundSparkPool;
+        private GameObject _landPrefab;
+        private Pool<Spark> _landPool;
+        private MoveDustState _moveDust;
         private GameObject _chargeInPrefab;
         private Pool<ChargeInState> _chargeInPool;
 
@@ -88,6 +96,8 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoSpark;
         private bool _warnedNoAttackSpark;
         private bool _warnedNoReboundSpark;
+        private bool _warnedNoLand;
+        private bool _warnedNoMoveDust;
         private bool _warnedNoChargeIn;
 
         public void Init(Transform parent)
@@ -107,8 +117,10 @@ namespace Refraction.Presentation.Effects
             TickSparks(_liveSparks, _sparkPool, deltaTime);
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
             TickSparks(_liveReboundSparks, _reboundSparkPool, deltaTime);
+            TickSparks(_liveLands, _landPool, deltaTime);
             TickShapes(deltaTime);
             TickChargeIns(deltaTime);
+            _moveDust?.Tick();
 
             if (_states.Count == 0) return;
 
@@ -204,6 +216,33 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, direction, color);
             _liveReboundSparks.Add(spark);
+        }
+
+        /// <summary>落地烟：落地那一下在脚下播一次，预制体自带朝向，不给颜色就用粒子默认</summary>
+        public void PlayLand(Vector2 position, Color? color = null)
+        {
+            if (!EnsureLandPool()) return;
+
+            if (!_landPool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, Vector2.up, color);
+            _liveLands.Add(spark);
+        }
+
+        /// <summary>移动扬尘：地面上跑动期间挂单实例常驻，on = false 当帧停发射并隐藏，位置每帧贴到 follow</summary>
+        public void SetMoveDust(Transform follow, bool on, Color? color = null)
+        {
+            if (follow == null) return;
+
+            if (!on)
+            {
+                _moveDust?.Stop();
+                return;
+            }
+
+            if (!EnsureMoveDust()) return;
+
+            _moveDust.Play(follow, color);
         }
 
         /// <summary>受击挤压：目标自己的 localScale 做 X 压 Y 拉，要传 View 这类纯视觉节点，根上有碰撞体不能缩</summary>
@@ -436,6 +475,70 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsureLandPool()
+        {
+            if (_landPool != null) return true;
+
+            _landPrefab = Resources.Load<GameObject>(LandPath);
+
+            if (_landPrefab == null)
+            {
+                if (!_warnedNoLand)
+                {
+                    _warnedNoLand = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{LandPath}，落地烟不播放。");
+                }
+
+                return false;
+            }
+
+            _landPool = new Pool<Spark>(
+                CreateLand,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: LandPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _landPool.Prewarm(LandPrewarm);
+
+            return true;
+        }
+
+        private Spark CreateLand()
+        {
+            GameObject go = Object.Instantiate(_landPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
+        private bool EnsureMoveDust()
+        {
+            if (_moveDust != null) return true;
+
+            GameObject prefab = Resources.Load<GameObject>(MoveDustPath);
+
+            if (prefab == null)
+            {
+                if (!_warnedNoMoveDust)
+                {
+                    _warnedNoMoveDust = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{MoveDustPath}，移动扬尘不播放。");
+                }
+
+                return false;
+            }
+
+            GameObject go = Object.Instantiate(prefab, _effectRoot);
+            go.SetActive(false);
+
+            _moveDust = new MoveDustState(go);
+
+            return true;
+        }
+
         private bool EnsureChargeInPool()
         {
             if (_chargeInPool != null) return true;
@@ -546,6 +649,11 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _liveReboundSparks.Count; i++) _reboundSparkPool?.Release(_liveReboundSparks[i]);
             _liveReboundSparks.Clear();
 
+            for (int i = 0; i < _liveLands.Count; i++) _landPool?.Release(_liveLands[i]);
+            _liveLands.Clear();
+
+            _moveDust = null;
+
             _sparkPool?.Dispose();
             _sparkPool = null;
 
@@ -554,6 +662,9 @@ namespace Refraction.Presentation.Effects
 
             _reboundSparkPool?.Dispose();
             _reboundSparkPool = null;
+
+            _landPool?.Dispose();
+            _landPool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;
@@ -923,6 +1034,85 @@ namespace Refraction.Presentation.Effects
                 _elapsed = 0f;
 
                 if (_go != null) _go.SetActive(false);
+            }
+        }
+
+        private sealed class MoveDustState
+        {
+            private readonly GameObject _go;
+            private readonly ParticleSystem _ps;
+            private readonly ParticleSystem.MinMaxGradient _defaultColor;
+
+            private Transform _follow;
+            private Color _color;
+            private bool _hasColor;
+            private bool _playing;
+
+            public MoveDustState(GameObject go)
+            {
+                _go = go;
+                _ps = go.GetComponent<ParticleSystem>();
+
+                if (_ps != null) _defaultColor = _ps.main.startColor;
+            }
+
+            public void Play(Transform follow, Color? color)
+            {
+                _follow = follow;
+
+                ApplyColor(color);
+
+                if (_playing)
+                {
+                    Place();
+                    return;
+                }
+
+                _playing = true;
+                _go.SetActive(true);
+                Place();
+
+                if (_ps == null) return;
+
+                _ps.Clear(true);
+                _ps.Play(true);
+            }
+
+            public void Tick() => Place();
+
+            public void Stop()
+            {
+                if (!_playing) return;
+
+                _playing = false;
+                _follow = null;
+
+                if (_ps != null) _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                if (_go != null) _go.SetActive(false);
+            }
+
+            private void ApplyColor(Color? color)
+            {
+                if (_ps == null) return;
+
+                bool has = color.HasValue;
+                Color value = has ? color.Value : default;
+
+                if (_hasColor == has && (!has || _color == value)) return;
+
+                _hasColor = has;
+                _color = value;
+
+                ParticleSystem.MainModule main = _ps.main;
+                main.startColor = has ? new ParticleSystem.MinMaxGradient(value) : _defaultColor;
+            }
+
+            private void Place()
+            {
+                if (_follow == null) return;
+
+                _go.transform.position = _follow.position;
             }
         }
 

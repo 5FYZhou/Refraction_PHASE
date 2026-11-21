@@ -20,6 +20,7 @@ namespace Refraction.Presentation.Actor
         private const float BlinkMinAlpha = 0.3f;
         private const float DashInvulnerableAlpha = 100f / 255f;
         private const int BulletLayer = 11;
+        private const float DustMinSpeed = 0.5f;
 
         public int Order => SceneOrder.Player;
 
@@ -47,6 +48,19 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Color reboundSparkColor = Color.white;
 
+        [Tooltip("移动扬尘的颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color moveDustColor = Color.white;
+
+        [Tooltip("落地烟的颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color landColor = Color.white;
+
+        private Color _attackSparkColor = Color.white;
+        private Color _reboundSparkColor = Color.white;
+        private Color _moveDustColor = Color.white;
+        private Color _landColor = Color.white;
+
         private LogicContext _context;
 
         private GameRoot _root;
@@ -62,6 +76,7 @@ namespace Refraction.Presentation.Actor
         private Collider2D _hurt;
         private int _hurtExclude;
         private bool _phasing;
+        private bool _grounded = true;
         private PlayerAniView _aniView;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
@@ -138,8 +153,6 @@ namespace Refraction.Presentation.Actor
 
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, dir => _logic?.OnReboundReflected(dir));
 
-            _blackAttack.SetSparkColors(attackSparkColor, reboundSparkColor);
-
             _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
@@ -215,6 +228,12 @@ namespace Refraction.Presentation.Actor
             _logic.FixedTick(_context);
             ApplyPhase();
 
+            bool grounded = _context.WorldInfo.Grounded;
+
+            if (grounded && !_grounded) PlayLand();
+
+            _grounded = grounded;
+
             _blackAttack?.ReboundTick();
 
             EventBus<PlayerDebugSnapshotTaken>.Publish(new(
@@ -255,6 +274,13 @@ namespace Refraction.Presentation.Actor
             if (_context.InputSnapshot.SavePressed) TrySaveCheckpoint();
         }
 
+        private void PlayLand()
+        {
+            if (bottom == null) return;
+
+            _root.Effects?.PlayLand(bottom.position, _landColor);
+        }
+
         public void OnHurt(int damage)
         {
             _root?.Effects?.Play(EffectType.DamageFlash, view, config.flashTime);
@@ -267,10 +293,25 @@ namespace Refraction.Presentation.Actor
 
         private void ApplyInvert(bool black)
         {
+            ApplyParticleColors(black);
+
             if (_root == null || view == null) return;
 
             _root.Effects?.SetInvert(view, black);
         }
+
+        private void ApplyParticleColors(bool invert)
+        {
+            _attackSparkColor = Tint(attackSparkColor, invert);
+            _reboundSparkColor = Tint(reboundSparkColor, invert);
+            _moveDustColor = Tint(moveDustColor, invert);
+            _landColor = Tint(landColor, invert);
+
+            _blackAttack?.SetSparkColors(_attackSparkColor, _reboundSparkColor);
+        }
+
+        private static Color Tint(Color color, bool invert) =>
+            invert ? new Color(1f - color.r, 1f - color.g, 1f - color.b, color.a) : color;
 
         private void HandleDeath()
         {
@@ -307,6 +348,9 @@ namespace Refraction.Presentation.Actor
                 _curViewScale = _logic.CurViewScale;
                 SetViewScale(_curViewScale);
             }
+
+            bool dust = _grounded && Mathf.Abs(_context.WorldInfo.FrameStartVelocity.x) >= DustMinSpeed;
+            _root.Effects?.SetMoveDust(bottom, dust, _moveDustColor);
 
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
