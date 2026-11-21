@@ -208,6 +208,18 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackDashBounceSpeed = 14f;
 
+        [Tooltip("空中黑突进的可用次数（次）：离地后最多连突进这么多次，落地当帧就补满。\n地面起手的突进不扣次数；0 表示空中不能突进。")]
+        [Min(0)]
+        public int blackDashAirCount = 1;
+
+        [Tooltip("空中突进劈到敌人返还的次数（次）：每命中一个受击盒加回这么多，钳在上限内不会累积超过 blackDashAirCount。\n0 表示命中不返还。")]
+        [Min(0)]
+        public int blackDashHitRefund = 1;
+
+        [Tooltip("弹反打回一发敌弹返还的空中突进次数（次）：每弹回一颗加回这么多，同样钳在上限内。\n0 表示弹反不返还。")]
+        [Min(0)]
+        public int blackDashReboundRefund = 1;
+
         [Header("受击")]
         [Tooltip("破坏力：敌人子弹打到玩家时扣的血量（点）。\n敌人只知道开了火，不知道玩家的数值——敌弹自带的伤害在这里一律被顶掉。0 表示敌弹不扣血。")]
         [Min(0f)]

@@ -75,6 +75,9 @@ MonoBehaviour:
   blackDashDamage: 18
   blackDashKnockback: 10
   blackDashBounceSpeed: 14
+  blackDashAirCount: 1
+  blackDashHitRefund: 1
+  blackDashReboundRefund: 1
   destruction: 1
   meleeHitStopTime: 0.06
   contactHitStopTime: 0.035

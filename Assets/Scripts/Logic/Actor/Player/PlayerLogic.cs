@@ -90,6 +90,8 @@ namespace Refraction.Logic.Actor
             EventBus<RequestHitStop>.Publish(new(_config.meleeHitStopTime));
         }
 
+        public void OnReboundReflected() => _attackGroup.RefundAirDash(_config.blackDashReboundRefund);
+
         private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
 
         private void OnWorldPolarityChanged(WorldPolarityChanged evt)

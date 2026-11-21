@@ -23,11 +23,13 @@ namespace Refraction.Logic.Actor
         private readonly BlackDashState _dashDown;
         private readonly ConditionGroup _conditions;
         private bool _black;
+        private int _airDash;
 
         public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null, ConditionGroup conditions = null)
         {
             _config = config;
             _conditions = conditions;
+            _airDash = config.blackDashAirCount;
             _white = new WhiteAttackState(config, motor, launcher, posture);
 
             RegisterState(new NoneAttackState());
@@ -69,6 +71,8 @@ namespace Refraction.Logic.Actor
 
         public void Tick(in LogicContext ctx)
         {
+            if (ctx.WorldInfo.Grounded) _airDash = _config.blackDashAirCount;
+
             AbortOnHurt(in ctx);
 
             Phased?.Advance(in ctx);
@@ -100,9 +104,11 @@ namespace Refraction.Logic.Actor
                     break;
                 case AttackStateTag.BlackDashUp:
                     _dashUp.NotifyHit();
+                    RefundAirDash(_config.blackDashHitRefund);
                     break;
                 case AttackStateTag.BlackDashDown:
                     _dashDown.NotifyHit();
+                    RefundAirDash(_config.blackDashHitRefund);
                     break;
             }
         }
@@ -143,14 +149,29 @@ namespace Refraction.Logic.Actor
 
             target = BlackTarget(ctx.InputSnapshot.Move.y, ctx.WorldInfo.Grounded);
 
-            return target != EmptyTag && CooldownOf(target).CanUse(ctx.GameTime.now);
+            return target != EmptyTag && CooldownOf(target).CanUse(ctx.GameTime.now)
+                && (target == AttackStateTag.FlatAttack || ctx.WorldInfo.Grounded || _airDash > 0);
         }
 
         protected override bool TryCommitPreempt(in LogicContext ctx, AttackStateTag target)
         {
             CooldownOf(target).MarkUsed(ctx.GameTime.now, CooldownTimeOf(target));
 
+            if (target != AttackStateTag.FlatAttack && !ctx.WorldInfo.Grounded) _airDash--;
+
             return true;
+        }
+
+        public int AirDash => _airDash;
+
+        public void RefundAirDash(int count)
+        {
+            if (count <= 0) return;
+
+            int cap = _config.blackDashAirCount;
+            int next = _airDash + count;
+
+            _airDash = next < cap ? cap : next;
         }
 
         private bool CanPreempt()
