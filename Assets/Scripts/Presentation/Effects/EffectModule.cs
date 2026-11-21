@@ -32,11 +32,15 @@ namespace Refraction.Presentation.Effects
 
         private const string HitSparkPath = "Effects/HitSpark";
         private const string AttackSparkPath = "Effects/AttackSpark";
+        private const string ChargeInPath = "Effects/ChargeIn";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
+        private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
+        private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
+        private const float ChargeInMinDuration = 0.05f;
 
         // 受击挤压：X 压、Y 拉，余弦回弹一轮后线性收回；乘在 View 的设计缩放上，朝向翻号的负号不动
         private const float SqueezeX = 0.08f;
@@ -58,6 +62,8 @@ namespace Refraction.Presentation.Effects
         private readonly List<Transform> _expired = new();
         private readonly Dictionary<Transform, ShapeState> _shapes = new();
         private readonly List<Transform> _expiredShapes = new();
+        private readonly Dictionary<Transform, ChargeInState> _chargeIns = new();
+        private readonly List<Transform> _expiredChargeIns = new();
         private readonly Dictionary<Graphic, UiState> _uiStates = new();
         private readonly List<Spark> _liveSparks = new();
         private readonly List<Spark> _liveAttackSparks = new();
@@ -67,12 +73,15 @@ namespace Refraction.Presentation.Effects
         private Pool<Spark> _sparkPool;
         private GameObject _attackSparkPrefab;
         private Pool<Spark> _attackSparkPool;
+        private GameObject _chargeInPrefab;
+        private Pool<ChargeInState> _chargeInPool;
 
         private bool _warnedNoFlash;
         private bool _warnedNoInvert;
         private bool _warnedNoInvertUi;
         private bool _warnedNoSpark;
         private bool _warnedNoAttackSpark;
+        private bool _warnedNoChargeIn;
 
         public void Init(Transform parent)
         {
@@ -91,6 +100,7 @@ namespace Refraction.Presentation.Effects
             TickSparks(_liveSparks, _sparkPool, deltaTime);
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
             TickShapes(deltaTime);
+            TickChargeIns(deltaTime);
 
             if (_states.Count == 0) return;
 
@@ -200,6 +210,56 @@ namespace Refraction.Presentation.Effects
 
             if (_states.TryGetValue(target, out TargetState state)) state.SetCharging(false);
             if (view != null && _shapes.TryGetValue(view, out ShapeState shape)) shape.SetCharging(false);
+        }
+
+        /// <summary>蓄力吸入：每帧贴到 follow 的枪口，播放时长（粒子 duration）就是前摇时长，开火当帧 on = false 收掉</summary>
+        public void SetChargeIn(Transform follow, Vector2 offset, bool on, float duration)
+        {
+            if (follow == null) return;
+
+            if (on)
+            {
+                if (!EnsureChargeInPool()) return;
+
+                if (!_chargeIns.TryGetValue(follow, out ChargeInState state))
+                {
+                    if (!_chargeInPool.TryGet(out state)) return;
+
+                    _chargeIns[follow] = state;
+                }
+
+                state.Play(follow, offset, duration);
+                return;
+            }
+
+            if (!_chargeIns.TryGetValue(follow, out ChargeInState playing)) return;
+
+            playing.Stop();
+            _chargeInPool?.Release(playing);
+            _chargeIns.Remove(follow);
+        }
+
+        private void TickChargeIns(float deltaTime)
+        {
+            if (_chargeIns.Count == 0) return;
+
+            foreach (KeyValuePair<Transform, ChargeInState> pair in _chargeIns)
+            {
+                if (pair.Value.Tick(pair.Key, deltaTime)) _expiredChargeIns.Add(pair.Key);
+            }
+
+            for (int i = 0; i < _expiredChargeIns.Count; i++)
+            {
+                Transform key = _expiredChargeIns[i];
+
+                if (!_chargeIns.TryGetValue(key, out ChargeInState state)) continue;
+
+                state.Stop();
+                _chargeInPool?.Release(state);
+                _chargeIns.Remove(key);
+            }
+
+            _expiredChargeIns.Clear();
         }
 
         private ShapeState GetShape(Transform target)
@@ -318,6 +378,54 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsureChargeInPool()
+        {
+            if (_chargeInPool != null) return true;
+
+            _chargeInPrefab = Resources.Load<GameObject>(ChargeInPath);
+
+            if (_chargeInPrefab == null)
+            {
+                if (!_warnedNoChargeIn)
+                {
+                    _warnedNoChargeIn = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ChargeInPath}，蓄力吸入不播放。");
+                }
+
+                return false;
+            }
+
+            _chargeInPool = new Pool<ChargeInState>(
+                CreateChargeIn,
+                onGet: TakeChargeIn,
+                onRelease: PutChargeIn,
+                onDestroy: DestroyChargeIn,
+                name: nameof(ChargeInState),
+                maxSize: ChargeInPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _chargeInPool.Prewarm(ChargeInPrewarm);
+
+            return true;
+        }
+
+        private ChargeInState CreateChargeIn()
+        {
+            GameObject go = Object.Instantiate(_chargeInPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new ChargeInState(go);
+        }
+
+        private static void TakeChargeIn(ChargeInState state) => state.Go.SetActive(true);
+
+        private static void PutChargeIn(ChargeInState state) => state.Stop();
+
+        private static void DestroyChargeIn(ChargeInState state)
+        {
+            if (state.Go != null) Object.Destroy(state.Go);
+        }
+
         private static void TakeSpark(Spark spark) => spark.Go.SetActive(true);
 
         private static void PutSpark(Spark spark) => spark.Sleep();
@@ -360,6 +468,13 @@ namespace Refraction.Presentation.Effects
             foreach (ShapeState shape in _shapes.Values) shape.Restore();
             _shapes.Clear();
             _expiredShapes.Clear();
+
+            foreach (ChargeInState chargeIn in _chargeIns.Values) _chargeInPool?.Release(chargeIn);
+            _chargeIns.Clear();
+            _expiredChargeIns.Clear();
+
+            _chargeInPool?.Dispose();
+            _chargeInPool = null;
 
             foreach (UiState state in _uiStates.Values) state.Dispose();
             _uiStates.Clear();
@@ -669,6 +784,80 @@ namespace Refraction.Presentation.Effects
                     _baseScale.x * (1f - SqueezeX * squeeze + ChargeScaleX * charge),
                     _baseScale.y * (1f + SqueezeY * squeeze + ChargeScaleY * charge),
                     _baseScale.z);
+            }
+        }
+
+        private sealed class ChargeInState
+        {
+            private readonly GameObject _go;
+            private readonly ParticleSystem _ps;
+
+            private Vector2 _offset;
+            private float _duration;
+            private float _elapsed;
+            private bool _playing;
+            // 时长到点只停发射、不收回池子：控制器还没说要收，重播会在准星上闪第二下
+            private bool _emitted;
+
+            public ChargeInState(GameObject go)
+            {
+                _go = go;
+                _ps = go.GetComponent<ParticleSystem>();
+            }
+
+            public GameObject Go => _go;
+
+            public void Play(Transform follow, Vector2 offset, float duration)
+            {
+                _offset = offset;
+                _duration = Mathf.Max(duration, ChargeInMinDuration);
+
+                if (_playing) return;
+
+                _playing = true;
+                _emitted = false;
+                _elapsed = 0f;
+
+                _go.SetActive(true);
+                _go.transform.position = follow.position + new Vector3(offset.x, offset.y, 0f);
+
+                if (_ps == null) return;
+
+                // 粒子的发射窗口就是前摇时长，蓄满恰好播完
+                ParticleSystem.MainModule main = _ps.main;
+                main.duration = _duration;
+
+                _ps.Clear(true);
+                _ps.Play(true);
+            }
+
+            public bool Tick(Transform follow, float deltaTime)
+            {
+                if (follow == null || !_playing) return true;
+
+                _go.transform.position = follow.position + new Vector3(_offset.x, _offset.y, 0f);
+
+                if (_emitted) return false;
+
+                _elapsed += deltaTime;
+                if (_elapsed < _duration) return false;
+
+                _emitted = true;
+
+                if (_ps != null) _ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+                return false;
+            }
+
+            public void Stop()
+            {
+                if (_ps != null) _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                _playing = false;
+                _emitted = false;
+                _elapsed = 0f;
+
+                if (_go != null) _go.SetActive(false);
             }
         }
 
