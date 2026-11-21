@@ -8,6 +8,7 @@ using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
+using Refraction.Presentation.Audio;
 using Refraction.Presentation.Effects;
 using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
@@ -33,6 +34,7 @@ namespace Refraction.Presentation
         private HitStopService _hitStopService;
         private LevelManager _levelMgr;
         private EffectModule _effects;
+        private AudioManager _audio;
 
         private bool _warnedNoLevel;
         private bool _levelPending;
@@ -54,6 +56,8 @@ namespace Refraction.Presentation
         public HitStopService HitStop => _hitStopService;
 
         public EffectModule Effects => _effects;
+
+        public AudioManager Audio => _audio;
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -131,6 +135,9 @@ namespace Refraction.Presentation
 
             _effects = new EffectModule();
             _effects.Init(transform);
+
+            _audio = new AudioManager(transform);
+            RegisterService(_audio);
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());

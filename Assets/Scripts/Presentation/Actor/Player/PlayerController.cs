@@ -6,6 +6,7 @@ using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
+using Refraction.Presentation.Audio;
 using Refraction.Presentation.Combat;
 using Refraction.Presentation.Effects;
 using Refraction.Presentation.Level;
@@ -114,7 +115,11 @@ namespace Refraction.Presentation.Actor
             _logic?.Dispose();
 
             // 用 Start 里抓住的引用：销毁期再问 GameRoot.Instance 可能当场造一个新的出来
-            if (_root != null) _root.UnregisterSceneRoot(this);
+            if (_root != null)
+            {
+                _root.Audio?.SetLoopSfx(AudioId.None, false);
+                _root.UnregisterSceneRoot(this);
+            }
         }
         private void OnEnable()
         {
@@ -225,7 +230,11 @@ namespace Refraction.Presentation.Actor
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
             _context = new(snapshot, worldInfo, gameTime);
 
+            MovementStateTag prevMove = _logic.CurrentTag;
+            AttackStateTag prevAttack = _logic.AttackTag;
+
             _logic.FixedTick(_context);
+            PlayActionAudio(prevMove, prevAttack);
             ApplyPhase();
 
             bool grounded = _context.WorldInfo.Grounded;
@@ -276,10 +285,36 @@ namespace Refraction.Presentation.Actor
 
         private void PlayLand()
         {
+            _root.Audio?.EnqueueSfx(AudioId.Land);
+
             if (bottom == null) return;
 
             _root.Effects?.PlayLand(bottom.position, _landColor);
         }
+
+        private void PlayActionAudio(MovementStateTag prevMove, AttackStateTag prevAttack)
+        {
+            AudioManager audio = _root != null ? _root.Audio : null;
+
+            if (audio == null) return;
+
+            MovementStateTag move = _logic.CurrentTag;
+
+            if (move != prevMove)
+            {
+                if (move == MovementStateTag.Dash) audio.EnqueueSfx(AudioId.Dash);
+                else if (move == MovementStateTag.Jump || move == MovementStateTag.AirJump) audio.EnqueueSfx(AudioId.Jump);
+            }
+
+            AttackStateTag attack = _logic.AttackTag;
+
+            if (attack == prevAttack || attack == AttackStateTag.None) return;
+
+            audio.EnqueueSfx(IsBlackDash(attack) ? AudioId.Dash : AudioId.SwordSwing);
+        }
+
+        private static bool IsBlackDash(AttackStateTag tag)
+            => tag == AttackStateTag.BlackDashUp || tag == AttackStateTag.BlackDashDown;
 
         public void OnHurt(int damage)
         {
@@ -348,6 +383,7 @@ namespace Refraction.Presentation.Actor
 
             bool dust = _grounded && Mathf.Abs(_context.WorldInfo.FrameStartVelocity.x) >= DustMinSpeed;
             _root.Effects?.SetMoveDust(bottom, dust, _moveDustColor);
+            _root.Audio?.SetLoopSfx(AudioId.Move, dust);
 
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);

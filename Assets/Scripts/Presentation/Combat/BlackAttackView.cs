@@ -445,6 +445,7 @@ namespace Refraction.Presentation.Combat
         public void OnHitLanded(Collider2D other)
         {
             PlayAttackSpark(other);
+            GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.HitBody);
             _onHitLanded?.Invoke();
         }
 

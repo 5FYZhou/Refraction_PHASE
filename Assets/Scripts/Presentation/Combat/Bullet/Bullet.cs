@@ -1,4 +1,5 @@
-﻿using Refraction.Logic.Combat;
+﻿using Refraction.Data;
+using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Effects;
 using System.Collections.Generic;
@@ -388,6 +389,8 @@ namespace Refraction.Presentation.Combat
             _hit = true;
 
             _hitSink?.OnHitLanded();
+
+            if (PlayerOwned) GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.HitBody);
 
             PlayHitSpark(_hitCollider);
             _system?.Kill(_id);
