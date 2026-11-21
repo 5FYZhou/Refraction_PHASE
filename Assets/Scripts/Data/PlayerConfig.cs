@@ -234,6 +234,10 @@ namespace Refraction.Data
         [Min(0f)]
         public float contactHitStopTime = 0.1f;
 
+        [Tooltip("弹反打回一发敌弹的顿帧时长（秒）：每弹回一颗触发一次，打不回去的不算。\n0 表示不顿帧。")]
+        [Min(0f)]
+        public float reboundHitStopTime = 0.08f;
+
         [Header("打击感 · 震屏")]
         [Tooltip("受击震屏的冲量强度（倍率，1 = Cinemachine 标准冲量）：乘以受击击退方向得到冲量向量。0 表示不震屏。")]
         [Min(0f)]
@@ -250,6 +254,14 @@ namespace Refraction.Data
         [Tooltip("世界黑白反转时的震屏持续时间（秒）：0 表示沿用冲量源自己的时长。")]
         [Min(0f)]
         public float worldShakeDuration = 0.3f;
+
+        [Tooltip("弹反打回一发敌弹的震屏强度（倍率，1 = Cinemachine 标准冲量）：方向取子弹被弹回的方向。0 表示不震屏。")]
+        [Min(0f)]
+        public float reboundShakeIntensity = 1.2f;
+
+        [Tooltip("弹反震屏的持续时间（秒）：0 表示沿用冲量源自己的时长。")]
+        [Min(0f)]
+        public float reboundShakeDuration = 0.12f;
 
 
         [Header("极性值")]

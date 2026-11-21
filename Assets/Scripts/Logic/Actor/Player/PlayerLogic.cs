@@ -90,7 +90,18 @@ namespace Refraction.Logic.Actor
             EventBus<RequestHitStop>.Publish(new(_config.meleeHitStopTime));
         }
 
-        public void OnReboundReflected() => _attackGroup.RefundAirDash(_config.blackDashReboundRefund);
+        public void OnReboundReflected(Vector2 reflectDir)
+        {
+            _attackGroup.RefundAirDash(_config.blackDashReboundRefund);
+
+            EventBus<RequestHitStop>.Publish(new(_config.reboundHitStopTime));
+
+            if (_config.reboundShakeIntensity <= 0f) return;
+
+            EventBus<RequestCameraShake>.Publish(new(
+                reflectDir * _config.reboundShakeIntensity,
+                _config.reboundShakeDuration));
+        }
 
         private void OnAfterimageLinkHit(AfterimageLinkHit evt) => AddPolarity(_config.afterimageLinkPolarity);
 

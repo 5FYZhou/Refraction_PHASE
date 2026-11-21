@@ -131,6 +131,26 @@ namespace Refraction.Tests
             player.Dispose();
         }
 
+        [Test]
+        public void 弹反成功_按弹反震屏参数发请求()
+        {
+            _config.reboundShakeIntensity = 1.5f;
+            _config.reboundShakeDuration = 0.12f;
+
+            PlayerLogic player = 造玩家();
+            Vector2 dir = new Vector2(-1f, 1f).normalized;
+
+            player.OnReboundReflected(dir);
+
+            Assert.AreEqual(1, _requests, "弹回一颗敌弹就震一次屏");
+            Assert.AreEqual(CameraShakeMode.Directional, _last.mode, "弹反沿子弹被弹回的方向推一下");
+            Assert.AreEqual(_config.reboundShakeDuration, _last.duration, Eps, "时长取弹反震屏配置");
+            Assert.AreEqual(dir.x * _config.reboundShakeIntensity, _last.impulse.x, Eps, "冲量横向 = 弹回方向 × 配置强度");
+            Assert.AreEqual(dir.y * _config.reboundShakeIntensity, _last.impulse.y, Eps, "冲量纵向 = 弹回方向 × 配置强度");
+
+            player.Dispose();
+        }
+
         private static LogicContext 反转帧(float now)
         {
             InputSnapshot input = new(Vector2.zero, false, false, false, false, false, false, false, true, false);

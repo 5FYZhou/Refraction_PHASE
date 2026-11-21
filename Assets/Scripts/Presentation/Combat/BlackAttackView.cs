@@ -58,7 +58,7 @@ namespace Refraction.Presentation.Combat
         private readonly PlayerConfig _config;
         private readonly Func<int> _face;
         private readonly Action _onHitLanded;
-        private readonly Action _onReflected;
+        private readonly Action<Vector2> _onReflected;
         private readonly EffectModule _effects;
 
         private static bool _warnedNoRebound;
@@ -78,7 +78,7 @@ namespace Refraction.Presentation.Combat
 
         /// <summary>root 是玩家根节点，层级里按 BlackDash/xxxCollider 找；朝向开打那一帧取定</summary>
         /// <remarks>onReflected 只在真弹回一颗子弹时回调一次，用来还空中突进次数；打不回去的（受击范围内、已被弹过）不算</remarks>
-        public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null, EffectModule effects = null, Action onReflected = null)
+        public BlackAttackView(Transform root, PlayerConfig config, Func<int> face, Action onHitLanded = null, EffectModule effects = null, Action<Vector2> onReflected = null)
         {
             _config = config;
             _face = face;
@@ -258,7 +258,7 @@ namespace Refraction.Presentation.Combat
                 if (!bullet.TryReflect(launcher, damage, knockback, transfer)) continue;
 
                 _effects?.PlayReboundSpark(pos, reflectDir, _reboundSparkColor);
-                _onReflected?.Invoke();
+                _onReflected?.Invoke(reflectDir);
             }
         }
 

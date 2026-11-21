@@ -60,7 +60,7 @@ namespace Refraction.Tests
             走到(0.06f, true);
             Assert.AreEqual(AttackStateTag.None, _player.AttackTag, "次数用光，空中按不出来");
 
-            _player.OnReboundReflected();
+            _player.OnReboundReflected(Vector2.right);
 
             走到(0.07f, true);
             Assert.AreEqual(AttackStateTag.BlackDashUp, _player.AttackTag, "弹反返还之后空中能再突一次");
