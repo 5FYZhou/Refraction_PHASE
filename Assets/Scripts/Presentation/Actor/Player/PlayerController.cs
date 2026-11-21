@@ -57,7 +57,6 @@ namespace Refraction.Presentation.Actor
         private Color landColor = Color.white;
 
         private Color _attackSparkColor = Color.white;
-        private Color _reboundSparkColor = Color.white;
         private Color _moveDustColor = Color.white;
         private Color _landColor = Color.white;
 
@@ -152,6 +151,7 @@ namespace Refraction.Presentation.Actor
                 );
 
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, dir => _logic?.OnReboundReflected(dir));
+            _blackAttack?.SetSparkColors(_attackSparkColor, reboundSparkColor);
 
             _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 
@@ -303,11 +303,8 @@ namespace Refraction.Presentation.Actor
         private void ApplyParticleColors(bool invert)
         {
             _attackSparkColor = Tint(attackSparkColor, invert);
-            _reboundSparkColor = Tint(reboundSparkColor, invert);
             _moveDustColor = Tint(moveDustColor, invert);
             _landColor = Tint(landColor, invert);
-
-            _blackAttack?.SetSparkColors(_attackSparkColor, _reboundSparkColor);
         }
 
         private static Color Tint(Color color, bool invert) =>
