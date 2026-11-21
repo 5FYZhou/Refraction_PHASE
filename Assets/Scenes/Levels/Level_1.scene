@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:yousandi.cn,2023:
 --- !u!29 &1
 OcclusionCullingSettings:
@@ -1248,7 +1248,7 @@ Transform:
   m_GameObject: {fileID: 1466504234}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000008033914, y: -0.000000051134474, z: -4.1080996e-15, w: 1}
-  m_LocalPosition: {x: -7.4343266, y: 2.7313583, z: -10}
+  m_LocalPosition: {x: -6.3939495, y: 3.6754985, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2199,10 +2199,10 @@ PolygonCollider2D:
   m_AutoTiling: 0
   m_Points:
     m_Paths:
-    - - {x: 22.055506, y: 21.500011}
-      - {x: -21.964935, y: 21.654604}
-      - {x: -21.768213, y: -3.2288084}
-      - {x: 22.017548, y: -3.3509312}
+    - - {x: 20.637697, y: 19.136986}
+      - {x: -20.648394, y: 19.325336}
+      - {x: -20.519186, y: -2.317356}
+      - {x: 20.599733, y: -2.3382063}
   m_UseDelaunayMesh: 0
 --- !u!4 &1840731044
 Transform:
@@ -2249,7 +2249,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 19.51
+      value: 20.71
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2323,7 +2323,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -20.2
+      value: -21.35
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2513,7 +2513,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 20.37
+      value: 21.35
       objectReference: {fileID: 0}
     - target: {fileID: 2968364640678020960, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
       propertyPath: m_LocalPosition.y
