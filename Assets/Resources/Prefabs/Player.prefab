@@ -712,6 +712,7 @@ MonoBehaviour:
   reboundSparkColor: {r: 0, g: 0.627451, b: 1, a: 1}
   moveDustColor: {r: 1, g: 1, b: 1, a: 1}
   landColor: {r: 1, g: 1, b: 1, a: 1}
+  savePointSparkColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &8012155498594749596
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1303,7 +1304,7 @@ Transform:
   m_GameObject: {fileID: 6043015256790418854}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalPosition: {x: -0.38, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1575,7 +1576,7 @@ Transform:
   m_GameObject: {fileID: 8646064823293272119}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalPosition: {x: -0.38, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -35,16 +35,19 @@ namespace Refraction.Presentation.Effects
         private const string ReboundSparkPath = "Effects/ReboundSpark";
         private const string LandPath = "Effects/Land";
         private const string MoveDustPath = "Effects/MoveDust";
+        private const string SavePointSparkPath = "Effects/SavePointSpark";
         private const string ChargeInPath = "Effects/ChargeIn";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
         private const int ReboundSparkPoolSize = 8;
         private const int LandPoolSize = 4;
+        private const int SavePointSparkPoolSize = 4;
         private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
         private const int ReboundSparkPrewarm = 2;
         private const int LandPrewarm = 1;
+        private const int SavePointSparkPrewarm = 1;
         private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
         private const float ChargeInMinDuration = 0.05f;
@@ -76,6 +79,7 @@ namespace Refraction.Presentation.Effects
         private readonly List<Spark> _liveAttackSparks = new();
         private readonly List<Spark> _liveReboundSparks = new();
         private readonly List<Spark> _liveLands = new();
+        private readonly List<Spark> _liveSaveSparks = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
@@ -86,6 +90,8 @@ namespace Refraction.Presentation.Effects
         private Pool<Spark> _reboundSparkPool;
         private GameObject _landPrefab;
         private Pool<Spark> _landPool;
+        private GameObject _saveSparkPrefab;
+        private Pool<Spark> _saveSparkPool;
         private MoveDustState _moveDust;
         private GameObject _chargeInPrefab;
         private Pool<ChargeInState> _chargeInPool;
@@ -97,6 +103,7 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoAttackSpark;
         private bool _warnedNoReboundSpark;
         private bool _warnedNoLand;
+        private bool _warnedNoSaveSpark;
         private bool _warnedNoMoveDust;
         private bool _warnedNoChargeIn;
 
@@ -118,6 +125,7 @@ namespace Refraction.Presentation.Effects
             TickSparks(_liveAttackSparks, _attackSparkPool, deltaTime);
             TickSparks(_liveReboundSparks, _reboundSparkPool, deltaTime);
             TickSparks(_liveLands, _landPool, deltaTime);
+            TickSparks(_liveSaveSparks, _saveSparkPool, deltaTime);
             TickShapes(deltaTime);
             TickChargeIns(deltaTime);
             _moveDust?.Tick();
@@ -227,6 +235,17 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, Vector2.up, color);
             _liveLands.Add(spark);
+        }
+
+        /// <summary>存档成功火花：在玩家身上播一次，预制体自带朝向，不给颜色就用粒子默认</summary>
+        public void PlaySavePointSpark(Vector2 position, Color? color = null)
+        {
+            if (!EnsureSaveSparkPool()) return;
+
+            if (!_saveSparkPool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, Vector2.up, color);
+            _liveSaveSparks.Add(spark);
         }
 
         /// <summary>移动扬尘：地面上跑动期间挂单实例常驻，on = false 当帧停发射并隐藏，位置每帧贴到 follow</summary>
@@ -514,6 +533,45 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsureSaveSparkPool()
+        {
+            if (_saveSparkPool != null) return true;
+
+            _saveSparkPrefab = Resources.Load<GameObject>(SavePointSparkPath);
+
+            if (_saveSparkPrefab == null)
+            {
+                if (!_warnedNoSaveSpark)
+                {
+                    _warnedNoSaveSpark = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{SavePointSparkPath}，存档火花不播放。");
+                }
+
+                return false;
+            }
+
+            _saveSparkPool = new Pool<Spark>(
+                CreateSaveSpark,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: SavePointSparkPoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _saveSparkPool.Prewarm(SavePointSparkPrewarm);
+
+            return true;
+        }
+
+        private Spark CreateSaveSpark()
+        {
+            GameObject go = Object.Instantiate(_saveSparkPrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
         private bool EnsureMoveDust()
         {
             if (_moveDust != null) return true;
@@ -652,6 +710,9 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _liveLands.Count; i++) _landPool?.Release(_liveLands[i]);
             _liveLands.Clear();
 
+            for (int i = 0; i < _liveSaveSparks.Count; i++) _saveSparkPool?.Release(_liveSaveSparks[i]);
+            _liveSaveSparks.Clear();
+
             _moveDust = null;
 
             _sparkPool?.Dispose();
@@ -665,6 +726,9 @@ namespace Refraction.Presentation.Effects
 
             _landPool?.Dispose();
             _landPool = null;
+
+            _saveSparkPool?.Dispose();
+            _saveSparkPool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;

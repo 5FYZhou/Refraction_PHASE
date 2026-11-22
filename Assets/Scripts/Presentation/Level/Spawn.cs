@@ -1,24 +1,15 @@
-﻿using System.Collections;
+﻿using Refraction.Logic.Level;
 using UnityEngine;
 
 namespace Refraction.Presentation.Level
 {
-    /// <summary>存档点：挂在场景的 Spawn 对象上，用自己的触发器认玩家身体，存档成功时闪一下黄再回原色</summary>
-    public sealed class Spawn : MonoBehaviour
+    /// <summary>存档点：用自己的触发器认玩家身体，颜色随世界极性取反（rgb 取反、alpha 不动）</summary>
+    public sealed class Spawn : MonoBehaviour, IReverse
     {
-        private static readonly Color SavedColor = new(1f, 0.92f, 0.3f, 1f);
-
-        [Tooltip("存档成功后高亮停留的时长（秒）。")]
-        [Min(0f)]
-        [SerializeField]
-        private float flashSeconds = 0.4f;
-
         private Collider2D _zone;
-        private SpriteRenderer _renderer;
-        private Color _baseColor;
         private Collider2D _playerBody;
         private bool _resolved;
-        private Coroutine _flashRoutine;
+        private GameRoot _root;
 
         /// <summary>锚点位置，按地面上的一点理解：调用方要自己补上脚底到枢轴的偏移</summary>
         public Vector2 Point => transform.position;
@@ -29,9 +20,6 @@ namespace Refraction.Presentation.Level
         private void Awake()
         {
             _zone = GetComponent<Collider2D>();
-            _renderer = GetComponent<SpriteRenderer>();
-
-            if (_renderer != null) _baseColor = _renderer.color;
 
             if (_zone == null)
             {
@@ -43,6 +31,16 @@ namespace Refraction.Presentation.Level
 
             _zone.isTrigger = true;
             Debug.LogWarning($"[Spawn] {name} 的碰撞体不是 Trigger，已临时改成 Trigger；请在 Inspector 里勾上，否则它会挡住玩家。");
+        }
+
+        private void Start()
+        {
+            Attach();
+        }
+
+        private void OnDestroy()
+        {
+            _root?.UnregisterReverse(this);
         }
 
         private void OnDisable() => HasPlayer = false;
@@ -62,6 +60,17 @@ namespace Refraction.Presentation.Level
             HasPlayer = false;
         }
 
+        public void Attach()
+        {
+            _root ??= GameRoot.Instance;
+            _root?.RegisterReverse(this);
+        }
+
+        public void Apply(WorldPolarity world)
+        {
+            _root.Effects.SetInvert(transform, world == WorldPolarity.Black);
+        }
+
         /// <summary>玩家身体碰撞体是恒定的：只解析一次，之后每个物理步只做引用比较，不再 GetComponent</summary>
         private void ResolvePlayerBody(Collider2D other)
         {
@@ -70,22 +79,6 @@ namespace Refraction.Presentation.Level
 
             _playerBody = motor.BodyCollider;
             _resolved = _playerBody != null;
-        }
-
-        public void Flash()
-        {
-            if (_renderer == null || flashSeconds <= 0f) return;
-
-            if (_flashRoutine != null) StopCoroutine(_flashRoutine);
-            _flashRoutine = StartCoroutine(FlashRoutine());
-        }
-
-        private IEnumerator FlashRoutine()
-        {
-            _renderer.color = SavedColor;
-            yield return new WaitForSeconds(flashSeconds);
-            _renderer.color = _baseColor;
-            _flashRoutine = null;
         }
     }
 }

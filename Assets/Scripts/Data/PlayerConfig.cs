@@ -345,5 +345,14 @@ namespace Refraction.Data
         [Tooltip("弹反冷却（秒）：弹反关掉的那一刻起算，冷却没走完再按攻击键不开弹反。\n0 表示没有冷却。")]
         [Min(0f)]
         public float reboundCooldown = 0.6f;
+
+        [Header("存档")]
+        [Tooltip("存档成功时玩家闪白的时长（秒）：与受击闪白分开配，存档的短一些才不糊脸。\n0 表示不闪白。")]
+        [Min(0f)]
+        public float saveFlashTime = 0.1f;
+
+        [Tooltip("存档成功后玩家不响应输入的时长（秒）：从存档成功那一刻起算，期间移动、跳跃、攻击、反转、存档全部停住，刚体与重力照常。\n0 表示不锁输入（会有连按存两次的风险）。")]
+        [Min(0f)]
+        public float saveInputLockTime = 0.5f;
     }
 }

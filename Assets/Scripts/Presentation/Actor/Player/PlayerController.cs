@@ -65,8 +65,13 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Color landColor = Color.white;
 
+        [Tooltip("存档成功的火花颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color savePointSparkColor = Color.white;
+
         private Color _moveDustColor = Color.white;
         private Color _landColor = Color.white;
+        private Color _savePointSparkColor = Color.white;
 
         private LogicContext _context;
 
@@ -85,10 +90,12 @@ namespace Refraction.Presentation.Actor
         private int _hurtExclude;
         private bool _phasing;
         private bool _grounded = true;
+        private float _saveLockUntil;
         private PlayerAniView _aniView;
 
         // View 与脚底参考点：都按名字找（Player/View、View/Bottom），不在 Inspector 里连线
         private Transform view;
+        private Transform top;
         private Transform bottom;
 
         private bool _warnedNoView;
@@ -282,6 +289,7 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
+            if (Time.fixedTime < _saveLockUntil) snapshot = default;
             // 世界信息由 PlayerMotor 的物理探测给出，本层只负责组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
             GameTime gameTime = new(Time.fixedTime, Time.fixedDeltaTime);
@@ -397,6 +405,7 @@ namespace Refraction.Presentation.Actor
         {
             _moveDustColor = Tint(moveDustColor, invert);
             _landColor = Tint(landColor, invert);
+            _savePointSparkColor = Tint(savePointSparkColor, invert);
         }
 
         private static Color Tint(Color color, bool invert) =>
@@ -424,7 +433,23 @@ namespace Refraction.Presentation.Actor
             Vector2 pivot = _checkpoint.Point;
             pivot.y -= moveMotor.FeetOffsetY;
 
-            if (_root.SaveCheckpoint(pivot)) _checkpoint.Flash();
+            if (!_root.SaveCheckpoint(pivot)) return;
+
+            _logic.ResetHealth();
+            _logic.Announce();
+
+            Vector2 pos = SaveSparkPos();
+            _root.Effects?.PlaySavePointSpark(pos, _savePointSparkColor);
+            _root.Effects?.Play(EffectType.DamageFlash, view, config.saveFlashTime);
+
+            _saveLockUntil = Time.fixedTime + config.saveInputLockTime;
+        }
+
+        private Vector2 SaveSparkPos()
+        {
+            if (top == null || bottom == null) return view != null ? (Vector2)view.position : (Vector2)transform.position;
+
+            return ((Vector2)top.position + (Vector2)bottom.position) * 0.5f;
         }
 
         public void RenderTick(float deltaTime)
@@ -512,6 +537,7 @@ namespace Refraction.Presentation.Actor
         #region View
         /// <summary>层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）；PlayerMotor 找的也是这两个名字，两边必须一致</summary>
         private const string ViewChildName = "View";
+        private const string TopChildName = "Top";
         private const string BottomChildName = "Bottom";
 
         /// <summary>按名字找 View 与脚底参考点：闪白要拿 View 上的 SpriteRenderer，扬尘与落地烟以脚底为发射位置</summary>
@@ -528,6 +554,7 @@ namespace Refraction.Presentation.Actor
             }
 
             bottom = view.Find(BottomChildName);
+            top = view.Find(TopChildName);
 
             _viewRenderer = view.GetComponent<SpriteRenderer>();
             if (_viewRenderer != null) _viewBaseColor = _viewRenderer.color;
