@@ -80,7 +80,21 @@ namespace Refraction.Logic.Events
     #endregion
 
     #region 事实
+    public readonly struct GameStateChanged
+    {
+        public readonly GameState state;
+        public readonly bool inputAllowed;
+        public readonly bool sceneBusy;
+        public readonly bool paused;
 
+        public GameStateChanged(GameState state, bool inputAllowed, bool sceneBusy, bool paused)
+        {
+            this.state = state;
+            this.inputAllowed = inputAllowed;
+            this.sceneBusy = sceneBusy;
+            this.paused = paused;
+        }
+    }
     public readonly struct PlayerHealthChanged
     {
         public readonly int cur;

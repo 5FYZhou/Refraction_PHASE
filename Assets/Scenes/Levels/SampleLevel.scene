@@ -3495,7 +3495,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37164cfdd33b9ff419887cbe69add89e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldPolarity: 0
+  entryState: 3
 --- !u!114 &2100959420 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4553412713207579908, guid: c971767fc8408e141af0d5a5646b1a58, type: 3}

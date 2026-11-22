@@ -1,17 +1,17 @@
-using Refraction.Logic.Level;
+﻿using Refraction.Logic;
 using UnityEngine;
 
 namespace Refraction.Presentation.Level
 {
-    /// <summary>关卡配置：场景里挂上就以这里的世界极性为准，覆盖上一关留下的值；没挂则沿用</summary>
+    /// <summary>入口状态：Attach 时推一次</summary>
+    /// <remarks>Order 取 SceneOrder.Entry：其余场景根的 Attach 都排在它之后。</remarks>
+    [DisallowMultipleComponent]
     public sealed class SceneFlowConfig : MonoBehaviour, ISceneRoot
     {
-        [SerializeField]
-        [Tooltip("本关起始世界极性：覆盖跨关保留的值，决定地面配色与玩家攻击链")]
-        private WorldPolarity worldPolarity = WorldPolarity.White;
+        [Tooltip("本场景的入口状态：游戏场景填 Running，开始场景填 Menu")]
+        [SerializeField] private GameState entryState = GameState.Running;
 
         private GameRoot _root;
-        private bool _applied;
 
         public int Order => SceneOrder.Entry;
 
@@ -28,11 +28,32 @@ namespace Refraction.Presentation.Level
 
         public void Attach()
         {
-            if (_applied) return;
-            _applied = true;
-
             _root ??= GameRoot.Instance;
-            _root?.ApplyWorldPolarity(worldPolarity);
+            _root?.Game.SetSceneTransitionTargetState(entryState);
+
+            Debug.Log($"[Flow] 场景声明入口状态 {entryState}（{gameObject.scene.name}）");
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (entryState == GameState.Paused)
+            {
+                Debug.LogWarning(
+                    "[Flow] SceneFlowConfig.entryState = Paused：进关即 timeScale=0，只能靠 Resume 解开。" +
+                    "游戏关卡场景请填 Running。",
+                    this);
+            }
+
+            if (entryState == GameState.None
+                || entryState == GameState.Exit
+                || entryState == GameState.SceneTransition)
+            {
+                Debug.LogWarning(
+                    $"[Flow] SceneFlowConfig.entryState = {entryState} 非法：只允许 Menu / CG / Running / Paused。",
+                    this);
+            }
+        }
+#endif
     }
 }

@@ -1,0 +1,64 @@
+﻿using Refraction.Generated;
+using Refraction.Logic.Events;
+
+namespace Refraction.Logic.Input
+{
+    public sealed class UIInputProvider
+    {
+        private readonly InputSys _input;
+
+        private bool _escPressed;
+        private bool _inputEnabled = true;
+
+        public UIInputProvider()
+        {
+            _input = new InputSys();
+        }
+
+        public void Init()
+        {
+            _input.UI.Enable();
+            EventBus<GameStateChanged>.Subscribe(OnGameStateChange);
+        }
+
+        public void Dispose()
+        {
+            _input.UI.Disable();
+            EventBus<GameStateChanged>.Unsubscribe(OnGameStateChange);
+
+            _input.Dispose();
+        }
+
+        public void Sample()
+        {
+            if (!_inputEnabled)
+                return;
+
+            _escPressed = _input.UI.Cancel.WasPressedThisFrame();
+        }
+
+        public UIInputSnapshot ConsumeSnapshot()
+        {
+            return new UIInputSnapshot(_escPressed);
+        }
+
+        public void Clear()
+        {
+            _escPressed = false;
+        }
+
+        public void SetInputEnabled(bool enabled)
+        {
+            if (_inputEnabled == enabled) return;
+            _inputEnabled = enabled;
+
+            if (!enabled)
+                Clear();
+        }
+
+        private void OnGameStateChange(GameStateChanged evt)
+        {
+            SetInputEnabled(!evt.sceneBusy);
+        }
+    }
+}

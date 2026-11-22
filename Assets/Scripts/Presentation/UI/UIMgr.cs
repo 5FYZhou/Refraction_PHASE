@@ -66,7 +66,6 @@ namespace Refraction.Presentation.UI
 
         private bool _warnedDuplicateEventSystem;
 
-        private Transform transitionLayer;
         private Transform bottomLayer;
         private Transform middleLayer;
         private Transform topLayer;
@@ -118,7 +117,6 @@ namespace Refraction.Presentation.UI
             uiCanvas.worldCamera = uiCamera;
             GameObject.DontDestroyOnLoad(uiCanvas.gameObject);
 
-            transitionLayer = uiCanvas.transform.Find("Transition");
             bottomLayer = uiCanvas.transform.Find("Bottom");
             middleLayer = uiCanvas.transform.Find("Middle");
             topLayer = uiCanvas.transform.Find("Top");
@@ -344,18 +342,29 @@ namespace Refraction.Presentation.UI
                     return;
                 }
 
-                Transform father = GetLayerFather(panelInfo.Layer);
+                GameObject panelObj = GameObject.Instantiate(res);
+
+                T panel = panelObj.GetComponent<T>();
+                if (panel == null)
+                {
+                    GameObject.Destroy(panelObj);
+                    panelDic.Remove(panelName);
+                    Debug.LogError($"[UI] 预制体 {UI_PANEL_PREFIX}{panelName} 上没有 {typeof(T).Name} 组件。");
+                    return;
+                }
+
+                panelInfo.panel = panel;
+
+                Transform father = GetLayerFather(panel.Layer);
                 // 层级非法就兜到 Middle，否则会挂到 Canvas 根上盖住其他层
                 if (father == null)
                     father = middleLayer;
-                GameObject panelObj = GameObject.Instantiate(res, father, false);
+                panelObj.transform.SetParent(father, false);
 
-                T panel = panelObj.GetComponent<T>();
                 panel.ShowMe();
                 panelInfo.callBack?.Invoke(panel);
                 // 回调只发一次
                 panelInfo.callBack = null;
-                panelInfo.panel = panel;
 
             });
         }

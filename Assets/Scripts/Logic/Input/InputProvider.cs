@@ -1,4 +1,5 @@
 ﻿using Refraction.Generated;
+using Refraction.Logic.Events;
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -11,6 +12,7 @@ namespace Refraction.Logic.Input
         private const string KeyPathPrefix = "<Keyboard>/";
 
         private InputSys _input = new();
+        private bool _inputEnabled;
 
         private Vector2 _move;
         private bool _jump;
@@ -29,14 +31,17 @@ namespace Refraction.Logic.Input
         public void Init()
         {
             _input.Enable();
+            EventBus<GameStateChanged>.Subscribe(OnGameStateChanged);
         }
         public void Dispose()
         {
             _input.Disable();
+            EventBus<GameStateChanged>.Unsubscribe(OnGameStateChanged);
         }
 
         public void Tick()
         {
+            if (!_inputEnabled) return;
             _move = Vector2.ClampMagnitude(
                 _input.Player.Move.ReadValue<Vector2>(),
                 1f
@@ -70,7 +75,38 @@ namespace Refraction.Logic.Input
 
             return snapshot;
         }
+        
+        public void OnGameStateChanged(GameStateChanged evt)
+        {
+            SetInputEnabled(evt.inputAllowed);
+        }
 
+        private void SetInputEnabled(bool enable)
+        {
+            if (_inputEnabled == enable) return;
+
+            _inputEnabled = enable;
+
+            if (!enable)
+                Clear();
+        }
+
+        public void Clear()
+        {
+            _move = Vector2.zero;
+            _jump = false;
+            _dash = false;
+            _jumpHeld = false;
+            _crouchHeld = false;
+            _attack = false;
+            _attackHeld = false;
+            _charge = false;
+            _reverse = false;
+            _save = false;
+            _upHeld = false;
+        }
+
+        #region 按键
         public string GetKey(PlayerKeyTag tag)
         {
             InputAction action = ActionOf(tag);
@@ -165,5 +201,6 @@ namespace Refraction.Logic.Input
 
             return binding.isPartOfComposite && string.Equals(binding.name, part, StringComparison.OrdinalIgnoreCase);
         }
+        #endregion
     }
 }

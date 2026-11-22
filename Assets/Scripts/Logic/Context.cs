@@ -87,4 +87,13 @@ namespace Refraction.Logic
             GameTime = gameTime;
         }
     }
+
+    public readonly struct UIInputSnapshot
+    {
+        public readonly bool EscPressed;
+        public UIInputSnapshot(bool ep)
+        {
+            EscPressed = ep;
+        }
+    }
 }

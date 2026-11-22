@@ -73,6 +73,7 @@ namespace Refraction.Presentation.UI
             if (name == "BtnClose")
             {
                 root.UIMgr.HidePanel<SettingsPanel>();
+                root.Game.Resume();
                 return;
             }
 

@@ -147,6 +147,7 @@ namespace Refraction.Presentation.UI
             {
                 case "BtnSetting":
                     GameRoot.Instance.UIMgr.ShowPanel<SettingsPanel>();
+                    GameRoot.Instance.Game.ChangeState(Logic.GameState.Paused);
                     return;
             }
         }

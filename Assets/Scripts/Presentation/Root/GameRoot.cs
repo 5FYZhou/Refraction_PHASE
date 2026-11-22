@@ -4,6 +4,7 @@ using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
+using Refraction.Logic.Game;
 using Refraction.Logic.Input;
 using Refraction.Logic.Level;
 using Refraction.Logic.Service;
@@ -37,6 +38,8 @@ namespace Refraction.Presentation
         private LevelManager _levelMgr;
         private EffectModule _effects;
         private AudioManager _audio;
+        private GameManager _gameMgr;
+        private UIInputProvider _uiInputProvider;
 
         private bool _warnedNoLevel;
         private bool _levelPending;
@@ -62,6 +65,8 @@ namespace Refraction.Presentation
         public EffectModule Effects => _effects;
 
         public AudioManager Audio => _audio;
+
+        public GameManager Game => _gameMgr;
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -108,6 +113,12 @@ namespace Refraction.Presentation
             _inputProvider = null;
             _inputKeys = null;
 
+            _uiInputProvider?.Dispose();
+            _uiInputProvider = null;
+
+            _uiMgr?.Dispose();
+            _uiMgr = null;
+
             _sceneRoots.Clear();
             _pendingAttach.Clear();
             _pendingReverse.Clear();
@@ -149,6 +160,12 @@ namespace Refraction.Presentation
 
             // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
             _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
+
+            _gameMgr = new(_pauseService);
+            _uiInputProvider = new();
+            _uiInputProvider.Init();
+            _uiMgr ??= new UIMgr();
+            _uiMgr.Init();
 
             _levelPending = true;
         }
@@ -222,13 +239,6 @@ namespace Refraction.Presentation
 
             _pendingReverse.Remove(reverse);
             _levelMgr?.RemoveReverse(reverse);
-        }
-
-        /// <summary>场景配置覆盖世界极性，要在其他场景根装配前调用，否则地面会先按上一关的颜色刷一次</summary>
-        public void ApplyWorldPolarity(WorldPolarity world)
-        {
-            _scenectx.SetWorld(world);
-            EventBus<WorldPolarityChanged>.Publish(new(world));
         }
 
         /// <summary>跨关：记下这次加载要落到的门，LevelManager 在 LoadScene 之前通过它交棒</summary>
