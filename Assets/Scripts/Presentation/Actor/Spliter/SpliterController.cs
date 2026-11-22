@@ -63,6 +63,11 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private float viewTurnSpeed = 720f;
 
+        [Tooltip("弹反成功时 ReboundCollider 红光亮起的时长（秒）：0 表示不闪。")]
+        [Min(0f)]
+        [SerializeField]
+        private float reboundFlashTime = 0.18f;
+
         private const string ReboundChildName = "ReboundCollider";
         private const string ViewChildName = "View";
         private const int BulletPoolSize = 6;
@@ -79,6 +84,7 @@ namespace Refraction.Presentation.Actor
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
+        private ReboundFlash _reboundFlash;
         private bool _tintBlack;
 
         private EnemyArea _patrolArea;
@@ -110,6 +116,7 @@ namespace Refraction.Presentation.Actor
         private void OnDestroy()
         {
             _logic?.Dispose();
+            _reboundFlash?.Dispose();
 
             if (_bulletField != null) Destroy(_bulletField.gameObject);
 
@@ -154,6 +161,7 @@ namespace Refraction.Presentation.Actor
             _bullets?.Tick(deltaTime);
 
             TickTint();
+            _reboundFlash?.Tick(deltaTime);
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
             if (!_logic.IsAlive) Destroy(gameObject);
@@ -196,6 +204,9 @@ namespace Refraction.Presentation.Actor
             if (!bullet.TryReflect(_bullets, damage.Amount, damage.KnockbackSpeed, 0f)) return;
 
             _logic.MarkRebounded(now);
+
+            // 弹成了才亮：冷却挡掉的那次不该有反馈
+            _reboundFlash?.Play();
 
             if (reflectDir.sqrMagnitude > DirEps) _logic.FireParallel(reboundAt, reflectDir);
         }
@@ -279,6 +290,8 @@ namespace Refraction.Presentation.Actor
             if (forwarder == null) forwarder = zone.gameObject.AddComponent<SpliterRebound>();
 
             forwarder.Init(this);
+
+            _reboundFlash = new ReboundFlash(trigger, reboundFlashTime);
         }
 
         private void AttachBullets()

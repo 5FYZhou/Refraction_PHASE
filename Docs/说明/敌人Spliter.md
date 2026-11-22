@@ -91,6 +91,7 @@
 - **额外两发**：方向与被弹反那发完全相同（平行），位置沿弹道法线各偏 `reboundSpread`（一边一颗）。
   这两颗用 `SpliterConfig` 的 `bulletSpeed / bulletDamage / bulletKnockback`，不吃原弹的数值。
 - 实现顺序很重要：`ReflectDirection` 与 `Position` **必须在 `TryReflect` 之前取** —— 它内部会把子弹回池，`Reset` 会清零速度并把位置复位。
+- **命中反馈**：弹成功那一刻 `ReboundCollider` 以半透明红色网格亮一下再淡出（`Presentation/Effects/ReboundFlash`），时长取控制器上的 `reboundFlashTime`；网格由碰撞体形状烘出、挂成它的子物体，被冷却挡掉的那次不亮。
 
 ## 十、View 的 z 轴旋转（纯表现）
 
