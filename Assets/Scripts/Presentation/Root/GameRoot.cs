@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
@@ -182,6 +183,8 @@ namespace Refraction.Presentation
             _uiMgr.Init();
 
             _levelPending = true;
+
+            _audio.EnqueueBgm(AudioId.BgmScene3);
         }
 
         public void RegisterService(IService service)

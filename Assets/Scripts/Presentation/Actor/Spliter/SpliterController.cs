@@ -204,6 +204,7 @@ namespace Refraction.Presentation.Actor
             if (!bullet.TryReflect(_bullets, damage.Amount, damage.KnockbackSpeed, 0f)) return;
 
             _logic.MarkRebounded(now);
+            _root.Audio?.EnqueueSfx(AudioId.WeaponClashEnemy);
 
             // 弹成了才亮：冷却挡掉的那次不该有反馈
             _reboundFlash?.Play();

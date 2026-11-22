@@ -121,3 +121,4 @@ InitTestScene*.unity*
 
 .codely-cli/
 .codely.packages/
+/.workbuddy

@@ -10,8 +10,8 @@ namespace Refraction.Presentation.Audio
     /// <remarks>
     /// 由 GameRoot 注册成服务驱动，常驻不随场景销毁。单帧只消费 Tick 开始时已有的请求，
     /// 入队当帧就能听到，不会拖到下一帧；循环音（SetLoopSfx）不走队列，免得排队漏掉首帧。
-    /// 时长一律取 clip.length。资源走 Resources.Load 取 Resources/Sound 下的文件并缓存，
-    /// 同一个编号只读一次盘，之后全走内存。
+    /// 时长一律取 clip.length。资源走 Resources.Load 取 Resources/Sound 下的文件并整体缓存，
+    /// 同一个编号只读一次盘。配了多条文件名的编号，一次性音效每次随机取一条。
     /// </remarks>
     public sealed class AudioManager : IService
     {
@@ -71,8 +71,8 @@ namespace Refraction.Presentation.Audio
         }
 
         private readonly Transform _host;
-        private readonly Dictionary<AudioId, string> _idToFile = new();
-        private readonly Dictionary<AudioId, AudioClip> _cache = new();
+        private readonly Dictionary<AudioId, string[]> _idToFiles = new();
+        private readonly Dictionary<AudioId, AudioClip[]> _clips = new();
         private readonly HashSet<AudioId> _warned = new();
         private readonly Queue<Request> _requests = new();
         private readonly List<Playing> _playing = new();
@@ -258,7 +258,8 @@ namespace Refraction.Presentation.Audio
             }
 
             _playing.Clear();
-            _cache.Clear();
+            _idToFiles.Clear();
+            _clips.Clear();
             _warned.Clear();
             _bgmProgress.Clear();
 
@@ -327,7 +328,7 @@ namespace Refraction.Presentation.Audio
 
         private void PlaySfx(AudioId id)
         {
-            AudioClip clip = GetClip(id);
+            AudioClip clip = GetRandomClip(id);
 
             if (clip == null) return;
 
@@ -573,7 +574,7 @@ namespace Refraction.Presentation.Audio
             _sfxVolume = Mathf.Clamp01(config.sfxVolume);
             _bgmFadeTime = Mathf.Max(0f, config.bgmFadeDuration);
 
-            _idToFile.Clear();
+            _idToFiles.Clear();
 
             AudioConfig.Entry[] entries = config.Entries;
 
@@ -581,43 +582,81 @@ namespace Refraction.Presentation.Audio
             {
                 AudioConfig.Entry entry = entries[i];
 
-                if (string.IsNullOrEmpty(entry.fileName))
+                if (!System.Enum.IsDefined(typeof(AudioId), entry.id))
+                {
+                    Debug.LogWarning($"[音频] AudioConfig 里有未定义的编号 {(int)entry.id}：枚举改过会留下这种残条，删掉它。");
+
+                    continue;
+                }
+
+                if (entry.fileNames == null || entry.fileNames.Length == 0 || string.IsNullOrEmpty(entry.fileNames[0]))
                 {
                     Debug.LogWarning($"[音频] {entry.id} 没有配置文件名，这一条不会响。");
 
                     continue;
                 }
 
-                if (!_idToFile.TryAdd(entry.id, entry.fileName))
+                if (!_idToFiles.TryAdd(entry.id, entry.fileNames))
                     Debug.LogWarning($"[音频] AudioConfig 里 {entry.id} 重复配置，取第一条。");
             }
         }
 
-        private AudioClip GetClip(AudioId id)
+        /// <summary>取编号的全部音频，第一次访问时把该编号的文件一次读完；单条加载失败只跳过它</summary>
+        private AudioClip[] GetClips(AudioId id)
         {
             if (id == AudioId.None) return null;
 
-            if (_cache.TryGetValue(id, out AudioClip cached)) return cached;
+            if (_clips.TryGetValue(id, out AudioClip[] cached)) return cached;
 
-            if (!_idToFile.TryGetValue(id, out string fileName) || string.IsNullOrEmpty(fileName))
+            if (!_idToFiles.TryGetValue(id, out string[] files) || files == null)
             {
                 Warn(id, "AudioConfig 里没有它的文件名");
 
                 return null;
             }
 
-            AudioClip clip = Resources.Load<AudioClip>(SoundFolder + fileName);
+            AudioClip[] loaded = new AudioClip[files.Length];
+            int count = 0;
 
-            if (clip == null)
+            for (int i = 0; i < files.Length; i++)
             {
-                Warn(id, $"Resources/{SoundFolder}{fileName} 加载失败");
+                if (string.IsNullOrEmpty(files[i])) continue;
 
-                return null;
+                AudioClip clip = Resources.Load<AudioClip>(SoundFolder + files[i]);
+
+                if (clip == null)
+                {
+                    Warn(id, $"Resources/{SoundFolder}{files[i]} 加载失败");
+
+                    continue;
+                }
+
+                loaded[count++] = clip;
             }
 
-            _cache[id] = clip;
+            if (count == 0) return null;
 
-            return clip;
+            if (count != loaded.Length) System.Array.Resize(ref loaded, count);
+
+            _clips[id] = loaded;
+
+            return loaded;
+        }
+
+        private AudioClip GetClip(AudioId id)
+        {
+            AudioClip[] clips = GetClips(id);
+
+            return clips != null ? clips[0] : null;
+        }
+
+        private AudioClip GetRandomClip(AudioId id)
+        {
+            AudioClip[] clips = GetClips(id);
+
+            if (clips == null) return null;
+
+            return clips.Length == 1 ? clips[0] : clips[Random.Range(0, clips.Length)];
         }
 
         private void Warn(AudioId id, string reason)

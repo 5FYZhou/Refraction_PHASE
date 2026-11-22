@@ -169,7 +169,7 @@ namespace Refraction.Presentation.Actor
                 Mathf.RoundToInt(1f / Time.fixedDeltaTime)
                 );
 
-            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, dir => _logic?.OnReboundReflected(dir));
+            _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, OnReboundReflected);
             _blackAttack?.SetSparkColors(attackSparkColor, reboundSparkColor);
 
             _logic = new(moveMotor, config, _buffer, ResolveLauncher(), this, _blackAttack);
@@ -394,7 +394,15 @@ namespace Refraction.Presentation.Actor
 
         public void OnHurt(int damage)
         {
+            if(_logic.CurHealth > 0)
+                _root?.Audio?.EnqueueSfx(AudioId.Hurt);
             _root?.Effects?.Play(EffectType.DamageFlash, view, config.flashTime);
+        }
+
+        private void OnReboundReflected(Vector2 dir)
+        {
+            _root?.Audio?.EnqueueSfx(AudioId.WeaponClash);
+            _logic?.OnReboundReflected(dir);
         }
 
         private void OnWorldPolarityChanged(WorldPolarityChanged evt)
@@ -423,6 +431,8 @@ namespace Refraction.Presentation.Actor
 
         private void HandleDeath()
         {
+            _root.Audio?.EnqueueSfx(AudioId.Death);
+
             // 先复活再决定回哪：跨关回档的新玩家要从上下文读血，这里不落满血就会带着 0 血重开
             _logic.Revive();
 
@@ -446,6 +456,7 @@ namespace Refraction.Presentation.Actor
 
             if (!_root.SaveCheckpoint(pivot)) return;
 
+            _root.Audio?.EnqueueSfx(AudioId.SaveBell);
             _logic.ResetHealth();
             _logic.Announce();
 
