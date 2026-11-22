@@ -3962,8 +3962,8 @@ PrefabInstance:
       value: ChargeDash
       objectReference: {fileID: 0}
     - target: {fileID: 8519648731632757814, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
-      propertyPath: EmissionModule.rateOverTime.scalar
-      value: 1000
+      propertyPath: InitialModule.startSize.maxCurve.m_Curve.Array.data[0].value
+      value: 0.49549866
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

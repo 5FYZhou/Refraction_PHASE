@@ -99,6 +99,8 @@ namespace Refraction.Presentation
 
             _inputProvider.Init();
             EventBus<RequestWorldReverse>.Subscribe(OnRequestWorldReverse);
+            EventBus<PlayerHealthChanged>.Subscribe(OnPlayerHealthChanged);
+            EventBus<PlayerPolarityChanged>.Subscribe(OnPlayerPolarityChanged);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
@@ -106,6 +108,8 @@ namespace Refraction.Presentation
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             EventBus<RequestWorldReverse>.Unsubscribe(OnRequestWorldReverse);
+            EventBus<PlayerHealthChanged>.Unsubscribe(OnPlayerHealthChanged);
+            EventBus<PlayerPolarityChanged>.Unsubscribe(OnPlayerPolarityChanged);
 
             DisposeServices();
 
@@ -136,6 +140,16 @@ namespace Refraction.Presentation
         {
             _scenectx.ReverseWorld();
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
+        }
+
+        private void OnPlayerHealthChanged(PlayerHealthChanged evt)
+        {
+            _scenectx.SetHealth(evt.cur, evt.max);
+        }
+
+        private void OnPlayerPolarityChanged(PlayerPolarityChanged evt)
+        {
+            _scenectx.SetPolarity(evt.cur, evt.max);
         }
 
         /// <summary>首关装配：玩家的接入走场景根注册表，这里不碰</summary>
@@ -251,6 +265,17 @@ namespace Refraction.Presentation
         public bool TryConsumeEntryPoint(out DoorEntry entry, out MovementStateTag enterTag, out int enterFace)
         {
             return _scenectx.TryConsumeEntry(out entry, out enterTag, out enterFace);
+        }
+
+        /// <summary>跨关血量：首关没有记录返回 false，玩家按满血出生</summary>
+        public bool TryGetPlayerHealth(out int health)
+        {
+            return _scenectx.TryGetHealth(out health);
+        }
+
+        public bool TryGetPlayerPolarity(out int polarity)
+        {
+            return _scenectx.TryGetPolarity(out polarity);
         }
 
         public bool SaveCheckpoint(Vector2 pivot)

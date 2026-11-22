@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Refraction.Logic.Level
 {
-    /// <summary>跨场景数据：世界极性、下一扇门与进门口、存档点、待复活点，由常驻的 GameRoot 持有，切场景不丢</summary>
+    /// <summary>跨场景数据：世界黑白、玩家血量与极性值、下一扇门与进门口、存档点、待复活点，由常驻的 GameRoot 持有，切场景不丢</summary>
     /// <remarks>门落点、进门口、待复活点都是取一次就清空——残留值会把之后的重载丢到错的位置</remarks>
     public sealed class SceneContext
     {
@@ -20,6 +20,12 @@ namespace Refraction.Logic.Level
 
         private Vector2 _respawnPoint;
         private bool _hasRespawn;
+
+        private int _health;
+        private bool _hasHealth;
+
+        private int _polarity;
+        private bool _hasPolarity;
 
         /// <summary>世界极性：跨关保留，新场景的 LevelManager 从这里接住</summary>
         public WorldPolarity World { get; private set; }
@@ -87,6 +93,32 @@ namespace Refraction.Logic.Level
             return _checkpoints.Save(levelId, pivot);
         }
 
+        /// <summary>跨关血量：受击、反转回满、复活都会覆盖它，上界钳到配表上限</summary>
+        public void SetHealth(int cur, int max)
+        {
+            _health = Mathf.Clamp(cur, 0, Mathf.Max(1, max));
+            _hasHealth = true;
+        }
+
+        public bool TryGetHealth(out int health)
+        {
+            health = _health;
+            return _hasHealth;
+        }
+
+        /// <summary>跨关极性：加值、反转清空、复活都会覆盖它，上界钳到配表上限</summary>
+        public void SetPolarity(int cur, int max)
+        {
+            _polarity = Mathf.Clamp(cur, 0, Mathf.Max(1, max));
+            _hasPolarity = true;
+        }
+
+        public bool TryGetPolarity(out int polarity)
+        {
+            polarity = _polarity;
+            return _hasPolarity;
+        }
+
         public bool TryGetCheckpoint(out Vector2 pivot, out int levelId)
         {
             return _checkpoints.TryGetRespawn(out pivot, out levelId);
@@ -122,6 +154,8 @@ namespace Refraction.Logic.Level
             _enterFace = 0;
             _hasEntry = false;
             _hasRespawn = false;
+            _hasHealth = false;
+            _hasPolarity = false;
         }
     }
 }

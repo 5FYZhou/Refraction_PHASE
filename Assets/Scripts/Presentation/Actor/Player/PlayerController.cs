@@ -170,6 +170,10 @@ namespace Refraction.Presentation.Actor
 
             _logic = new(moveMotor, config, _buffer, ResolveLauncher(), this, _blackAttack);
 
+            // 跨关血量与极性都要在这里恢复：GameRoot 紧接着会 Announce，晚一步界面就先闪一次默认值
+            if (_root.TryGetPlayerHealth(out int health)) _logic.SetHealth(health);
+            if (_root.TryGetPlayerPolarity(out int polarity)) _logic.SetPolarity(polarity);
+
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
@@ -413,16 +417,17 @@ namespace Refraction.Presentation.Actor
 
         private void HandleDeath()
         {
+            // 先复活再决定回哪：跨关回档的新玩家要从上下文读血，这里不落满血就会带着 0 血重开
+            _logic.Revive();
+
             if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
             {
-                _logic.Revive();
                 _logic.SpawnTo(checkpoint);
                 return;
             }
 
             if (_root.TryStartRespawnInCheckpointLevel()) return;
 
-            _logic.Revive();
             if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
         }
 

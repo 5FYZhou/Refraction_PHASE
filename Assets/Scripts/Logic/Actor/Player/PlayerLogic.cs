@@ -80,6 +80,8 @@ namespace Refraction.Logic.Actor
 
         public int MaxPolarity => _polarity.Max;
 
+        public void SetPolarity(int value) => _polarity.Set(value);
+
         public void OnHitLanded() => AddPolarity(_config.polarityPerHit);
 
         public void OnMeleeHitLanded()

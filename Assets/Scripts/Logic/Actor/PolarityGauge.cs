@@ -25,6 +25,9 @@ namespace Refraction.Logic.Actor
             else _value += amount;
         }
 
+        /// <remarks>跨关接住上一个值：配表把上限调小后进关不会带着超额极性</remarks>
+        public void Set(int value) => _value = Mathf.Clamp(value, 0, _max);
+
         public void Clear() => _value = 0;
     }
 }

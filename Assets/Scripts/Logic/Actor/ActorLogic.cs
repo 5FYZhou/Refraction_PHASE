@@ -57,6 +57,8 @@ namespace Refraction.Logic.Actor
         /// <summary>血量回满，不动无敌窗与受伤态</summary>
         public void ResetHealth() => _curHealth = MaxHealth;
 
+        public void SetHealth(int cur) => _curHealth = Mathf.Clamp(cur, 0, MaxHealth);
+
         public void FixedTick(LogicContext ctx)
         {
             _motor.BeginStep(ctx.GameTime.now, ctx.GameTime.deltaTime);
