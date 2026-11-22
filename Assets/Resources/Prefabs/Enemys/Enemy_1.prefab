@@ -1353,6 +1353,7 @@ MonoBehaviour:
   blackForm: 0
   bulletPrefab: {fileID: 6832848243399639401, guid: 0f6c9cd5a0012cd439faad8739e36c73, type: 3}
   bulletMuzzle: {x: 0.52, y: 0}
+  chargeInColor: {r: 1, g: 0, b: 0, a: 1}
   patrolOffset: {x: 1.18, y: 0}
   patrolSize: {x: 10.88, y: 1.59}
 --- !u!114 &-342813784211894207
@@ -1409,7 +1410,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8369626305273200315
 Transform:
   m_ObjectHideFlags: 0
