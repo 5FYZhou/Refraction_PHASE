@@ -72,6 +72,8 @@ namespace Refraction.Logic.Actor
 
         public PostureStateTag PostureTag => _postureGroup.Current;
 
+        public float CrouchProgress => _postureGroup.CrouchProgress;
+
         public AttackStateTag AttackTag => _attackGroup.Current;
 
         public int Polarity => _polarity.Value;

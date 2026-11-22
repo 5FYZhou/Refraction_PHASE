@@ -41,6 +41,14 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Transform spawnT;
 
+        [Tooltip("站立时的子弹发射点：相对玩家根节点的局部偏移，x 取正值、运行时按朝向镜像（x 分量会取绝对值再乘朝向）。")]
+        [SerializeField]
+        private Vector2 muzzleStand = new(0.6f, 0.2f);
+
+        [Tooltip("下蹲时的子弹发射点：同一套局部坐标。下蹲前摇期间它与 muzzleStand 之间按蹲姿进度线性过渡。")]
+        [SerializeField]
+        private Vector2 muzzleCrouch = new(0.6f, -0.15f);
+
         [Tooltip("黑攻击命中的火花颜色：直接覆盖粒子自带颜色。")]
         [SerializeField]
         private Color attackSparkColor = Color.white;
@@ -71,6 +79,7 @@ namespace Refraction.Presentation.Actor
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
         private IBulletLauncher _launcher;
+        private IBulletLauncher _muzzleLauncher;
         private BlackAttackView _blackAttack;
         private Collider2D _hurt;
         private int _hurtExclude;
@@ -152,7 +161,7 @@ namespace Refraction.Presentation.Actor
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, dir => _logic?.OnReboundReflected(dir));
             _blackAttack?.SetSparkColors(attackSparkColor, reboundSparkColor);
 
-            _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
+            _logic = new(moveMotor, config, _buffer, ResolveLauncher(), this, _blackAttack);
 
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
@@ -205,7 +214,61 @@ namespace Refraction.Presentation.Actor
         public void BindBulletLauncher(IBulletLauncher launcher)
         {
             _launcher = launcher;
-            _logic?.BindBulletLauncher(launcher);
+            _muzzleLauncher = null;
+            _logic?.BindBulletLauncher(ResolveLauncher());
+        }
+
+        private IBulletLauncher ResolveLauncher()
+        {
+            if (_launcher == null) return null;
+
+            return _muzzleLauncher ??= new MuzzleLauncher(this, _launcher);
+        }
+
+        private Vector2 MuzzlePosition()
+        {
+            float progress = _logic != null ? _logic.CrouchProgress : 0f;
+            Vector2 offset = Vector2.Lerp(muzzleStand, muzzleCrouch, progress);
+
+            return (Vector2)transform.position + Mirror(offset, CurrentFace);
+        }
+
+        private static Vector2 Mirror(Vector2 offset, int face) =>
+            new(Mathf.Abs(offset.x) * (face < 0 ? -1f : 1f), offset.y);
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            float sign = transform.lossyScale.x < 0f ? -1f : 1f;
+            Vector3 stand = transform.position + (Vector3)Mirror(muzzleStand, (int)sign);
+            Vector3 crouch = transform.position + (Vector3)Mirror(muzzleCrouch, (int)sign);
+
+            Gizmos.color = new Color(0.35f, 1f, 0.45f, 0.9f);
+            Gizmos.DrawWireSphere(stand, 0.12f);
+
+            Gizmos.color = new Color(1f, 0.55f, 0.25f, 0.9f);
+            Gizmos.DrawWireSphere(crouch, 0.12f);
+
+            Gizmos.color = new Color(1f, 1f, 1f, 0.3f);
+            Gizmos.DrawLine(stand, crouch);
+        }
+#endif
+
+        private sealed class MuzzleLauncher : IBulletLauncher
+        {
+            private readonly PlayerController _owner;
+            private readonly IBulletLauncher _inner;
+
+            public MuzzleLauncher(PlayerController owner, IBulletLauncher inner)
+            {
+                _owner = owner;
+                _inner = inner;
+            }
+
+            public void Launch(in BulletSpawn spawn) =>
+                _inner.Launch(new BulletSpawn(
+                    _owner.MuzzlePosition(), spawn.Direction, spawn.Speed, spawn.Damage,
+                    spawn.KnockbackSpeed, spawn.TransferSpeed));
         }
 
         public Transform View => view;
