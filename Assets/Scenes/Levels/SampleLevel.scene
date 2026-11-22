@@ -1815,6 +1815,18 @@ PrefabInstance:
       propertyPath: spawnT
       value: 
       objectReference: {fileID: 1984433627}
+    - target: {fileID: 4553412713207579908, guid: c971767fc8408e141af0d5a5646b1a58, type: 3}
+      propertyPath: attackSparkColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4553412713207579908, guid: c971767fc8408e141af0d5a5646b1a58, type: 3}
+      propertyPath: attackSparkColor.g
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4553412713207579908, guid: c971767fc8408e141af0d5a5646b1a58, type: 3}
+      propertyPath: attackSparkColor.r
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

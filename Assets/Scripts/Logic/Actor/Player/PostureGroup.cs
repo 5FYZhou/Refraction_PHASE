@@ -78,23 +78,6 @@ namespace Refraction.Logic.Actor
 
         public bool CanDash => !IsCrouching || _config.crouchAllowDash;
 
-        /// <summary>表现层该用的 View 缩放绝对值；与碰撞体高度共用同一份进度</summary>
-        public Vector2 ViewScale
-        {
-            get
-            {
-                float height = Current switch
-                {
-                    PostureStateTag.Crouch => _config.crouchHeightRatio,
-                    PostureStateTag.CrouchingTransition =>
-                        Mathf.Lerp(1f, _config.crouchHeightRatio, _transitionState.Progress),
-                    _ => 1f
-                };
-
-                return new Vector2(1f, height);
-            }
-        }
-
         private float StandHeight => _motor.BodyHeight;
 
         private float CrouchHeight => _motor.BodyHeight * _config.crouchHeightRatio;

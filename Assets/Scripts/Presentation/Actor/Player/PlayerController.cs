@@ -57,7 +57,6 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Color landColor = Color.white;
 
-        private Color _attackSparkColor = Color.white;
         private Color _moveDustColor = Color.white;
         private Color _landColor = Color.white;
 
@@ -83,11 +82,6 @@ namespace Refraction.Presentation.Actor
         private Transform view;
         private Transform bottom;
 
-        // View 的原始姿态与底边：缩放要以脚底为锚点，必须知道它站立时站在哪儿
-        private Vector3 _viewBasePos;
-        private Vector3 _viewBaseScale;
-        private float _viewBottomOffset;
-        private Vector2 _curViewScale;
         private bool _warnedNoView;
 
         private SpriteRenderer _viewRenderer;
@@ -156,7 +150,7 @@ namespace Refraction.Presentation.Actor
                 );
 
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, dir => _logic?.OnReboundReflected(dir));
-            _blackAttack?.SetSparkColors(_attackSparkColor, reboundSparkColor);
+            _blackAttack?.SetSparkColors(attackSparkColor, reboundSparkColor);
 
             _logic = new(moveMotor, config, _buffer, _launcher, this, _blackAttack);
 
@@ -337,7 +331,6 @@ namespace Refraction.Presentation.Actor
 
         private void ApplyParticleColors(bool invert)
         {
-            _attackSparkColor = Tint(attackSparkColor, invert);
             _moveDustColor = Tint(moveDustColor, invert);
             _landColor = Tint(landColor, invert);
         }
@@ -375,11 +368,6 @@ namespace Refraction.Presentation.Actor
             if (!_attached) return;
 
             _logic.Tick(new());
-            if (_curViewScale != _logic.CurViewScale)
-            {
-                _curViewScale = _logic.CurViewScale;
-                SetViewScale(_curViewScale);
-            }
 
             bool dust = _grounded && Mathf.Abs(_context.WorldInfo.FrameStartVelocity.x) >= DustMinSpeed;
             _root.Effects?.SetMoveDust(bottom, dust, _moveDustColor);
@@ -388,8 +376,8 @@ namespace Refraction.Presentation.Actor
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
 
-            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.MoveX, _logic.IsHurt,
-                _context.WorldInfo.FrameStartVelocity.y);
+            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.PostureTag, _logic.MoveX,
+                _logic.IsHurt, _context.WorldInfo.FrameStartVelocity.y);
         }
 
         private void ApplyBlinkVisual(float deltaTime)
@@ -458,31 +446,12 @@ namespace Refraction.Presentation.Actor
 
 
         #region View
-        /// <summary>应用逻辑层给的 View 缩放：枢轴在身体中心，只改 scale 脚会离地（蹲下抬起 0.65），所以同时下移 (1 − scale.y) × 脚底到枢轴的距离</summary>
-        public void SetViewScale(Vector2 scale)
-        {
-            if (view == null)
-            {
-                WarnNoView();
-                return;
-            }
-
-            view.localScale = new Vector3(
-                _viewBaseScale.x * scale.x,
-                _viewBaseScale.y * scale.y,
-                _viewBaseScale.z);
-
-            Vector3 pos = _viewBasePos;
-            pos.y = _viewBasePos.y + _viewBottomOffset * (1f - scale.y);
-            view.localPosition = pos;
-        }
-
         /// <summary>层级里约定好的两个名字：Player/View 与 View/Bottom（脚底空物体）；PlayerMotor 找的也是这两个名字，两边必须一致</summary>
         private const string ViewChildName = "View";
         private const string BottomChildName = "Bottom";
 
-        /// <summary>记下 View 站立时的本地姿态与脚底相对枢轴的高度，蹲下缩放围着脚底做</summary>
-        /// <remarks>Bottom 是 View 的直接子节点，必须 view.Find 而不是 transform.Find——后者只扫 Player 的一级子物体，找不到就以身体中心为锚点（脚浮起来）；基准取 localPosition / localScale，存世界坐标会在关卡根节点不在原点时把人整体甩出去</remarks>
+        /// <summary>按名字找 View 与脚底参考点：闪白要拿 View 上的 SpriteRenderer，扬尘与落地烟以脚底为发射位置</summary>
+        /// <remarks>Bottom 是 View 的直接子节点，必须 view.Find 而不是 transform.Find——后者只扫 Player 的一级子物体</remarks>
         private void CacheView()
         {
             _aniView = GetComponentInChildren<PlayerAniView>(true);
@@ -496,33 +465,8 @@ namespace Refraction.Presentation.Actor
 
             bottom = view.Find(BottomChildName);
 
-            _viewBasePos = view.localPosition;
-            _viewBaseScale = view.localScale;
-
             _viewRenderer = view.GetComponent<SpriteRenderer>();
             if (_viewRenderer != null) _viewBaseColor = _viewRenderer.color;
-
-            // y 压成 0 就再也换不回来了，宁可不做缩放
-            if (Mathf.Abs(_viewBaseScale.y) < 1e-4f)
-            {
-                _viewBottomOffset = 0f;
-                Debug.LogWarning($"[PlayerController] {ViewChildName} 的基础 y 缩放是 0，下蹲的身高变化不会生效。");
-                return;
-            }
-
-            if (bottom == null)
-            {
-                _viewBottomOffset = 0f;
-                Debug.LogWarning($"[PlayerController] 找不到 {ViewChildName}/{BottomChildName}，" +
-                                 "下蹲会以 View 枢轴（身体中心）为锚点缩放，脚会浮起来。");
-                return;
-            }
-
-            // 底边的本地 y 乘 View 基础缩放，就是脚底到枢轴的本地距离（正常为负）
-            _viewBottomOffset = bottom.localPosition.y * _viewBaseScale.y;
-
-            // 初始就当"已经应用过站姿"：第一帧逻辑层给的也是 1，不必重复写一次 Transform
-            _curViewScale = Vector2.one;
         }
 
         private void WarnNoView()
@@ -530,8 +474,7 @@ namespace Refraction.Presentation.Actor
             if (_warnedNoView) return;
 
             _warnedNoView = true;
-            Debug.LogWarning($"[PlayerController] 层级里找不到 {ViewChildName} 子物体：下蹲不会反映到画面上" +
-                             "（碰撞体与移速仍会正常生效）。");
+            Debug.LogWarning($"[PlayerController] 层级里找不到 {ViewChildName} 子物体：受击闪白、扬尘与落地烟都不会生效。");
         }
         #endregion
 

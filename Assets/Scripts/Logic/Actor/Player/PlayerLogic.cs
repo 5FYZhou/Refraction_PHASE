@@ -32,7 +32,6 @@ namespace Refraction.Logic.Actor
 
         private Vector2 _lastGroundedPos;
         private bool _hasGroundedPos;
-        private Vector2 _curScale = Vector2.one;
         private float _moveX;
 
         private DoorEntry _pendingEntry;
@@ -60,9 +59,6 @@ namespace Refraction.Logic.Actor
         public bool HasGroundedPos => _hasGroundedPos;
 
         public Vector2 LastGroundedPos => _lastGroundedPos;
-
-        /// PlayerController 每帧拿去应用
-        public Vector2 CurViewScale { get => _curScale; }
 
         /// 广播当前血量：装配时给初值，掉血与复活后再发
         public void Announce()
@@ -270,10 +266,7 @@ namespace Refraction.Logic.Actor
                 CameraShakeMode.Omni));
         }
 
-        protected override void OnTick(in LogicContext ctx)
-        {
-            _curScale = _postureGroup.ViewScale;
-        }
+        protected override void OnTick(in LogicContext ctx) { }
 
         public void SpawnTo(Vector2 pos)
         {

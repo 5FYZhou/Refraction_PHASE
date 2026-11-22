@@ -707,6 +707,8 @@ MonoBehaviour:
   spawnT: {fileID: 0}
   attackSparkColor: {r: 1, g: 1, b: 1, a: 1}
   reboundSparkColor: {r: 0, g: 0.627451, b: 1, a: 1}
+  moveDustColor: {r: 1, g: 1, b: 1, a: 1}
+  landColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &8012155498594749596
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -927,7 +929,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 0839f9e11629d474d8854131910e1524, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
