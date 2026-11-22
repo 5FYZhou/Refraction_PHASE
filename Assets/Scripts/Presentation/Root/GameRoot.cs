@@ -10,6 +10,7 @@ using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Audio;
 using Refraction.Presentation.Effects;
+using Refraction.Presentation.Input;
 using Refraction.Presentation.Level;
 using Refraction.Presentation.UI;
 using UnityEngine;
@@ -27,6 +28,7 @@ namespace Refraction.Presentation
         private readonly SceneContext _scenectx = new();
 
         private InputProvider _inputProvider;
+        private InputKeyMgr _inputKeys;
         private DoorReader _doorReader;
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
@@ -41,6 +43,8 @@ namespace Refraction.Presentation
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
+
+        public InputKeyMgr InputKeys => _inputKeys;
 
         public IDoorReader DoorReader => _doorReader;
 
@@ -102,6 +106,7 @@ namespace Refraction.Presentation
 
             _inputProvider?.Dispose();
             _inputProvider = null;
+            _inputKeys = null;
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
@@ -126,6 +131,9 @@ namespace Refraction.Presentation
         private void Assemble()
         {
             _inputProvider = new();
+
+            _inputKeys = new InputKeyMgr(_inputProvider);
+            _inputKeys.Load();
 
             _pauseService = new PauseService(new Adapters.GameTimer());
             RegisterService(_pauseService);

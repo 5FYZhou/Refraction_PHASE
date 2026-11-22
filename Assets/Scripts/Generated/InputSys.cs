@@ -147,6 +147,15 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Reverse"",
+                    ""type"": ""Button"",
+                    ""id"": ""31b94923-9413-4a9d-9348-b7bfe5c58965"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -422,6 +431,17 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Charge"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d276fbc2-246a-412a-bdfe-2e0618d8a971"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Reverse"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1322,6 +1342,7 @@ namespace Refraction.Generated
             m_Player_Attack = m_Player.FindAction("Attack", throwIfNotFound: true);
             m_Player_Crouch = m_Player.FindAction("Crouch", throwIfNotFound: true);
             m_Player_Charge = m_Player.FindAction("Charge", throwIfNotFound: true);
+            m_Player_Reverse = m_Player.FindAction("Reverse", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Cancel = m_UI.FindAction("Cancel", throwIfNotFound: true);
@@ -1424,6 +1445,7 @@ namespace Refraction.Generated
         private readonly InputAction m_Player_Attack;
         private readonly InputAction m_Player_Crouch;
         private readonly InputAction m_Player_Charge;
+        private readonly InputAction m_Player_Reverse;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1459,6 +1481,10 @@ namespace Refraction.Generated
             /// Provides access to the underlying input action "Player/Charge".
             /// </summary>
             public InputAction @Charge => m_Wrapper.m_Player_Charge;
+            /// <summary>
+            /// Provides access to the underlying input action "Player/Reverse".
+            /// </summary>
+            public InputAction @Reverse => m_Wrapper.m_Player_Reverse;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1503,6 +1529,9 @@ namespace Refraction.Generated
                 @Charge.started += instance.OnCharge;
                 @Charge.performed += instance.OnCharge;
                 @Charge.canceled += instance.OnCharge;
+                @Reverse.started += instance.OnReverse;
+                @Reverse.performed += instance.OnReverse;
+                @Reverse.canceled += instance.OnReverse;
             }
 
             /// <summary>
@@ -1532,6 +1561,9 @@ namespace Refraction.Generated
                 @Charge.started -= instance.OnCharge;
                 @Charge.performed -= instance.OnCharge;
                 @Charge.canceled -= instance.OnCharge;
+                @Reverse.started -= instance.OnReverse;
+                @Reverse.performed -= instance.OnReverse;
+                @Reverse.canceled -= instance.OnReverse;
             }
 
             /// <summary>
@@ -1842,6 +1874,13 @@ namespace Refraction.Generated
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnCharge(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Reverse" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnReverse(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

@@ -140,5 +140,15 @@ namespace Refraction.Presentation.UI
                 _anims[i].SetBool(LoseParam, i >= _alive);
             }
         }
+
+        protected override void OnButtonClicked(string name)
+        {
+            switch (name)
+            {
+                case "BtnSetting":
+                    GameRoot.Instance.UIMgr.ShowPanel<SettingsPanel>();
+                    return;
+            }
+        }
     }
 }
