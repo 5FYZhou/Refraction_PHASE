@@ -54,7 +54,11 @@ namespace Refraction.Presentation
                 child.gameObject.layer = GroundLayer;
                 EnsureCollider(child.gameObject);
 
-                if (child.TryGetComponent(out SpriteRenderer sprite)) _sprites.Add(sprite);
+                if (child.TryGetComponent(out SpriteRenderer sprite))
+                {
+                    sprite.sortingOrder = -5;
+                    _sprites.Add(sprite);
+                }
             }
         }
 
