@@ -186,7 +186,7 @@ namespace Refraction.Logic.Actor
 
             if (_attackGroup.HoldsMoveFall) _moveGroup.ChangeState(MovementStateTag.Fall, in tick);
 
-            _rebound.Tick(in tick, _black);
+            _rebound.Tick(in tick, _black, _postureGroup.IsCrouching);
 
             TickCharge(in tick, dashStarted);
 

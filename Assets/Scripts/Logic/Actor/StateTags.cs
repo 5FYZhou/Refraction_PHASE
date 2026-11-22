@@ -43,6 +43,7 @@ namespace Refraction.Logic.Actor
         WhiteAttackRecover,
         FlatAttack,
         BlackDashUp,
-        BlackDashDown
+        BlackDashDown,
+        BlackDashLevel
     }
 }

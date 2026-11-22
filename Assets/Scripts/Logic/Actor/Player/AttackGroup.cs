@@ -17,11 +17,14 @@ namespace Refraction.Logic.Actor
         private readonly Cooldown _flatCooldown = new();
         private readonly Cooldown _dashUpCooldown = new();
         private readonly Cooldown _dashDownCooldown = new();
+        private readonly Cooldown _dashLevelCooldown = new();
         private readonly WhiteAttackState _white;
         private readonly FlatAttackState _flat;
         private readonly BlackDashState _dashUp;
         private readonly BlackDashState _dashDown;
+        private readonly BlackDashState _dashLevel;
         private readonly ConditionGroup _conditions;
+        private readonly PostureGroup _posture;
         private bool _black;
         private int _airDash;
         private float _lastGroundedTime = float.NegativeInfinity;
@@ -32,6 +35,7 @@ namespace Refraction.Logic.Actor
         {
             _config = config;
             _conditions = conditions;
+            _posture = posture;
             _airDash = config.blackDashAirCount;
             _white = new WhiteAttackState(config, motor, launcher, posture);
 
@@ -43,10 +47,12 @@ namespace Refraction.Logic.Actor
             _flat = new FlatAttackState(config, blackView, motor, posture);
             _dashUp = new BlackDashState(config, motor, blackView, conditions, AttackStateTag.BlackDashUp, BlackAttackKind.Up);
             _dashDown = new BlackDashState(config, motor, blackView, conditions, AttackStateTag.BlackDashDown, BlackAttackKind.Down);
+            _dashLevel = new BlackDashState(config, motor, blackView, conditions, AttackStateTag.BlackDashLevel, BlackAttackKind.Level);
 
             RegisterState(_flat);
             RegisterState(_dashUp);
             RegisterState(_dashDown);
+            RegisterState(_dashLevel);
 
             blackView?.SetHitHandler(OnBlackHit);
 
@@ -64,7 +70,7 @@ namespace Refraction.Logic.Actor
         /// <summary>正在后摇：别的攻击可以顶掉它</summary>
         public bool Cancelable => Phased != null && Phased.Cancelable;
 
-        public bool HoldsMoveFall => Phased is BlackDashState && Phased.BlocksMovement;
+        public bool HoldsMoveFall => Phased is BlackDashState && Phased.Tag != AttackStateTag.BlackDashLevel && Phased.BlocksMovement;
 
         public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
 
@@ -128,6 +134,9 @@ namespace Refraction.Logic.Actor
                     _dashDown.NotifyHit();
                     RefundAirDash(_config.blackDashHitRefund);
                     break;
+                case AttackStateTag.BlackDashLevel:
+                    _dashLevel.NotifyHit();
+                    break;
             }
         }
 
@@ -165,11 +174,14 @@ namespace Refraction.Logic.Actor
                 return true;
             }
 
-            target = BlackTarget(ctx.InputSnapshot.Move.y, GroundLike(in ctx));
+            target = BlackTarget(ctx.InputSnapshot.Move.y, GroundLike(in ctx), Crouching);
 
             return target != EmptyTag && CooldownOf(target).CanUse(ctx.GameTime.now)
-                && (target == AttackStateTag.FlatAttack || GroundLike(in ctx) || _airDash > 0);
+                && (target == AttackStateTag.FlatAttack || target == AttackStateTag.BlackDashLevel
+                    || GroundLike(in ctx) || _airDash > 0);
         }
+
+        private bool Crouching => _posture != null && _posture.IsCrouching;
 
         private bool GroundLike(in LogicContext ctx)
         {
@@ -182,7 +194,7 @@ namespace Refraction.Logic.Actor
         {
             CooldownOf(target).MarkUsed(ctx.GameTime.now, CooldownTimeOf(target));
 
-            bool dashStart = target != AttackStateTag.FlatAttack;
+            bool dashStart = target == AttackStateTag.BlackDashUp || target == AttackStateTag.BlackDashDown;
 
             if (dashStart && !GroundLike(in ctx)) _airDash--;
             if (dashStart && !ctx.WorldInfo.Grounded) _coyoteUsed = true;
@@ -209,14 +221,16 @@ namespace Refraction.Logic.Actor
             return phased != null ? phased.Cancelable : Current == AttackStateTag.None;
         }
 
-        private AttackStateTag BlackTarget(float vertical, bool grounded)
+        private AttackStateTag BlackTarget(float vertical, bool groundLike, bool crouching)
         {
+            if (crouching) return AttackStateTag.BlackDashLevel;
+
             switch (AttackAim.Kind(vertical))
             {
                 case BlackAttackKind.Up:
                     return AttackStateTag.BlackDashUp;
                 case BlackAttackKind.Down:
-                    return grounded ? AttackStateTag.None : AttackStateTag.BlackDashDown;
+                    return groundLike ? AttackStateTag.None : AttackStateTag.BlackDashDown;
                 default:
                     return AttackStateTag.FlatAttack;
             }
@@ -232,6 +246,8 @@ namespace Refraction.Logic.Actor
                     return _dashUpCooldown;
                 case AttackStateTag.BlackDashDown:
                     return _dashDownCooldown;
+                case AttackStateTag.BlackDashLevel:
+                    return _dashLevelCooldown;
                 default:
                     return _cooldown;
             }
@@ -247,6 +263,8 @@ namespace Refraction.Logic.Actor
                     return _config.blackDashUpCooldown;
                 case AttackStateTag.BlackDashDown:
                     return _config.blackDashDownCooldown;
+                case AttackStateTag.BlackDashLevel:
+                    return _config.blackDashLevelCooldown;
                 default:
                     return _config.attackCooldown;
             }

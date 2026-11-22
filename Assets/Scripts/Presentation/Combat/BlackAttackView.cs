@@ -8,10 +8,10 @@ using UnityEngine;
 namespace Refraction.Presentation.Combat
 {
     /// <summary>黑形态近战表现端：按方向点亮判定盒，命中回报给玩家</summary>
-    /// <remarks>三只盒共用本对象做 IAttacker：没点亮的两只不产生触发，所以一次挥击每个目标只吃一次伤害，
+    /// <remarks>各方向的盒共用本对象做 IAttacker：没点亮的不产生触发，所以一次挥击每个目标只吃一次伤害，
     /// 不必再挂 IIntervalAttacker（那会让同一帧里的第二个目标被判成"间隔内"而漏掉）。
-    /// 三只盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
-    /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down 并且整段跟着玩家跑。
+    /// 这些盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
+    /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down / Level 并且整段跟着玩家跑。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
     /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹
     /// 命中回报有两条路，别混：ProduceDamage 里的 _onHit 取伤害那一刻就回调、不看扣血结果，只给逻辑用
@@ -24,10 +24,12 @@ namespace Refraction.Presentation.Combat
         private const string ReboundAheadPath = "BlackRebound/AheadCollider";
         private const string ReboundUpPath = "BlackRebound/UpCollider";
         private const string ReboundDownPath = "BlackRebound/DownCollider";
+        private const string ReboundLevelPath = "BlackRebound/LevelCollider";
 
         private const string DashAheadPath = "BlackDash/AheadCollider";
         private const string DashUpPath = "BlackDash/UpCollider";
         private const string DashDownPath = "BlackDash/DownCollider";
+        private const string DashLevelPath = "BlackDash/LevelCollider";
 
         private const string RangeName = "Range";
 
@@ -48,11 +50,13 @@ namespace Refraction.Presentation.Combat
         private readonly Collider2D _reboundAhead;
         private readonly Collider2D _reboundUp;
         private readonly Collider2D _reboundDown;
+        private readonly Collider2D _reboundLevel;
         private readonly Transform _reboundRoot;
         private readonly float _reboundBaseScaleX;
         private readonly AttackBox _dashAhead;
         private readonly AttackBox _dashUp;
         private readonly AttackBox _dashDown;
+        private readonly AttackBox _dashLevel;
         private readonly Anchor _dashAheadHome;
         private readonly HitLedger _dashHits = new();
         private readonly PlayerConfig _config;
@@ -89,6 +93,7 @@ namespace Refraction.Presentation.Combat
             _reboundAhead = FindRebound(root, ReboundAheadPath);
             _reboundUp = FindRebound(root, ReboundUpPath);
             _reboundDown = FindRebound(root, ReboundDownPath);
+            _reboundLevel = FindRebound(root, ReboundLevelPath);
 
             _reboundRoot = root != null ? root.Find(ReboundRootPath) : null;
             _reboundBaseScaleX = _reboundRoot != null ? _reboundRoot.localScale.x : 1f;
@@ -96,20 +101,24 @@ namespace Refraction.Presentation.Combat
             _dashAhead = Find(root, DashAheadPath);
             _dashUp = Find(root, DashUpPath);
             _dashDown = Find(root, DashDownPath);
+            _dashLevel = Find(root, DashLevelPath);
             _dashAheadHome = new(_dashAhead);
 
             BindDash(_dashAhead);
             BindDash(_dashUp);
             BindDash(_dashDown);
+            BindDash(_dashLevel);
 
             // 弹反盒同样按真实碰撞形状画，换成明黄；盒不点亮时子物体跟着隐藏，和攻击盒一致
             Paint(_reboundAhead, ReboundMaterial);
             Paint(_reboundUp, ReboundMaterial);
             Paint(_reboundDown, ReboundMaterial);
+            Paint(_reboundLevel, ReboundMaterial);
 
             Paint(_dashAhead);
             Paint(_dashUp);
             Paint(_dashDown);
+            Paint(_dashLevel);
 
             End();
             HideRebound();
@@ -157,6 +166,7 @@ namespace Refraction.Presentation.Combat
             Close(_dashAhead, _dashAheadHome);
             SetActive(_dashUp, false);
             SetActive(_dashDown, false);
+            SetActive(_dashLevel, false);
 
             ClearSweep();
             _dashMode = false;
@@ -183,6 +193,7 @@ namespace Refraction.Presentation.Combat
                 SetActive(_reboundAhead, false);
                 SetActive(_reboundUp, false);
                 SetActive(_reboundDown, false);
+                SetActive(_reboundLevel, false);
                 SetActive(zone, true);
                 _reboundActive = zone;
             }
@@ -197,6 +208,7 @@ namespace Refraction.Presentation.Combat
             SetActive(_reboundAhead, false);
             SetActive(_reboundUp, false);
             SetActive(_reboundDown, false);
+            SetActive(_reboundLevel, false);
         }
 
         /// <summary>根节点已经按朝向翻过 scale，指令那一侧与朝向相反时把 BlackRebound 再翻一次</summary>
@@ -220,6 +232,7 @@ namespace Refraction.Presentation.Combat
             {
                 case BlackAttackKind.Up: return _reboundUp;
                 case BlackAttackKind.Down: return _reboundDown;
+                case BlackAttackKind.Level: return _reboundLevel;
                 default: return _reboundAhead;
             }
         }
@@ -307,9 +320,14 @@ namespace Refraction.Presentation.Combat
             box.SetOnceLedger(_dashHits);
         }
 
-        /// <summary>突进只认斜上 / 斜下；Ahead 那只留给普攻，突进这一路不碰它</summary>
+        /// <summary>突进只认法线方向；Ahead 那只留给普攻，突进这一路不碰它</summary>
         private AttackBox DashBoxOf(BlackAttackKind kind)
-            => kind == BlackAttackKind.Down ? _dashDown : _dashUp;
+            => kind switch
+            {
+                BlackAttackKind.Down => _dashDown,
+                BlackAttackKind.Level => _dashLevel,
+                _ => _dashUp,
+            };
 
         /// <summary>绿色扫掠面：把起手形状沿突进位移平移一份，取两组点的凸包，位置固定在世界里</summary>
         private void PaintSweep(BlackAttackKind kind)
@@ -353,9 +371,12 @@ namespace Refraction.Presentation.Combat
         }
 
         private float TravelOf(BlackAttackKind kind)
-            => kind == BlackAttackKind.Down
-                ? _config.blackDashSpeedDown * _config.blackDashTimeDown
-                : _config.blackDashSpeedUp * _config.blackDashTimeUp;
+            => kind switch
+            {
+                BlackAttackKind.Down => _config.blackDashSpeedDown * _config.blackDashTimeDown,
+                BlackAttackKind.Level => _config.blackDashSpeedLevel * _config.blackDashTimeLevel,
+                _ => _config.blackDashSpeedUp * _config.blackDashTimeUp,
+            };
 
         private void ClearSweep()
         {

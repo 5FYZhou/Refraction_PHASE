@@ -30,7 +30,7 @@ namespace Refraction.Logic.Actor
 
         public int Side { get; private set; }
 
-        public void Tick(in LogicContext ctx, bool black)
+        public void Tick(in LogicContext ctx, bool black, bool crouching = false)
         {
             if (!ctx.InputSnapshot.AttackHeld)
             {
@@ -44,7 +44,7 @@ namespace Refraction.Logic.Actor
             if (IsOpen)
             {
                 if (!black || ctx.GameTime.now >= _closeAt) Close(in ctx);
-                else Show(in ctx);
+                else Show(in ctx, crouching);
 
                 return;
             }
@@ -59,12 +59,12 @@ namespace Refraction.Logic.Actor
             _spent = true;
             IsOpen = true;
 
-            Show(in ctx);
+            Show(in ctx, crouching);
         }
 
-        private void Show(in LogicContext ctx)
+        private void Show(in LogicContext ctx, bool crouching)
         {
-            Kind = KindOf(ctx.InputSnapshot.Move);
+            Kind = KindOf(ctx.InputSnapshot.Move, crouching);
             Side = SideOf(Kind, in ctx);
 
             _view?.ShowRebound(Kind, Side);
@@ -78,18 +78,18 @@ namespace Refraction.Logic.Actor
             _view?.HideRebound();
         }
 
-        private static BlackAttackKind KindOf(Vector2 move)
+        private static BlackAttackKind KindOf(Vector2 move, bool crouching)
         {
             if (move.y > 0.5f) return BlackAttackKind.Up;
             if (move.y < -0.5f) return BlackAttackKind.Down;
 
-            return BlackAttackKind.Ahead;
+            return crouching ? BlackAttackKind.Level : BlackAttackKind.Ahead;
         }
 
         /// <summary>斜向（W / S）的左右跟着当前速度走，不看朝向；静止才回落到朝向</summary>
         private static int SideOf(BlackAttackKind kind, in LogicContext ctx)
         {
-            if (kind == BlackAttackKind.Ahead)
+            if (kind == BlackAttackKind.Ahead || kind == BlackAttackKind.Level)
             {
                 if (ctx.InputSnapshot.Move.x < -0.5f) return -1;
                 if (ctx.InputSnapshot.Move.x > 0.5f) return 1;

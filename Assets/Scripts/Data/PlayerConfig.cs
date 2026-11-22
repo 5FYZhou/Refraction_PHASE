@@ -180,6 +180,10 @@ namespace Refraction.Data
         [Min(0f)]
         public float blackDashDownCooldown = 0.6f;
 
+        [Tooltip("水平突进的冷却（秒）：下蹲时按攻击键走的那一份，只占它自己。")]
+        [Min(0f)]
+        public float blackDashLevelCooldown = 0.6f;
+
         [Tooltip("斜上 45° 突进的初速度（单位/秒）：横向取朝向、竖直向上，两个分量各为 0.707 × 该值。")]
         [Min(0f)]
         public float blackDashSpeedUp = 18f;
@@ -195,6 +199,14 @@ namespace Refraction.Data
         [Tooltip("斜下 45° 突进的持续时间（秒）：同样在结束时进后摇，撞到地面后由移动减速停住。")]
         [Min(0f)]
         public float blackDashTimeDown = 0.2f;
+
+        [Tooltip("水平突进的初速度（单位/秒）：只取横向，沿当前朝向冲出去，竖直速度清零。")]
+        [Min(0f)]
+        public float blackDashSpeedLevel = 16f;
+
+        [Tooltip("水平突进的持续时间（秒）：这段时间重力关闭、速度不变，时间到进后摇；命中或撞墙当帧就进后摇。")]
+        [Min(0f)]
+        public float blackDashTimeLevel = 0.2f;
 
         [Tooltip("黑突进的伤害点数：突进盒（斜上/斜下）碰到怪物受击盒时按这个值扣血。\n一次突进里同一个受击盒只结算一次，穿过去也只扣一次；0 表示不造成伤害。")]
         [Min(0f)]

@@ -68,10 +68,13 @@ MonoBehaviour:
   blackDashRecoverTime: 0.055
   blackDashUpCooldown: 0.5
   blackDashDownCooldown: 0.5
+  blackDashLevelCooldown: 0.5
   blackDashSpeedUp: 19
   blackDashSpeedDown: 21
   blackDashTimeUp: 0.15
   blackDashTimeDown: 0.18
+  blackDashSpeedLevel: 16
+  blackDashTimeLevel: 0.18
   blackDashDamage: 18
   blackDashKnockback: 10
   blackDashBounceSpeed: 16.5

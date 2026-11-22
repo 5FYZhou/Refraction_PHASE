@@ -371,7 +371,8 @@ namespace Refraction.Presentation.Actor
         }
 
         private static bool IsBlackDash(AttackStateTag tag)
-            => tag == AttackStateTag.BlackDashUp || tag == AttackStateTag.BlackDashDown;
+            => tag == AttackStateTag.BlackDashUp || tag == AttackStateTag.BlackDashDown
+               || tag == AttackStateTag.BlackDashLevel;
 
         public void OnHurt(int damage)
         {
