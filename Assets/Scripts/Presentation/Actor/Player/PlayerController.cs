@@ -492,8 +492,12 @@ namespace Refraction.Presentation.Actor
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
             ApplyBlinkVisual(deltaTime);
 
-            if (_aniView != null) _aniView.PlayLocomotion(_logic.CurrentTag, _logic.PostureTag, _logic.MoveX,
-                _logic.IsHurt, _context.WorldInfo.FrameStartVelocity.y);
+            if (_aniView != null)
+            {
+                _aniView.PlayBlackAttack(_logic.AttackTag);
+                _aniView.PlayLocomotion(_logic.CurrentTag, _logic.PostureTag, _logic.MoveX,
+                    _logic.IsHurt, _context.WorldInfo.FrameStartVelocity.y);
+            }
         }
 
         private void ApplyBlinkVisual(float deltaTime)

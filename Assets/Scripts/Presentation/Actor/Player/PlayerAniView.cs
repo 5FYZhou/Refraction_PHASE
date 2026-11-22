@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>玩家状态到动画参数的翻译器，改规则只在这里落笔</summary>
-    /// <remarks>动画器认七个 bool（Move / Jump / Fall / Dash / Rising / Crouch / CrouchPrepare）与两个触发（Land / AirJump）；名字必须一致，改一边等于静默失效</remarks>
+    /// <remarks>动画器认十个 bool（Move / Jump / Fall / Dash / Rising / Crouch / CrouchPrepare / BlackUp / BlackDown / BlackForward）与两个触发（Land / AirJump）；名字必须一致，改一边等于静默失效</remarks>
     public sealed class PlayerAniView : MonoBehaviour
     {
         private const string MoveParam = "Move";
@@ -16,6 +16,9 @@ namespace Refraction.Presentation.Actor
         private const string CrouchPrepareParam = "CrouchPrepare";
         private const string LandParam = "Land";
         private const string AirJumpParam = "AirJump";
+        private const string BlackUpParam = "BlackUp";
+        private const string BlackDownParam = "BlackDown";
+        private const string BlackForwardParam = "BlackForward";
 
         private static readonly int MoveId = Animator.StringToHash(MoveParam);
         private static readonly int JumpId = Animator.StringToHash(JumpParam);
@@ -26,6 +29,9 @@ namespace Refraction.Presentation.Actor
         private static readonly int CrouchPrepareId = Animator.StringToHash(CrouchPrepareParam);
         private static readonly int LandId = Animator.StringToHash(LandParam);
         private static readonly int AirJumpId = Animator.StringToHash(AirJumpParam);
+        private static readonly int BlackUpId = Animator.StringToHash(BlackUpParam);
+        private static readonly int BlackDownId = Animator.StringToHash(BlackDownParam);
+        private static readonly int BlackForwardId = Animator.StringToHash(BlackForwardParam);
 
         [Tooltip("播放玩家动画的动画器。留空则从自身或子物体上找（预制体里挂在 View 上）。")]
         [SerializeField]
@@ -45,6 +51,13 @@ namespace Refraction.Presentation.Actor
         private bool _crouchApplied;
         private bool _crouchPrepare;
         private bool _crouchPrepareApplied;
+        private bool _blackUp;
+        private bool _blackUpApplied;
+        private bool _blackDown;
+        private bool _blackDownApplied;
+        private bool _blackForward;
+        private bool _blackForwardApplied;
+        private bool _blackBusy;
         private MovementStateTag _lastTag;
         private bool _wasAirborne;
         private bool _warnedNoAnimator;
@@ -87,8 +100,8 @@ namespace Refraction.Presentation.Actor
 
             _lastTag = tag;
 
-            // 冲刺不判落地：dash 没接 Land 的边，触发会挂到下次进 jump 误播
-            if (dash) return;
+            // 冲刺与黑攻击不判落地：这两类态没接 Land 出边，触发会挂到下次进 jump 误播
+            if (dash || _blackBusy) return;
 
             // 蹲姿同理：起身当帧不补落地，但离地记账照常推进
             if (crouched)
@@ -123,6 +136,27 @@ namespace Refraction.Presentation.Actor
         /// <summary>直接开关下蹲前摇：单帧 clip，靠参数保持姿势直到蹲满</summary>
         public void PlayCrouchPrepare(bool preparing) => Write(CrouchPrepareId, preparing, ref _crouchPrepare, ref _crouchPrepareApplied);
 
+        /// <summary>黑形态上/下突进与普攻：三个 bool 互斥，动画器从任意态切入</summary>
+        /// <remarks>蹲着平突（BlackDashLevel）暂无素材，保持蹲姿不参与</remarks>
+        public void PlayBlackAttack(AttackStateTag tag)
+        {
+            bool up = tag == AttackStateTag.BlackDashUp;
+            bool down = tag == AttackStateTag.BlackDashDown;
+            bool forward = tag == AttackStateTag.FlatAttack;
+
+            PlayBlackUp(up);
+            PlayBlackDown(down);
+            PlayBlackForward(forward);
+
+            _blackBusy = up || down || forward;
+        }
+
+        private void PlayBlackUp(bool up) => Write(BlackUpId, up, ref _blackUp, ref _blackUpApplied);
+
+        private void PlayBlackDown(bool down) => Write(BlackDownId, down, ref _blackDown, ref _blackDownApplied);
+
+        private void PlayBlackForward(bool forward) => Write(BlackForwardId, forward, ref _blackForward, ref _blackForwardApplied);
+
         private void Write(int id, bool value, ref bool cache, ref bool applied)
         {
             if (applied && cache == value) return;
@@ -155,7 +189,7 @@ namespace Refraction.Presentation.Actor
             if (_warnedNoAnimator) return;
 
             _warnedNoAnimator = true;
-            Debug.LogWarning($"[PlayerAniView] 找不到 Animator：不会播任何动作（需要参数 {MoveParam} / {JumpParam} / {FallParam} / {DashParam} / {RisingParam} / {CrouchParam} / {CrouchPrepareParam} / {LandParam} / {AirJumpParam}）。");
+            Debug.LogWarning($"[PlayerAniView] 找不到 Animator：不会播任何动作（需要参数 {MoveParam} / {JumpParam} / {FallParam} / {DashParam} / {RisingParam} / {CrouchParam} / {CrouchPrepareParam} / {BlackUpParam} / {BlackDownParam} / {BlackForwardParam} / {LandParam} / {AirJumpParam}）。");
         }
     }
 }

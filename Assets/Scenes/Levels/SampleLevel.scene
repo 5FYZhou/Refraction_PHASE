@@ -2558,7 +2558,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerController: {fileID: 2100959420}
   afterimagePrefab: {fileID: 4492115629568869392, guid: d5918cd7a3fd13740a89e823af491b90, type: 3}
-  bulletPrefab: {fileID: 0}
 --- !u!1 &1657284872
 GameObject:
   m_ObjectHideFlags: 0
@@ -3173,7 +3172,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8808637644688469431, guid: 574542c6cc61ae64db5b3a0293a93b09, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 2079227044310960855, guid: 574542c6cc61ae64db5b3a0293a93b09, type: 3}
