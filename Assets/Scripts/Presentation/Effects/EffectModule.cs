@@ -37,6 +37,7 @@ namespace Refraction.Presentation.Effects
         private const string MoveDustPath = "Effects/MoveDust";
         private const string SavePointSparkPath = "Effects/SavePointSpark";
         private const string ChargeInPath = "Effects/ChargeIn";
+        private const string ChargeDashPath = "Effects/ChargeDash";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
         private const int ReboundSparkPoolSize = 8;
@@ -93,6 +94,7 @@ namespace Refraction.Presentation.Effects
         private GameObject _saveSparkPrefab;
         private Pool<Spark> _saveSparkPool;
         private MoveDustState _moveDust;
+        private ChargeDashState _chargeDash;
         private GameObject _chargeInPrefab;
         private Pool<ChargeInState> _chargeInPool;
 
@@ -105,6 +107,7 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoLand;
         private bool _warnedNoSaveSpark;
         private bool _warnedNoMoveDust;
+        private bool _warnedNoChargeDash;
         private bool _warnedNoChargeIn;
 
         public void Init(Transform parent)
@@ -262,6 +265,20 @@ namespace Refraction.Presentation.Effects
             if (!EnsureMoveDust()) return;
 
             _moveDust.Play(follow, color);
+        }
+
+        /// <summary>充能冲刺：单实例常驻，位置每帧贴到传入点，发射窗口按传入时长，on = false 当帧停发射并隐藏</summary>
+        public void SetChargeDash(Vector2 position, Vector2 direction, bool on, float duration)
+        {
+            if (!on)
+            {
+                _chargeDash?.Stop();
+                return;
+            }
+
+            if (!EnsureChargeDash()) return;
+
+            _chargeDash.Play(position, direction, duration);
         }
 
         /// <summary>受击挤压：目标自己的 localScale 做 X 压 Y 拉，要传 View 这类纯视觉节点，根上有碰撞体不能缩</summary>
@@ -597,6 +614,31 @@ namespace Refraction.Presentation.Effects
             return true;
         }
 
+        private bool EnsureChargeDash()
+        {
+            if (_chargeDash != null) return true;
+
+            GameObject prefab = Resources.Load<GameObject>(ChargeDashPath);
+
+            if (prefab == null)
+            {
+                if (!_warnedNoChargeDash)
+                {
+                    _warnedNoChargeDash = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ChargeDashPath}，充能冲刺特效不播放。");
+                }
+
+                return false;
+            }
+
+            GameObject go = Object.Instantiate(prefab, _effectRoot);
+            go.SetActive(false);
+
+            _chargeDash = new ChargeDashState(go);
+
+            return true;
+        }
+
         private bool EnsureChargeInPool()
         {
             if (_chargeInPool != null) return true;
@@ -714,6 +756,7 @@ namespace Refraction.Presentation.Effects
             _liveSaveSparks.Clear();
 
             _moveDust = null;
+            _chargeDash = null;
 
             _sparkPool?.Dispose();
             _sparkPool = null;
@@ -1177,6 +1220,65 @@ namespace Refraction.Presentation.Effects
                 if (_follow == null) return;
 
                 _go.transform.position = _follow.position;
+            }
+        }
+
+        private sealed class ChargeDashState
+        {
+            private readonly GameObject _go;
+            private readonly ParticleSystem _ps;
+
+            private Vector2 _position;
+            private Vector2 _direction = Vector2.right;
+            private bool _playing;
+
+            public ChargeDashState(GameObject go)
+            {
+                _go = go;
+                _ps = go.GetComponent<ParticleSystem>();
+            }
+
+            public void Play(Vector2 position, Vector2 direction, float duration)
+            {
+                _position = position;
+
+                if (direction.sqrMagnitude > 1e-6f) _direction = direction.normalized;
+
+                if (_playing)
+                {
+                    Place();
+                    return;
+                }
+
+                _playing = true;
+                _go.SetActive(true);
+                Place();
+
+                if (_ps == null) return;
+
+                ParticleSystem.MainModule main = _ps.main;
+                main.duration = Mathf.Max(duration, ChargeInMinDuration);
+
+                _ps.Clear(true);
+                _ps.Play(true);
+            }
+
+            public void Stop()
+            {
+                if (!_playing) return;
+
+                _playing = false;
+
+                if (_ps != null) _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                if (_go != null) _go.SetActive(false);
+            }
+
+            private void Place()
+            {
+                Transform t = _go.transform;
+                t.position = new Vector3(_position.x, _position.y, 0f);
+                t.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(_direction.y, _direction.x) * Mathf.Rad2Deg);
             }
         }
 

@@ -438,14 +438,14 @@ namespace Refraction.Presentation.Actor
             _logic.ResetHealth();
             _logic.Announce();
 
-            Vector2 pos = SaveSparkPos();
+            Vector2 pos = ViewCenter();
             _root.Effects?.PlaySavePointSpark(pos, _savePointSparkColor);
             _root.Effects?.Play(EffectType.DamageFlash, view, config.saveFlashTime);
 
             _saveLockUntil = Time.fixedTime + config.saveInputLockTime;
         }
 
-        private Vector2 SaveSparkPos()
+        private Vector2 ViewCenter()
         {
             if (top == null || bottom == null) return view != null ? (Vector2)view.position : (Vector2)transform.position;
 
@@ -460,6 +460,11 @@ namespace Refraction.Presentation.Actor
 
             bool dust = _grounded && Mathf.Abs(_context.WorldInfo.FrameStartVelocity.x) >= DustMinSpeed;
             _root.Effects?.SetMoveDust(bottom, dust, _moveDustColor);
+
+            Vector2 dashDir = moveMotor.LedgerVelocity;
+            if (dashDir.sqrMagnitude < 1e-4f) dashDir = new(moveMotor.FaceSign, 0f);
+
+            _root.Effects?.SetChargeDash(ViewCenter(), dashDir, _logic.IsPhasing, config.dashInvulnerableTime);
             _root.Audio?.SetLoopSfx(AudioId.Move, dust);
 
             _chargeBar?.Tick(_logic.ChargeStage, _logic.ChargeProgress, deltaTime);
