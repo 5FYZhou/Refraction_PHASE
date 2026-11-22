@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:yousandi.cn,2023:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -82,10 +82,13 @@ MonoBehaviour:
   destruction: 1
   meleeHitStopTime: 0.06
   contactHitStopTime: 0.035
+  reboundHitStopTime: 0.03
   cameraShakeIntensity: 0.5
   cameraShakeDuration: 0.2
   worldShakeIntensity: 0.8
   worldShakeDuration: 0.3
+  reboundShakeIntensity: 1.2
+  reboundShakeDuration: 0.12
   maxPolarity: 180
   polarityPerHit: 20
   afterimageLinkPolarity: 15

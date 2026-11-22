@@ -705,8 +705,10 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: c054cdf82763e1b47b8350caed29d612, type: 2}
   moveMotor: {fileID: 8012155498594749596}
   spawnT: {fileID: 0}
-  attackSparkColor: {r: 1, g: 1, b: 1, a: 1}
-  reboundSparkColor: {r: 0, g: 0.627451, b: 1, a: 1}
+  attackSparkColor: {r: 0, g: 0, b: 0, a: 1}
+  reboundSparkColor: {r: 0, g: 0, b: 0, a: 1}
+  moveDustColor: {r: 1, g: 1, b: 1, a: 1}
+  landColor: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
 --- !u!114 &8012155498594749596
 MonoBehaviour:
   m_ObjectHideFlags: 0
