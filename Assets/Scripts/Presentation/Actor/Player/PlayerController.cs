@@ -49,6 +49,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 muzzleCrouch = new(0.6f, -0.15f);
 
+        [Tooltip("白攻击的子弹预制体：留空则退回 Resources/Prefabs/Bullet。弹反反打复用同一条池。")]
+        [SerializeField]
+        private GameObject bulletPrefab;
+
         [Tooltip("黑攻击命中的火花颜色：直接覆盖粒子自带颜色。")]
         [SerializeField]
         private Color attackSparkColor = Color.white;
@@ -285,6 +289,8 @@ namespace Refraction.Presentation.Actor
         public Transform View => view;
 
         public PlayerConfig Config => config;
+
+        public GameObject BulletPrefab => bulletPrefab;
 
         public IHitLanded HitSink => _logic;
 

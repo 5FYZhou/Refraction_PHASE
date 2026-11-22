@@ -286,6 +286,7 @@ namespace Refraction.Logic.Actor
             _motor.SpawnAt(pos, Vector2.zero);
 
             CancelCharge();
+            Conditions.BeginInvulnerable(_config.invulnerableTime);
         }
 
         public void BindAfterimageSpawner(IAfterimageSpawner spawner)

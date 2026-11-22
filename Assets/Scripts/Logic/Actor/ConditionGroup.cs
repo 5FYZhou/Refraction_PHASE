@@ -17,6 +17,7 @@ namespace Refraction.Logic.Actor
         private bool _hasPending;
         private float _now;
         private float _invulnerableUntil;
+        private float _invulnerablePending;
         private float _dashInvulnerableUntil;
         private float _phaseUntil;
 
@@ -51,6 +52,14 @@ namespace Refraction.Logic.Actor
             _dashInvulnerableUntil = _now + duration;
         }
 
+        public void BeginInvulnerable(float duration)
+        {
+            if (duration <= 0f) return;
+
+            _invulnerableUntil = _now + duration;
+            _invulnerablePending = duration;
+        }
+
         public bool IsPhasing => _now < _phaseUntil;
 
         public void BeginPhase(float duration)
@@ -78,6 +87,7 @@ namespace Refraction.Logic.Actor
         public void ClearHurt()
         {
             _invulnerableUntil = 0f;
+            _invulnerablePending = 0f;
             _dashInvulnerableUntil = 0f;
             _phaseUntil = 0f;
             _hasPending = false;
@@ -88,6 +98,14 @@ namespace Refraction.Logic.Actor
         public void Tick(in LogicContext ctx)
         {
             _now = ctx.GameTime.now;
+
+            // 重生这类不发生在 Tick 里的无敌要在拿到真实时间后再落窗，否则装配期 _now 还是 0
+            if (_invulnerablePending > 0f)
+            {
+                if (_invulnerableUntil <= _now) _invulnerableUntil = _now + _invulnerablePending;
+
+                _invulnerablePending = 0f;
+            }
 
             ApplyPending(in ctx);
 

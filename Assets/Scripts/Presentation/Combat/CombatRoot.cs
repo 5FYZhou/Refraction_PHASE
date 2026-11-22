@@ -19,9 +19,6 @@ namespace Refraction.Presentation.Combat
         [SerializeField]
         private GameObject afterimagePrefab;
 
-        [SerializeField]
-        private GameObject bulletPrefab;
-
         private AfterimageLogic _afterimages;
         private AfterimageField _field;
         private BulletLogic _bullets;
@@ -87,8 +84,8 @@ namespace Refraction.Presentation.Combat
 
             GameObject host = new(nameof(BulletField));
 
-            GameObject prefab = bulletPrefab != null
-                ? bulletPrefab
+            GameObject prefab = playerController.BulletPrefab != null
+                ? playerController.BulletPrefab
                 : Resources.Load<GameObject>(BulletPath);
 
             _bulletField = host.AddComponent<BulletField>();
