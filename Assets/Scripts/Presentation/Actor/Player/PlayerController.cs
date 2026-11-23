@@ -572,7 +572,7 @@ namespace Refraction.Presentation.Actor
         {
             Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
 
-            _logic.SpawnTo(pivot);
+            _logic.SpawnTo(pivot, invulnerable: false);
             _logic.BeginTransit(in entry, enterTag, enterFace);
         }
 

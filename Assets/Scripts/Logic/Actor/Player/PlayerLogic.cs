@@ -272,21 +272,22 @@ namespace Refraction.Logic.Actor
 
         protected override void OnTick(in LogicContext ctx) { }
 
-        public void SpawnTo(Vector2 pos)
+        public void SpawnTo(Vector2 pos, bool invulnerable = true)
         {
             _afterimages?.Clear();
-            Place(pos);
+            Place(pos, invulnerable);
         }
 
         // 掉虚空不算重生：人回来，残影留在原地
-        public void FallBackTo(Vector2 pos) => Place(pos);
+        public void FallBackTo(Vector2 pos) => Place(pos, true);
 
-        private void Place(Vector2 pos)
+        private void Place(Vector2 pos, bool invulnerable)
         {
             _motor.SpawnAt(pos, Vector2.zero);
 
             CancelCharge();
-            Conditions.BeginInvulnerable(_config.invulnerableTime);
+
+            if (invulnerable) Conditions.BeginInvulnerable(_config.invulnerableTime);
         }
 
         public void BindAfterimageSpawner(IAfterimageSpawner spawner)
