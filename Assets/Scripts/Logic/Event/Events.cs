@@ -25,6 +25,16 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public readonly struct RequestLoadScene
+    {
+        public readonly string sceneName;
+
+        public RequestLoadScene(string sceneName)
+        {
+            this.sceneName = sceneName;
+        }
+    }
+
     public readonly struct RequestPlayerPosChange
     {
         public readonly DoorEntry Entry;

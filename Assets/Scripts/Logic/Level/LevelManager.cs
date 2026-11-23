@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Events;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Refraction.Logic.Level
 {
@@ -137,16 +136,8 @@ namespace Refraction.Logic.Level
 
             _transfer.RequestLevelLoad(evt.nextDoor, evt.enterTag, evt.enterFace);
 
-            try
-            {
-                SceneManager.LoadScene(nextName);
-            }
-            catch (Exception ex)
-            {
-                // 加载失败要放开 _loading，否则这扇门以及后面所有门都会永久失效
-                _loading = false;
-                Debug.LogError($"[LevelManager] 加载场景 \"{nextName}\" 失败：{ex.Message}");
-            }
+            // 真正换场景交给常驻根：它要先拉遮罩，加载完还要等装配与玩家就位才淡出
+            EventBus<RequestLoadScene>.Publish(new RequestLoadScene(nextName));
         }
 
         /// <summary>同关内的门对门传送：用 RequestPlayerPosChange 发出去而不是直接抓玩家，逻辑层不认识玩家实体</summary>

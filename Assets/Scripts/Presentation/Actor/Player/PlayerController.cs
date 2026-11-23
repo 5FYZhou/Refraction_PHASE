@@ -438,11 +438,15 @@ namespace Refraction.Presentation.Actor
 
             if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
             {
+                _root.UIMgr.Transition?.Blink();
                 _logic.SpawnTo(checkpoint);
                 return;
             }
 
+            // 跨关回档走转场，遮罩由它自己拉；同关复活在这里闪一下
             if (_root.TryStartRespawnInCheckpointLevel()) return;
+
+            _root.UIMgr.Transition?.Blink();
 
             if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
         }

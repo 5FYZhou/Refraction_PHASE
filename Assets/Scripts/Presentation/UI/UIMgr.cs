@@ -63,6 +63,8 @@ namespace Refraction.Presentation.UI
 
         public bool IsReady { get; private set; }
 
+        public TransitionMask Transition { get; private set; }
+
 
         private bool _warnedDuplicateEventSystem;
 
@@ -76,6 +78,8 @@ namespace Refraction.Presentation.UI
         private const string UI_CANVAS_KEY = "ui/Canvas";
         private const string UI_EVENT_SYS_KEY = "ui/EventSystem";
         private const string UI_PANEL_PREFIX = "ui/Panel/";
+
+        private const int UI_SORTING_ORDER = 100;
 
         // 样式表与字资产只取一次：ResMgr.Load 每次都加引用计数
         private const string UI_STYLE_KEY = "Data/UIStyleConfig";
@@ -115,6 +119,7 @@ namespace Refraction.Presentation.UI
 
             uiCanvas = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_CANVAS_KEY)).GetComponent<Canvas>();
             uiCanvas.worldCamera = uiCamera;
+            uiCanvas.sortingOrder = UI_SORTING_ORDER;
             GameObject.DontDestroyOnLoad(uiCanvas.gameObject);
 
             bottomLayer = uiCanvas.transform.Find("Bottom");
@@ -126,6 +131,8 @@ namespace Refraction.Presentation.UI
 
             uiEventSystem = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_EVENT_SYS_KEY)).GetComponent<EventSystem>();
             GameObject.DontDestroyOnLoad(uiEventSystem.gameObject);
+
+            Transition = systemLayer != null ? TransitionMask.Create(systemLayer) : null;
 
             EventBus<GameStateChanged>.Subscribe(OnGameStateChanged);
 
@@ -155,6 +162,7 @@ namespace Refraction.Presentation.UI
             uiEventSystem = null;
             uiCanvas = null;
             uiCamera = null;
+            Transition = null;
             bottomLayer = null;
             middleLayer = null;
             topLayer = null;

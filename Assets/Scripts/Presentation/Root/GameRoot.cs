@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Refraction.Data;
 using Refraction.Foundation;
@@ -44,6 +45,10 @@ namespace Refraction.Presentation
 
         private bool _warnedNoLevel;
         private bool _levelPending;
+
+        private Coroutine _sceneLoad;
+        private bool _levelReady;
+        private bool _playerPlaced;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
@@ -100,6 +105,7 @@ namespace Refraction.Presentation
 
             _inputProvider.Init();
             EventBus<RequestWorldReverse>.Subscribe(OnRequestWorldReverse);
+            EventBus<RequestLoadScene>.Subscribe(OnRequestLoadScene);
             EventBus<PlayerHealthChanged>.Subscribe(OnPlayerHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPlayerPolarityChanged);
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -109,6 +115,7 @@ namespace Refraction.Presentation
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             EventBus<RequestWorldReverse>.Unsubscribe(OnRequestWorldReverse);
+            EventBus<RequestLoadScene>.Unsubscribe(OnRequestLoadScene);
             EventBus<PlayerHealthChanged>.Unsubscribe(OnPlayerHealthChanged);
             EventBus<PlayerPolarityChanged>.Unsubscribe(OnPlayerPolarityChanged);
 
@@ -141,6 +148,77 @@ namespace Refraction.Presentation
         {
             _scenectx.ReverseWorld();
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
+        }
+
+        private void OnRequestLoadScene(RequestLoadScene evt)
+        {
+            if (_sceneLoad != null)
+            {
+                Debug.LogError($"[GameRoot] 上一段转场还没结束，拒绝再次加载 \"{evt.sceneName}\"。");
+                return;
+            }
+
+            _sceneLoad = StartCoroutine(CoSceneTransition(evt.sceneName));
+        }
+
+        private IEnumerator CoSceneTransition(string sceneName)
+        {
+            _levelReady = false;
+            _playerPlaced = false;
+
+            _gameMgr?.BeginSceneTransition();
+
+            TransitionMask mask = _uiMgr != null ? _uiMgr.Transition : null;
+
+            if (mask != null) yield return mask.CoFadeIn();
+
+            yield return null;
+
+            bool loaded = true;
+
+            try
+            {
+                SceneManager.LoadScene(sceneName);
+            }
+            catch (Exception ex)
+            {
+                loaded = false;
+                Debug.LogError($"[GameRoot] 加载场景 \"{sceneName}\" 失败：{ex.Message}");
+            }
+
+            if (!loaded)
+            {
+                if (mask != null) yield return mask.CoFadeOut();
+
+                _gameMgr?.FinishSceneTransition(false);
+                _sceneLoad = null;
+                yield break;
+            }
+
+            float waited = 0f;
+            float timeout = mask != null ? mask.ReadyTimeout : 3f;
+
+            while (!(_levelReady && _playerPlaced) && waited < timeout)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (!(_levelReady && _playerPlaced))
+            {
+                Debug.LogWarning($"[GameRoot] 场景 \"{sceneName}\" 在 {timeout} 秒内没等到关卡装配 + 玩家就位，按超时淡出。");
+            }
+
+            if (mask != null) yield return mask.CoFadeOut();
+
+            _gameMgr?.FinishSceneTransition(true);
+
+            if (_gameMgr != null && _gameMgr.CurState == GameState.SceneTransition)
+            {
+                Debug.LogError($"[GameRoot] 场景 \"{sceneName}\" 没有声明入口状态（SceneFlowConfig），转场收不了尾。");
+            }
+
+            _sceneLoad = null;
         }
 
         private void OnPlayerHealthChanged(PlayerHealthChanged evt)
@@ -319,17 +397,9 @@ namespace Refraction.Presentation
 
             _scenectx.BeginRespawn(point);
 
-            try
-            {
-                SceneManager.LoadScene(sceneName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _scenectx.CancelRespawn();
-                Debug.LogError($"[GameRoot] 加载存档关 \"{sceneName}\" 失败：{ex.Message}");
-                return false;
-            }
+            EventBus<RequestLoadScene>.Publish(new RequestLoadScene(sceneName));
+
+            return true;
         }
 
         public bool TryConsumeRespawnPoint(out Vector2 pivot)
@@ -426,6 +496,8 @@ namespace Refraction.Presentation
             }
 
             _pendingReverse.Clear();
+
+            _levelReady = true;
         }
 
         /// <summary>把这一帧新注册的场景根按 Order 顺序 Attach 掉。Attach 里再注册的，下一帧继续。</summary>
@@ -457,6 +529,7 @@ namespace Refraction.Presentation
                 {
                     player.Announce();
                     player.AnnouncePolarity();
+                    _playerPlaced = true;
                 }
             }
         }
