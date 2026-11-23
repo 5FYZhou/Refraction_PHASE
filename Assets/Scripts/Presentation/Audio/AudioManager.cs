@@ -60,18 +60,22 @@ namespace Refraction.Presentation.Audio
         {
             public GameObject Go;
             public AudioSource Source;
+            public float Mix;
             public float Remaining;
 
             public void Reset()
             {
                 Go = null;
                 Source = null;
+                Mix = 0f;
                 Remaining = 0f;
             }
         }
 
         private readonly Transform _host;
         private readonly Dictionary<AudioId, string[]> _idToFiles = new();
+        private readonly Dictionary<AudioId, float> _idVolume = new();
+        private readonly Dictionary<AudioId, bool> _idRandomize = new();
         private readonly Dictionary<AudioId, AudioClip[]> _clips = new();
         private readonly HashSet<AudioId> _warned = new();
         private readonly Queue<Request> _requests = new();
@@ -90,6 +94,12 @@ namespace Refraction.Presentation.Audio
         private float _bgmFadeTime;
         private bool _initialized;
 
+        private bool _randomVariation;
+        private float _randomVolumeRange;
+        private float _randomPitchRange;
+        private float _bgmMix = 1f;
+        private AudioId _loopId;
+
         private FadeState _fadeState;
         private float _fadeElapsed;
         private float _fadeFrom;
@@ -97,6 +107,7 @@ namespace Refraction.Presentation.Audio
         private AudioClip _pendingClip;
         private bool _pendingResume;
         private bool _pendingLoop;
+        private float _pendingMix = 1f;
 
         private bool _bgmShouldPlay;
         private bool _bgmStopWarned;
@@ -173,6 +184,8 @@ namespace Refraction.Presentation.Audio
             {
                 if (_loopSource.isPlaying) _loopSource.Stop();
 
+                _loopId = AudioId.None;
+
                 return;
             }
 
@@ -182,8 +195,9 @@ namespace Refraction.Presentation.Audio
 
             if (_loopSource.clip == clip && _loopSource.isPlaying) return;
 
+            _loopId = id;
             _loopSource.clip = clip;
-            _loopSource.volume = _sfxVolume;
+            _loopSource.volume = Mathf.Clamp01(_sfxVolume * EntryVolume(id));
             _loopSource.Play();
         }
 
@@ -224,17 +238,17 @@ namespace Refraction.Presentation.Audio
 
             if (_bgmSource == null) return;
 
-            if (_fadeState == FadeState.FadingIn) _fadeTo = _bgmVolume;
-            else if (_fadeState == FadeState.None) _bgmSource.volume = _bgmVolume;
+            if (_fadeState == FadeState.FadingIn) _fadeTo = Mathf.Clamp01(_bgmVolume * _bgmMix);
+            else if (_fadeState == FadeState.None) _bgmSource.volume = Mathf.Clamp01(_bgmVolume * _bgmMix);
         }
 
         public void SetSfxVolume(float value)
         {
             _sfxVolume = Mathf.Clamp01(value);
 
-            for (int i = 0; i < _playing.Count; i++) _playing[i].Source.volume = _sfxVolume;
+            for (int i = 0; i < _playing.Count; i++) _playing[i].Source.volume = Mathf.Clamp01(_playing[i].Mix * _sfxVolume);
 
-            if (_loopSource != null) _loopSource.volume = _sfxVolume;
+            if (_loopSource != null) _loopSource.volume = Mathf.Clamp01(_sfxVolume * EntryVolume(_loopId));
         }
 
         public void Dispose()
@@ -259,15 +273,20 @@ namespace Refraction.Presentation.Audio
 
             _playing.Clear();
             _idToFiles.Clear();
+            _idVolume.Clear();
+            _idRandomize.Clear();
             _clips.Clear();
             _warned.Clear();
             _bgmProgress.Clear();
 
             _fadeState = FadeState.None;
             _bgmShouldPlay = false;
+            _bgmMix = 1f;
+            _loopId = AudioId.None;
             _pendingClip = null;
             _pendingResume = false;
             _pendingLoop = true;
+            _pendingMix = 1f;
             _fadeElapsed = 0f;
 
             // 池里的 voice 都是音频根的子物体，销毁根即一并回收
@@ -351,8 +370,11 @@ namespace Refraction.Presentation.Audio
             // 池复用前保险：确保上一轮残留已停
             if (source.isPlaying) source.Stop();
 
+            float mix = EntryVolume(id) * RandomVolume(id);
+
             source.clip = clip;
-            source.volume = _sfxVolume;
+            source.pitch = RandomPitch(id);
+            source.volume = Mathf.Clamp01(_sfxVolume * mix);
             source.priority = PrioritySfx;
             source.loop = false;
             source.Play();
@@ -360,6 +382,7 @@ namespace Refraction.Presentation.Audio
             Playing entry = _entryPool.Get();
             entry.Go = go;
             entry.Source = source;
+            entry.Mix = mix;
             entry.Remaining = clip.length;
 
             _playing.Add(entry);
@@ -370,6 +393,8 @@ namespace Refraction.Presentation.Audio
             AudioClip clip = GetClip(id);
 
             if (clip == null) return;
+
+            float mix = EntryVolume(id);
 
             // 非循环 BGM：每次都应从头播，续播参数无意义
             if (!isLoop) resumeLastTime = false;
@@ -382,8 +407,9 @@ namespace Refraction.Presentation.Audio
                 _pendingResume = false;
                 _pendingLoop = true;
 
+                _bgmMix = mix;
                 SwitchBgmClip(clip, resumeLastTime, isLoop);
-                _bgmSource.volume = _bgmVolume;
+                _bgmSource.volume = Mathf.Clamp01(_bgmVolume * _bgmMix);
 
                 return;
             }
@@ -393,6 +419,7 @@ namespace Refraction.Presentation.Audio
 
             if (_bgmSource.clip == null || !_bgmSource.isPlaying)
             {
+                _bgmMix = mix;
                 SwitchBgmClip(clip, resumeLastTime, isLoop);
                 StartFadeIn();
 
@@ -402,6 +429,7 @@ namespace Refraction.Presentation.Audio
             _pendingClip = clip;
             _pendingResume = resumeLastTime;
             _pendingLoop = isLoop;
+            _pendingMix = mix;
             StartFadeOut();
         }
 
@@ -441,7 +469,7 @@ namespace Refraction.Presentation.Audio
             _fadeState = FadeState.FadingIn;
             _fadeElapsed = 0f;
             _fadeFrom = _bgmSource.volume;
-            _fadeTo = _bgmVolume;
+            _fadeTo = Mathf.Clamp01(_bgmVolume * _bgmMix);
             _pendingClip = null;
             _pendingResume = false;
             _pendingLoop = true;
@@ -478,7 +506,7 @@ namespace Refraction.Presentation.Audio
         {
             if (_fadeState == FadeState.FadingIn)
             {
-                _bgmSource.volume = _bgmVolume;
+                _bgmSource.volume = Mathf.Clamp01(_bgmVolume * _bgmMix);
                 _fadeState = FadeState.None;
 
                 return;
@@ -502,6 +530,9 @@ namespace Refraction.Presentation.Audio
                 _pendingClip = null;
                 _pendingResume = false;
                 _pendingLoop = true;
+
+                _bgmMix = _pendingMix;
+                _pendingMix = 1f;
 
                 SwitchBgmClip(next, resume, loop);
                 StartFadeIn();
@@ -573,8 +604,13 @@ namespace Refraction.Presentation.Audio
             _bgmVolume = Mathf.Clamp01(config.bgmVolume);
             _sfxVolume = Mathf.Clamp01(config.sfxVolume);
             _bgmFadeTime = Mathf.Max(0f, config.bgmFadeDuration);
+            _randomVariation = config.randomVariation;
+            _randomVolumeRange = Mathf.Max(0f, config.randomVolumeRange);
+            _randomPitchRange = Mathf.Max(0f, config.randomPitchRange);
 
             _idToFiles.Clear();
+            _idVolume.Clear();
+            _idRandomize.Clear();
 
             AudioConfig.Entry[] entries = config.Entries;
 
@@ -597,7 +633,14 @@ namespace Refraction.Presentation.Audio
                 }
 
                 if (!_idToFiles.TryAdd(entry.id, entry.fileNames))
+                {
                     Debug.LogWarning($"[音频] AudioConfig 里 {entry.id} 重复配置，取第一条。");
+
+                    continue;
+                }
+
+                _idVolume[entry.id] = Mathf.Clamp01(entry.volume);
+                _idRandomize[entry.id] = entry.randomize;
             }
         }
 
@@ -664,6 +707,25 @@ namespace Refraction.Presentation.Audio
             if (!_warned.Add(id)) return;
 
             Debug.LogWarning($"[音频] {id}：{reason}。");
+        }
+
+        private float EntryVolume(AudioId id) => _idVolume.TryGetValue(id, out float volume) ? volume : 1f;
+
+        private bool Varied(AudioId id) => _randomVariation && _idRandomize.TryGetValue(id, out bool on) && on;
+
+        private float RandomVolume(AudioId id)
+        {
+            if (_randomVolumeRange <= 0f || !Varied(id)) return 1f;
+
+            return 1f + Random.Range(-_randomVolumeRange, _randomVolumeRange);
+        }
+
+        /// <summary>返回的是音高倍率而不是固定值：池里的源会带着上一发的 pitch，所以每次都写</summary>
+        private float RandomPitch(AudioId id)
+        {
+            if (_randomPitchRange <= 0f || !Varied(id)) return 1f;
+
+            return Mathf.Max(0.05f, 1f + Random.Range(-_randomPitchRange, _randomPitchRange));
         }
     }
 }
