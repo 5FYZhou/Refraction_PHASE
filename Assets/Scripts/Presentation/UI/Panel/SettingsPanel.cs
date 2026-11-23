@@ -68,12 +68,19 @@ namespace Refraction.Presentation.UI
             Refresh();
         }
 
+        /// 关闭面板就是退出暂停：Esc、点按钮、切场景都汇到这里
+        public override void HideMe()
+        {
+            if (root == null) return;
+
+            root.Game.Resume();
+        }
+
         protected override void OnButtonClicked(string name)
         {
             if (name == "BtnClose")
             {
                 root.UIMgr.HidePanel<SettingsPanel>();
-                root.Game.Resume();
                 return;
             }
 

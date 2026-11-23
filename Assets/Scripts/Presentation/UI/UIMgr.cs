@@ -127,6 +127,8 @@ namespace Refraction.Presentation.UI
             uiEventSystem = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_EVENT_SYS_KEY)).GetComponent<EventSystem>();
             GameObject.DontDestroyOnLoad(uiEventSystem.gameObject);
 
+            EventBus<GameStateChanged>.Subscribe(OnGameStateChanged);
+
             IsReady = true;
         }
 
@@ -136,6 +138,8 @@ namespace Refraction.Presentation.UI
             if (!IsReady) return;
 
             IsReady = false;
+
+            EventBus<GameStateChanged>.Unsubscribe(OnGameStateChanged);
 
             panelDic.Clear();
 
@@ -360,11 +364,13 @@ namespace Refraction.Presentation.UI
                 if (father == null)
                     father = middleLayer;
                 panelObj.transform.SetParent(father, false);
+                panelObj.transform.SetAsLastSibling();
 
                 panel.ShowMe();
                 panelInfo.callBack?.Invoke(panel);
                 // 回调只发一次
                 panelInfo.callBack = null;
+                openPanels[panel.Layer].Push(panelInfo);
 
             });
         }
@@ -499,6 +505,26 @@ namespace Refraction.Presentation.UI
             }
 
             if (!enabled) uiEventSystem.SetSelectedGameObject(null);
+        }
+
+        private void OnGameStateChanged(GameStateChanged evt)
+        {
+            SetUIInputEnabled(!evt.sceneBusy);
+
+            switch (evt.state)
+            {
+                case Logic.GameState.Paused:
+                    if (!IsPanelOpen<SettingsPanel>()) ShowPanel<SettingsPanel>();
+                    return;
+
+                case Logic.GameState.None:
+                    Debug.LogError("[UI] 收到 None 状态，面板集合未定义。");
+                    return;
+
+                default:
+                    HidePanel<SettingsPanel>();
+                    return;
+            }
         }
 
     }

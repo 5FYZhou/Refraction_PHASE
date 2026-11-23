@@ -480,9 +480,34 @@ namespace Refraction.Presentation
             AttachPending();
             AttachLevel();
             _inputProvider?.Tick();
+            TickUiInput();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             _effects?.Tick(Time.deltaTime);
             TickSceneRootsRender(Time.deltaTime);
+        }
+
+        private void TickUiInput()
+        {
+            if (_uiInputProvider == null) return;
+
+            _uiInputProvider.Sample();
+
+            if (!_uiInputProvider.ConsumeSnapshot().EscPressed) return;
+
+            if (_uiMgr != null && _uiMgr.TryCloseTopmostPanel()) return;
+
+            if (_gameMgr == null) return;
+
+            switch (_gameMgr.CurState)
+            {
+                case GameState.Running:
+                    _gameMgr.ChangeState(GameState.Paused);
+                    return;
+
+                case GameState.Paused:
+                    _gameMgr.Resume();
+                    return;
+            }
         }
 
         private void FixedUpdate()
