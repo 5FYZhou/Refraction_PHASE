@@ -37,7 +37,7 @@ namespace Refraction.Presentation.Actor
         private MoveMotor moveMotor;
 
 
-        [Tooltip("存档点锚点：场景里的 Spawn 对象，玩家站在它的碰撞体范围内按 W 存档。留空表示本关没有存档点。")]
+        [Tooltip("存档点锚点：场景里的 Spawn 对象。该存档点勾了自动存档就进范围即存，否则按 W 存。留空表示本关没有存档点。")]
         [SerializeField]
         private Transform spawnT;
 
@@ -87,6 +87,7 @@ namespace Refraction.Presentation.Actor
         private PlayerLogic _logic;
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
+        private bool _insideCheckpoint;
         private IBulletLauncher _launcher;
         private IBulletLauncher _muzzleLauncher;
         private BlackAttackView _blackAttack;
@@ -355,7 +356,14 @@ namespace Refraction.Presentation.Actor
                 }
             }
 
-            if (_context.InputSnapshot.SavePressed) TrySaveCheckpoint();
+            bool insideCheckpoint = _checkpoint != null && _checkpoint.HasPlayer;
+            bool enteredCheckpoint = insideCheckpoint && !_insideCheckpoint;
+            _insideCheckpoint = insideCheckpoint;
+
+            if (insideCheckpoint && (_context.InputSnapshot.SavePressed || (_checkpoint.AutoSave && enteredCheckpoint)))
+            {
+                TrySaveCheckpoint();
+            }
         }
 
         private void PlayLand()
