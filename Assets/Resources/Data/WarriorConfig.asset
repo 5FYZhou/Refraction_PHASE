@@ -19,6 +19,7 @@ MonoBehaviour:
   externalDeceleration: 40
   maxHealth: 100
   invulnerableTime: 0
+  flashTime: 0.12
   KnockbackDecay: 30
   enableGravity: 1
   maxFallSpeed: 20
@@ -26,7 +27,7 @@ MonoBehaviour:
   fallGravity: 70
   patrolSpeed: 2.2
   pounceApexHeight: 2.8
-  pounceSpeed: 11
+  pounceSpeed: 16
   pounceCooldown: 1.8
   windupTime: 0.2
   recoverTime: 0.35
