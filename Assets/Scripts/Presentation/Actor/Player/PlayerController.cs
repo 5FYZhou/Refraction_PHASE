@@ -446,6 +446,8 @@ namespace Refraction.Presentation.Actor
             // 先复活再决定回哪：跨关回档的新玩家要从上下文读血，这里不落满血就会带着 0 血重开
             _logic.Revive();
 
+            EventBus<RequestWorldReverse>.Publish(new(true));
+
             if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
             {
                 _root.UIMgr.Transition?.Blink();

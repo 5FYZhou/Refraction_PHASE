@@ -146,7 +146,12 @@ namespace Refraction.Presentation
 
         private void OnRequestWorldReverse(RequestWorldReverse evt)
         {
-            _scenectx.ReverseWorld();
+            if (evt.requestWhite)
+            {
+                _scenectx.SetWorld(WorldPolarity.White);
+            }
+            else
+                _scenectx.ReverseWorld();
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
         }
 

@@ -86,6 +86,11 @@ namespace Refraction.Logic.Events
 
     public readonly struct RequestWorldReverse
     {
+        public readonly bool requestWhite;
+        public RequestWorldReverse(bool requestWhite = false)
+        {
+            this.requestWhite = requestWhite;
+        }
     }
     #endregion
 
