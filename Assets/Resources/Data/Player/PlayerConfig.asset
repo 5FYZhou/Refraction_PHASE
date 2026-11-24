@@ -88,10 +88,10 @@ MonoBehaviour:
   reboundHitStopTime: 0.01
   cameraShakeIntensity: 0.5
   cameraShakeDuration: 0.2
-  worldShakeIntensity: 0.8
+  worldShakeIntensity: 0.6
   worldShakeDuration: 0.3
-  reboundShakeIntensity: 1.2
-  reboundShakeDuration: 0.12
+  reboundShakeIntensity: 0.1
+  reboundShakeDuration: 0.06
   maxPolarity: 180
   polarityPerHit: 20
   afterimageLinkPolarity: 15
