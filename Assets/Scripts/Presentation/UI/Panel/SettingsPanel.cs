@@ -1,3 +1,7 @@
+﻿using Refraction.Logic.Events;
+using Refraction.Logic.Level;
+using Unity.VisualScripting;
+
 namespace Refraction.Presentation.UI
 {
     /// <summary>暂停总设置面板：Esc 打开；开子面板时自身淡出但不关闭，子面板关掉再淡入，关它才解除暂停</summary>
@@ -16,6 +20,8 @@ namespace Refraction.Presentation.UI
         private const string AudioSetButtonName = "BtnAudioSet";
 
         private const string CloseButtonName = "BtnClose";
+
+        private const string ReturnMenuButtonName = "BtnReturnMenu";
 
         public override void HideMe()
         {
@@ -41,6 +47,9 @@ namespace Refraction.Presentation.UI
                     break;
                 case AudioSetButtonName:
                     OpenSub<AudioSetPanel>();
+                    break;
+                case ReturnMenuButtonName:
+                    EventBus<RequestLoadScene>.Publish(new(SceneName.Begin));
                     break;
             }
         }
