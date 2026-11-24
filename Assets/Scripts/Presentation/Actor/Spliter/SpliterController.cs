@@ -9,11 +9,9 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>Spliter 的组合根：装配、喂玩家位置、转发弹反、按阶段转 View；弹反范围取 ReboundCollider</summary>
-    public sealed class SpliterController : MonoBehaviour, ISceneRoot, IPhysicsTicked, IRenderTicked
+    /// <summary>Spliter 的组合根：装配、喂玩家位置、转发弹反、按阶段转 View、按出生快照复位</summary>
+    public sealed class SpliterController : MonoBehaviour, IManagedEnemy, IRenderTicked
     {
-        public int Order => SceneOrder.World;
-
         [Tooltip("敌人参数资产，运行时只读不改。")]
         [SerializeField]
         private SpliterConfig config;
@@ -78,9 +76,11 @@ namespace Refraction.Presentation.Actor
 
         private GameRoot _root;
         private bool _attached;
+        private bool _dead;
         private SpliterLogic _logic;
         private BulletLogic _bullets;
         private BulletField _bulletField;
+        private EnemySpawnState _spawn;
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
@@ -110,7 +110,17 @@ namespace Refraction.Presentation.Actor
             _chaseArea = EnemyArea.Snapshot(transform.position, chaseOffset, chaseSize);
 
             _root = GameRoot.Instance;
-            _root.RegisterSceneRoot(this);
+
+            Attach();
+
+            _spawn = new EnemySpawnState(
+                EnemyKind.Spliter,
+                transform.position,
+                moveMotor.FaceSign,
+                blackForm,
+                config.maxHealth);
+
+            EnemyMgr.Join(this);
         }
 
         private void OnDestroy()
@@ -120,10 +130,14 @@ namespace Refraction.Presentation.Actor
 
             if (_bulletField != null) Destroy(_bulletField.gameObject);
 
-            if (_root != null) _root.UnregisterSceneRoot(this);
+            EnemyMgr.Leave(this);
         }
 
-        public void Attach()
+        public EnemySpawnState SpawnState => _spawn;
+
+        public bool IsDead => _dead;
+
+        private void Attach()
         {
             if (_attached) return;
 
@@ -147,9 +161,9 @@ namespace Refraction.Presentation.Actor
             _attached = true;
         }
 
-        public void FixedTick(float deltaTime)
+        public void ManagedTick(float deltaTime)
         {
-            if (!_attached) return;
+            if (!_attached || _dead) return;
 
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
@@ -164,13 +178,13 @@ namespace Refraction.Presentation.Actor
             _reboundFlash?.Tick(deltaTime);
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
 
-            if (!_logic.IsAlive) Destroy(gameObject);
+            if (!_logic.IsAlive) _dead = true;
         }
 
         /// <summary>渲染帧转 z 轴：白前摇实时跟人、锁定后停住、其余回初始角；放物理帧里会被 50Hz 卡成跳格</summary>
         public void RenderTick(float deltaTime)
         {
-            if (!_attached || viewRoot == null) return;
+            if (!_attached || _dead || viewRoot == null) return;
 
             float target = ResolveViewAngle();
 
@@ -187,7 +201,7 @@ namespace Refraction.Presentation.Actor
         /// <summary>弹反入口：只认玩家阵营的飞行子弹；形态、冷却与当前阶段都归逻辑层判</summary>
         public void OnReboundEnter(Collider2D other)
         {
-            if (!_attached || other == null || _bullets == null) return;
+            if (!_attached || _dead || other == null || _bullets == null) return;
 
             Bullet bullet = other.GetComponentInParent<Bullet>();
             if (bullet == null || !bullet.PlayerOwned) return;
@@ -210,6 +224,49 @@ namespace Refraction.Presentation.Actor
             _reboundFlash?.Play();
 
             if (reflectDir.sqrMagnitude > DirEps) _logic.FireParallel(reboundAt, reflectDir);
+        }
+
+        public void Recycle()
+        {
+            _bullets?.ClearAll();
+            gameObject.SetActive(false);
+        }
+
+        public void ResetToSpawn()
+        {
+            if (!_attached) return;
+
+            gameObject.SetActive(false);
+            _dead = false;
+
+            _logic?.Dispose();
+            _logic = new SpliterLogic(moveMotor, config, _hurtFlash, _patrolArea, _chaseArea, SpawnState.InitialBlack, true, bulletMuzzle);
+            _logic.SetHealth(SpawnState.InitialHealth);
+
+            HitBoxBinder.Bind(transform, _logic, _logic);
+
+            if (_bullets != null)
+            {
+                _bullets.ClearAll();
+                _logic.BindLauncher(_bullets);
+            }
+
+            _sight.Reset();
+
+            moveMotor.FaceTowards(new Vector2(SpawnState.FaceSign, 0f));
+            moveMotor.SpawnAt(SpawnState.Position, Vector2.zero);
+
+            _tintBlack = _logic.Black;
+            _tint.Apply(_tintBlack);
+
+            _viewAngle = _baseViewAngle;
+            _lockedViewAngle = _baseViewAngle;
+            _aimLocked = false;
+
+            if (viewRoot != null) viewRoot.localRotation = Quaternion.Euler(0f, 0f, _baseViewAngle);
+
+            // 重新入世：探测器对当前重叠再发一次 Enter，复位清掉的视线才补得回来
+            gameObject.SetActive(true);
         }
 
         private float ResolveViewAngle()

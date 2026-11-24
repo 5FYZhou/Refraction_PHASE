@@ -12,6 +12,7 @@ using Refraction.Logic.Level;
 using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Audio;
+using Refraction.Presentation.Combat;
 using Refraction.Presentation.Effects;
 using Refraction.Presentation.Input;
 using Refraction.Presentation.Level;
@@ -73,6 +74,8 @@ namespace Refraction.Presentation
         public AudioManager Audio => _audio;
 
         public GameManager Game => _gameMgr;
+
+        public CombatRoot Combat { get; private set; }
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -140,6 +143,8 @@ namespace Refraction.Presentation
             _levelMgr?.Dispose();
             _levelMgr = null;
             _levelPending = false;
+
+            Combat = null;
 
             _effects?.Destroy();
         }
@@ -276,6 +281,13 @@ namespace Refraction.Presentation
 
             _services.Add(service);
             service.Init();
+        }
+
+        public void BindCombatRoot(CombatRoot combat) => Combat = combat;
+
+        public void UnbindCombatRoot(CombatRoot combat)
+        {
+            if (Combat == combat) Combat = null;
         }
 
         private void TickServices(float deltaTime, float unscaledDeltaTime)

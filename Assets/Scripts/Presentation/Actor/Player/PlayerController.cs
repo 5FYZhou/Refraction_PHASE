@@ -452,6 +452,7 @@ namespace Refraction.Presentation.Actor
             {
                 _root.UIMgr.Transition?.Blink();
                 _logic.SpawnTo(checkpoint);
+                EventBus<PlayerRespawned>.Publish(default);
                 return;
             }
 
@@ -461,6 +462,8 @@ namespace Refraction.Presentation.Actor
             _root.UIMgr.Transition?.Blink();
 
             if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+
+            EventBus<PlayerRespawned>.Publish(default);
         }
 
         private void TrySaveCheckpoint()
@@ -481,6 +484,8 @@ namespace Refraction.Presentation.Actor
             _root.Effects?.Play(EffectType.DamageFlash, view, config.saveFlashTime);
 
             _saveLockUntil = Time.fixedTime + config.saveInputLockTime;
+
+            EventBus<CheckpointActivated>.Publish(default);
         }
 
         private Vector2 ViewCenter()

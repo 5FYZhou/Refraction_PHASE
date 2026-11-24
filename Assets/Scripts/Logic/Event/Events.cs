@@ -146,6 +146,14 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public readonly struct CheckpointActivated
+    {
+    }
+
+    public readonly struct PlayerRespawned
+    {
+    }
+
     public readonly struct AfterimageLinkHit
     {
         public readonly Vector2 Pos;

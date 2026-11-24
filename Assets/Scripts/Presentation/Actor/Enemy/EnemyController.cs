@@ -9,11 +9,9 @@ using UnityEngine;
 
 namespace Refraction.Presentation.Actor
 {
-    /// <summary>敌人组合根：只做装配与转发</summary>
-    public sealed class EnemyController : MonoBehaviour, ISceneRoot, IPhysicsTicked
+    /// <summary>敌人组合根：装配、采样、执行、复位；登记与全局刷新交给 EnemyMgr</summary>
+    public sealed class EnemyController : MonoBehaviour, IManagedEnemy
     {
-        public int Order => SceneOrder.World;
-
         [Tooltip("敌人参数资产。巡逻、索敌与接触伤害的数值都在这里，运行时只读不改。")]
         [SerializeField]
         private EnemyConfig config;
@@ -52,9 +50,11 @@ namespace Refraction.Presentation.Actor
 
         private GameRoot _root;
         private bool _attached;
+        private bool _dead;
         private EnemyLogic _logic;
         private BulletLogic _bullets;
         private BulletField _bulletField;
+        private EnemySpawnState _spawn;
 
         private EnemyArea _patrolArea;
 
@@ -75,7 +75,17 @@ namespace Refraction.Presentation.Actor
             _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
 
             _root = GameRoot.Instance;
-            _root.RegisterSceneRoot(this);
+
+            Attach();
+
+            _spawn = new EnemySpawnState(
+                EnemyKind.Ground,
+                transform.position,
+                moveMotor.FaceSign,
+                blackForm,
+                config.maxHealth);
+
+            EnemyMgr.Join(this);
         }
 
         private void OnDestroy()
@@ -84,10 +94,20 @@ namespace Refraction.Presentation.Actor
 
             if (_bulletField != null) Destroy(_bulletField.gameObject);
 
-            if (_root != null) _root.UnregisterSceneRoot(this);
+            EnemyMgr.Leave(this);
         }
 
-        public void Attach()
+        public EnemySpawnState SpawnState => _spawn;
+
+        public bool IsDead => _dead;
+
+        public bool AIEnabled => OpenAI;
+
+        public bool HasTarget => _sight.HasTarget;
+
+        public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
+
+        private void Attach()
         {
             if (_attached) return;
 
@@ -109,15 +129,9 @@ namespace Refraction.Presentation.Actor
             _attached = true;
         }
 
-        public bool AIEnabled => OpenAI;
-
-        public bool HasTarget => _sight.HasTarget;
-
-        public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
-
-        public void FixedTick(float deltaTime)
+        public void ManagedTick(float deltaTime)
         {
-            if (!_attached) return;
+            if (!_attached || _dead) return;
 
             // 世界信息由 EnemyMotor 探测，本层只组装 Context
             WorldInfo worldInfo = moveMotor.SampleWorld();
@@ -129,8 +143,44 @@ namespace Refraction.Presentation.Actor
 
             TickTint();
 
-            // 血被打空：这具身体没有死亡演出，直接消失（销毁排在帧末，本帧后续逻辑不受影响）
-            if (!_logic.IsAlive) Destroy(gameObject);
+            if (!_logic.IsAlive) _dead = true;
+        }
+
+        public void Recycle()
+        {
+            _bullets?.ClearAll();
+            gameObject.SetActive(false);
+        }
+
+        public void ResetToSpawn()
+        {
+            if (!_attached) return;
+
+            gameObject.SetActive(false);
+            _dead = false;
+
+            _logic?.Dispose();
+            _logic = new EnemyLogic(moveMotor, config, _hurtFlash, OpenAI, bulletMuzzle, SpawnState.InitialBlack);
+            _logic.SetHealth(SpawnState.InitialHealth);
+
+            HitBoxBinder.Bind(transform, _logic, _logic);
+
+            if (_bullets != null)
+            {
+                _bullets.ClearAll();
+                _logic.BindLauncher(_bullets);
+            }
+
+            _sight.Reset();
+
+            moveMotor.FaceTowards(new Vector2(SpawnState.FaceSign, 0f));
+            moveMotor.SpawnAt(SpawnState.Position, Vector2.zero);
+
+            _tintBlack = _logic.Black;
+            _tint.Apply(_tintBlack);
+
+            // 重新入世：探测器对当前重叠再发一次 Enter，复位清掉的视线才补得回来
+            gameObject.SetActive(true);
         }
 
         private void TickTint()
