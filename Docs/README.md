@@ -53,7 +53,7 @@
 ### 每一条怎么写
 
 ```text
-- 黑攻击 / 弹反 / 扫掠范围的显示开关与颜色 — `Assets/Resources/Data/BlackAttackVisualConfig.asset`
+- 黑攻击 / 弹反 / 扫掠范围的显示开关与颜色 — `Assets/Resources/Data/Player/BlackAttackVisualConfig.asset`
 - 站立 / 下蹲开火点（Muzzle Stand / Muzzle Crouch） — `Assets/Resources/Prefabs/Player.prefab` ▸ 根节点 ▸ PlayerController
 ```
 

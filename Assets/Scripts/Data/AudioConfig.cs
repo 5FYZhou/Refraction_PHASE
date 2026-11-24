@@ -1,4 +1,5 @@
 using System;
+using Refraction.Foundation;
 using UnityEngine;
 
 namespace Refraction.Data
@@ -67,12 +68,10 @@ namespace Refraction.Data
     }
 
     /// <summary>音频配置：全局音量与抖动参数在前，枚举到文件名的配对表在后</summary>
-    /// <remarks>资产放 Resources/Data/AudioConfig.asset，缺则退回脚本默认表；文件名不带扩展名、相对 Resources/Sound；配多条时一次性音效随机取，循环音与 BGM 取第一条。</remarks>
+    /// <remarks>资产放 Resources/Data/Settings/AudioConfig.asset，缺则退回脚本默认表；文件名不带扩展名、相对 Resources/Sound；配多条时一次性音效随机取，循环音与 BGM 取第一条。</remarks>
     [CreateAssetMenu(fileName = "AudioConfig", menuName = "Refraction/Settings/Audio")]
     public sealed class AudioConfig : ScriptableObject
     {
-        private const string ResourcePath = "Data/AudioConfig";
-
         private static AudioConfig _default;
 
         [Serializable]
@@ -127,13 +126,13 @@ namespace Refraction.Data
             {
                 if (_default != null) return _default;
 
-                _default = Resources.Load<AudioConfig>(ResourcePath);
+                _default = Resources.Load<AudioConfig>(ResPath.AudioConfig);
 
                 if (_default == null)
                 {
                     _default = CreateInstance<AudioConfig>();
                     _default.hideFlags = HideFlags.HideAndDontSave;
-                    Debug.LogWarning($"[音频] 缺 Resources/{ResourcePath}.asset：临时用脚本默认表，资产里改不到。");
+                    Debug.LogWarning($"[音频] 缺 Resources/{ResPath.AudioConfig}.asset：临时用脚本默认表，资产里改不到。");
                 }
 
                 return _default;

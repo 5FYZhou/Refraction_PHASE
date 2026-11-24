@@ -30,14 +30,6 @@ namespace Refraction.Presentation.Effects
         private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
         private static readonly int OpenInvertId = Shader.PropertyToID("_OpenInvert");
 
-        private const string HitSparkPath = "Effects/HitSpark";
-        private const string AttackSparkPath = "Effects/AttackSpark";
-        private const string ReboundSparkPath = "Effects/ReboundSpark";
-        private const string LandPath = "Effects/Land";
-        private const string MoveDustPath = "Effects/MoveDust";
-        private const string SavePointSparkPath = "Effects/SavePointSpark";
-        private const string ChargeInPath = "Effects/ChargeIn";
-        private const string ChargeDashPath = "Effects/ChargeDash";
         private const int HitSparkPoolSize = 16;
         private const int AttackSparkPoolSize = 8;
         private const int ReboundSparkPoolSize = 8;
@@ -398,14 +390,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_sparkPool != null) return true;
 
-            _sparkPrefab = Resources.Load<GameObject>(HitSparkPath);
+            _sparkPrefab = Resources.Load<GameObject>(ResPath.HitSpark);
 
             if (_sparkPrefab == null)
             {
                 if (!_warnedNoSpark)
                 {
                     _warnedNoSpark = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{HitSparkPath}，命中火花不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.HitSpark}，命中火花不播放。");
                 }
 
                 return false;
@@ -437,14 +429,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_attackSparkPool != null) return true;
 
-            _attackSparkPrefab = Resources.Load<GameObject>(AttackSparkPath);
+            _attackSparkPrefab = Resources.Load<GameObject>(ResPath.AttackSpark);
 
             if (_attackSparkPrefab == null)
             {
                 if (!_warnedNoAttackSpark)
                 {
                     _warnedNoAttackSpark = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{AttackSparkPath}，攻击火花不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.AttackSpark}，攻击火花不播放。");
                 }
 
                 return false;
@@ -476,14 +468,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_reboundSparkPool != null) return true;
 
-            _reboundSparkPrefab = Resources.Load<GameObject>(ReboundSparkPath);
+            _reboundSparkPrefab = Resources.Load<GameObject>(ResPath.ReboundSpark);
 
             if (_reboundSparkPrefab == null)
             {
                 if (!_warnedNoReboundSpark)
                 {
                     _warnedNoReboundSpark = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ReboundSparkPath}，弹反火花不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.ReboundSpark}，弹反火花不播放。");
                 }
 
                 return false;
@@ -515,14 +507,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_landPool != null) return true;
 
-            _landPrefab = Resources.Load<GameObject>(LandPath);
+            _landPrefab = Resources.Load<GameObject>(ResPath.Land);
 
             if (_landPrefab == null)
             {
                 if (!_warnedNoLand)
                 {
                     _warnedNoLand = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{LandPath}，落地烟不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.Land}，落地烟不播放。");
                 }
 
                 return false;
@@ -554,14 +546,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_saveSparkPool != null) return true;
 
-            _saveSparkPrefab = Resources.Load<GameObject>(SavePointSparkPath);
+            _saveSparkPrefab = Resources.Load<GameObject>(ResPath.SavePointSpark);
 
             if (_saveSparkPrefab == null)
             {
                 if (!_warnedNoSaveSpark)
                 {
                     _warnedNoSaveSpark = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{SavePointSparkPath}，存档火花不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.SavePointSpark}，存档火花不播放。");
                 }
 
                 return false;
@@ -593,14 +585,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_moveDust != null) return true;
 
-            GameObject prefab = Resources.Load<GameObject>(MoveDustPath);
+            GameObject prefab = Resources.Load<GameObject>(ResPath.MoveDust);
 
             if (prefab == null)
             {
                 if (!_warnedNoMoveDust)
                 {
                     _warnedNoMoveDust = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{MoveDustPath}，移动扬尘不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.MoveDust}，移动扬尘不播放。");
                 }
 
                 return false;
@@ -618,14 +610,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_chargeDash != null) return true;
 
-            GameObject prefab = Resources.Load<GameObject>(ChargeDashPath);
+            GameObject prefab = Resources.Load<GameObject>(ResPath.ChargeDash);
 
             if (prefab == null)
             {
                 if (!_warnedNoChargeDash)
                 {
                     _warnedNoChargeDash = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ChargeDashPath}，充能冲刺特效不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.ChargeDash}，充能冲刺特效不播放。");
                 }
 
                 return false;
@@ -643,14 +635,14 @@ namespace Refraction.Presentation.Effects
         {
             if (_chargeInPool != null) return true;
 
-            _chargeInPrefab = Resources.Load<GameObject>(ChargeInPath);
+            _chargeInPrefab = Resources.Load<GameObject>(ResPath.ChargeIn);
 
             if (_chargeInPrefab == null)
             {
                 if (!_warnedNoChargeIn)
                 {
                     _warnedNoChargeIn = true;
-                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ChargeInPath}，蓄力吸入不播放。");
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.ChargeIn}，蓄力吸入不播放。");
                 }
 
                 return false;

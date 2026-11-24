@@ -1,17 +1,16 @@
-﻿using UnityEngine;
+﻿using Refraction.Foundation;
+using UnityEngine;
 
 namespace Refraction.Data
 {
     /// <summary>黑形态的范围绘制配置：三块调试网格各自的颜色与总开关</summary>
     /// <remarks>
-    /// 资产放在 Resources/Data/BlackAttackVisualConfig.asset，运行时由 BlackAttackView 自己加载。
+    /// 资产放在 Resources/Data/Player/BlackAttackVisualConfig.asset，运行时由 BlackAttackView 自己加载。
     /// 只影响看得见的那三块网格，判定与弹反本身照常生效。
     /// </remarks>
     [CreateAssetMenu(fileName = "BlackAttackVisualConfig", menuName = "Refraction/Settings/BlackAttackVisual")]
     public sealed class BlackAttackVisualConfig : ScriptableObject
     {
-        private const string ResourcePath = "Data/BlackAttackVisualConfig";
-
         private static BlackAttackVisualConfig _default;
 
         [Tooltip("判定范围的网格颜色：普攻与突进点亮的那几只盒，半透明紫。")]
@@ -38,13 +37,13 @@ namespace Refraction.Data
             {
                 if (_default != null) return _default;
 
-                _default = Resources.Load<BlackAttackVisualConfig>(ResourcePath);
+                _default = Resources.Load<BlackAttackVisualConfig>(ResPath.BlackAttackVisualConfig);
 
                 if (_default == null)
                 {
                     _default = CreateInstance<BlackAttackVisualConfig>();
                     _default.hideFlags = HideFlags.HideAndDontSave;
-                    Debug.LogWarning($"[黑攻击范围] 缺 Resources/{ResourcePath}.asset：临时用脚本默认值，资产里改不到。");
+                    Debug.LogWarning($"[黑攻击范围] 缺 Resources/{ResPath.BlackAttackVisualConfig}.asset：临时用脚本默认值，资产里改不到。");
                 }
 
                 return _default;

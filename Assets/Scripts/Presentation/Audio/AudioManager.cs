@@ -15,8 +15,6 @@ namespace Refraction.Presentation.Audio
     /// </remarks>
     public sealed class AudioManager : IService
     {
-        private const string SoundFolder = "Sound/";
-
         // Unity AudioSource.priority：数值越小越优先，被偷时先偷数值大的
         private const int PriorityBgm = 0;
         private const int PriorityLoopSfx = 64;
@@ -665,11 +663,11 @@ namespace Refraction.Presentation.Audio
             {
                 if (string.IsNullOrEmpty(files[i])) continue;
 
-                AudioClip clip = Resources.Load<AudioClip>(SoundFolder + files[i]);
+                AudioClip clip = Resources.Load<AudioClip>(ResPath.SoundFolder + files[i]);
 
                 if (clip == null)
                 {
-                    Warn(id, $"Resources/{SoundFolder}{files[i]} 加载失败");
+                    Warn(id, $"Resources/{ResPath.SoundFolder}{files[i]} 加载失败");
 
                     continue;
                 }

@@ -10,9 +10,6 @@ namespace Refraction.Presentation.Combat
     {
         public int Order => SceneOrder.World;
 
-        private const string AfterimagePath = "Prefabs/AfterImage";
-        private const string BulletPath = "Prefabs/Bullet";
-
         [SerializeField]
         private PlayerController playerController;
 
@@ -60,7 +57,7 @@ namespace Refraction.Presentation.Combat
 
             GameObject prefab = afterimagePrefab != null
                 ? afterimagePrefab
-                : Resources.Load<GameObject>(AfterimagePath);
+                : Resources.Load<GameObject>(ResPath.AfterimagePrefab);
 
             _field = host.AddComponent<AfterimageField>();
             _field.Init(_afterimages, config, playerController.View, playerController.transform, prefab);
@@ -86,7 +83,7 @@ namespace Refraction.Presentation.Combat
 
             GameObject prefab = playerController.BulletPrefab != null
                 ? playerController.BulletPrefab
-                : Resources.Load<GameObject>(BulletPath);
+                : Resources.Load<GameObject>(ResPath.BulletPrefab);
 
             _bulletField = host.AddComponent<BulletField>();
             _bulletField.Init(prefab, playerController.transform, playerController.HitSink);

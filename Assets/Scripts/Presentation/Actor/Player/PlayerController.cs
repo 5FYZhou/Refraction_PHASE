@@ -49,7 +49,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 muzzleCrouch = new(0.6f, -0.15f);
 
-        [Tooltip("白攻击的子弹预制体：留空则退回 Resources/Prefabs/Bullet。弹反反打复用同一条池。")]
+        [Tooltip("白攻击的子弹预制体：留空则退回 Resources/Prefabs/Bullet/Bullet。弹反反打复用同一条池。")]
         [SerializeField]
         private GameObject bulletPrefab;
 
