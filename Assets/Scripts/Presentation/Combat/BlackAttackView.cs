@@ -37,9 +37,9 @@ namespace Refraction.Presentation.Combat
 
         private const float Diagonal = 0.70710678f;
 
-        private static readonly Color RangeColor = new(0.65f, 0.35f, 1f, 0.3f);
+        private static readonly Color RangeColor = new(0.65f, 0.35f, 1f, 0.2f);
 
-        private static readonly Color ReboundColor = new(1f, 0.92f, 0.02f, 0.35f);
+        private static readonly Color ReboundColor = new(1f, 0.92f, 0.02f, 0.1f);
 
         private static readonly Color SweepColor = new(0.2f, 1f, 0.35f, 0.22f);
 
@@ -115,10 +115,10 @@ namespace Refraction.Presentation.Combat
             Paint(_reboundDown, ReboundMaterial);
             Paint(_reboundLevel, ReboundMaterial);
 
-            Paint(_dashAhead);
-            Paint(_dashUp);
-            Paint(_dashDown);
-            Paint(_dashLevel);
+            //Paint(_dashAhead);
+            //Paint(_dashUp);
+            //Paint(_dashDown);
+            //Paint(_dashLevel);
 
             End();
             HideRebound();
@@ -158,7 +158,7 @@ namespace Refraction.Presentation.Combat
             _dashHits.Clear();
             SetActive(DashBoxOf(kind), true);
             _activeBox = DashBoxOf(kind);
-            PaintSweep(kind);
+            //PaintSweep(kind);
         }
 
         public void End()
