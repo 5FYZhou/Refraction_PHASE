@@ -1164,7 +1164,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.21053262, y: 0.24067278, z: 1.0526631}
+  m_LocalScale: {x: 0.428876, y: 0.49027455, z: 2.14438}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 716219137766338611}
@@ -1242,7 +1242,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06f9fcc5016f08c41863ba3aaa5a8b49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleColor: {r: 0.23529413, g: 0.73333335, b: 1, a: 1}
+  particleColor: {r: 0.16435264, g: 0.17784417, b: 0.18867922, a: 1}
 --- !u!114 &7550763708427544725
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1333,7 +1333,7 @@ TrailRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 0.27450982, g: 0.8117648, b: 0.9960785, a: 1}
+      key0: {r: 0.8267078, g: 0.9229556, b: 0.9559748, a: 1}
       key1: {r: 1, g: 1, b: 1, a: 0}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}

@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "cn.tuanjie.ai.graph": "1.0.10",
-    "cn.tuanjie.codely.bridge": "1.0.88",
+    "cn.tuanjie.codely.bridge": "1.0.93",
     "com.unity.cinemachine": "2.10.7",
     "com.unity.feature.2d": "2.0.1",
     "com.unity.ide.rider": "3.0.36",

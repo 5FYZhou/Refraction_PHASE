@@ -17,34 +17,34 @@ MonoBehaviour:
   moveDeceleration: 60
   turnAcceleration: 80
   externalDeceleration: 40
-  maxHealth: 3
-  invulnerableTime: 0.4
+  maxHealth: 55
+  invulnerableTime: 0
   flashTime: 0.12
   KnockbackDecay: 30
   enableGravity: 0
   maxFallSpeed: 20
   maxRiseSpeed: 20
   fallGravity: 70
-  patrolSpeed: 2
+  patrolSpeed: 2.5
   chaseStopDistance: 3
   attackRange: 6
-  chargeSpeed: 18
-  chargeWindupTime: 0.35
-  chargeCooldown: 2
-  floatSpeed: 4
+  chargeSpeed: 80
+  chargeWindupTime: 1.2
+  chargeCooldown: 2.5
+  floatSpeed: 3
   floatDistanceMin: 1
   floatDistanceMax: 3
   barrageCooldown: 3
   barrageWindupTime: 0.5
   waveCount: 3
-  bulletsPerWave: 5
-  spreadAngle: 12
-  waveInterval: 0.15
-  bulletSpeed: 12
-  bulletDamage: 1
-  bulletKnockback: 6
-  reboundCooldown: 2
+  bulletsPerWave: 3
+  spreadAngle: 15
+  waveInterval: 0.3
+  bulletSpeed: 6
+  bulletDamage: 20
+  bulletKnockback: 4
+  reboundCooldown: 3
   reboundSpread: 0.5
   contactDamage: 1
   contactInterval: 1
-  contactKnockback: 8
+  contactKnockback: 1
