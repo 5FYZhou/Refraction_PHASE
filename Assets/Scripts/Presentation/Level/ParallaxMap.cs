@@ -60,7 +60,7 @@ namespace Refraction.Presentation.Level
         private void OnDestroy()
         {
             _root?.UnregisterSceneRoot(this);
-            _root?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverse(this);
         }
 
         public void Attach()
@@ -72,7 +72,7 @@ namespace Refraction.Presentation.Level
             EnsureCamera();
 
             _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void RenderTick(float deltaTime)

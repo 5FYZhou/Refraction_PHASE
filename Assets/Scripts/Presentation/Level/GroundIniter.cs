@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Refraction.Logic.Level;
+using Refraction.Presentation.Level;
 using UnityEngine;
 
 namespace Refraction.Presentation
@@ -16,8 +17,6 @@ namespace Refraction.Presentation
 
         private readonly List<SpriteRenderer> _sprites = new();
 
-        private GameRoot _root;
-
         private void Awake()
         {
             Init();
@@ -30,13 +29,12 @@ namespace Refraction.Presentation
 
         private void OnDestroy()
         {
-            _root?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverse(this);
         }
 
         public void Attach()
         {
-            _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void Init()

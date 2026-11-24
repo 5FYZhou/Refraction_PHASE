@@ -46,7 +46,7 @@ namespace Refraction.Presentation.Level
 
         private void OnDestroy()
         {
-            _root?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverse(this);
         }
 
         private void OnDisable() => HasPlayer = false;
@@ -69,7 +69,7 @@ namespace Refraction.Presentation.Level
         public void Attach()
         {
             _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void Apply(WorldPolarity world)

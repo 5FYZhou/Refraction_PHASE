@@ -65,16 +65,17 @@ namespace Refraction.Presentation.Level
 
         private void OnDestroy()
         {
+            LevelRoot.Current?.UnregisterReverse(this);
+
             if (_root == null) return;
 
             _root.UnregisterSceneRoot(this);
-            _root.UnregisterReverse(this);
         }
 
         public void Attach()
         {
             _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void Apply(WorldPolarity world)

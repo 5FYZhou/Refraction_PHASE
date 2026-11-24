@@ -16,7 +16,6 @@ namespace Refraction.Presentation.Level
         private SpriteRenderer _sprite;
         private Collider2D _collider;
         private Color _designColor = Color.white;
-        private GameRoot _root;
 
         private void Awake()
         {
@@ -30,13 +29,12 @@ namespace Refraction.Presentation.Level
 
         private void OnDestroy()
         {
-            _root?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverse(this);
         }
 
         public void Attach()
         {
-            _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void Apply(WorldPolarity world)

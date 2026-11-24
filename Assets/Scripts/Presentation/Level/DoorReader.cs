@@ -7,20 +7,17 @@ using UnityEngine.SceneManagement;
 namespace Refraction.Presentation.Level
 {
     /// <summary>本关门索引：扫场景内所有 Door 按门 id 建表，随场景销毁，不会串到上一个场景</summary>
-    /// <remarks>索引只在 Attach 或首次查询时建一次，运行期增删门不支持；查门前调用方要先核对关卡 id，否则会拿错关的表查同号门</remarks>
-    public sealed class DoorReader : MonoBehaviour, ISceneRoot, IDoorReader
+    /// <remarks>索引只在 Initialize 或首次查询时建一次，运行期增删门不支持；查门前调用方要先核对关卡 id，否则会拿错关的表查同号门</remarks>
+    public sealed class DoorReader : MonoBehaviour, IDoorReader
     {
         /// <summary>落点放下后吞掉门的进入触发这么久（秒），否则两扇门会来回弹</summary>
         private const float SuppressSeconds = 0.2f;
 
         private readonly Dictionary<int, Door> _doors = new();
 
-        private GameRoot _root;
         private bool _indexed;
         private int _levelId;
         private bool _resolved;
-
-        public int Order => SceneOrder.World;
 
         /// <summary>本场景解析出的关卡 id；命名不合 Level_正整数 时为 0，本关不索引任何门</summary>
         public int LevelId 
@@ -54,25 +51,14 @@ namespace Refraction.Presentation.Level
             _resolved = true;
         }
 
-        private void Start()
-        {
-            // 抓住实例：销毁期再问 GameRoot.Instance 会当场造一个新的出来
-            _root = GameRoot.Instance;
-            _root?.RegisterSceneRoot(this);
-        }
-
-        private void OnDestroy()
-        {
-            // GameRoot 在场景卸载时已清过表，这里只是兜底
-            if (_root != null) _root.UnregisterSceneRoot(this);
-        }
         private static int ResolveId()
         {
             string sceneName = SceneManager.GetActiveScene().name;
             return SceneName.TryGetLevelId(sceneName, out int id) ? id : 0;
         }
 
-        public void Attach()
+        /// <summary>建门索引，幂等；由 LevelRoot 装配时调用，首帧查询也会自动补建</summary>
+        public void Initialize()
         {
             EnsureIndexed();
         }
