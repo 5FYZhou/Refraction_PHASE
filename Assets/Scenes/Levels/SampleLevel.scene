@@ -3931,25 +3931,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: ChargeDash
       objectReference: {fileID: 0}
-    - target: {fileID: 5370988008764223367, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8151541898138382798, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8519648731632757814, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
-      propertyPath: EmissionModule.rateOverTime.scalar
-      value: 1000
+      propertyPath: ShapeModule.m_Scale.x
+      value: 0.37
       objectReference: {fileID: 0}
     - target: {fileID: 8519648731632757814, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
-      propertyPath: VelocityModule.x.maxCurve.m_Curve.Array.data[0].value
-      value: -1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8519648731632757814, guid: 27b36bf3af135cf4888fdbb26f2e45ea, type: 3}
-      propertyPath: InitialModule.startSize.maxCurve.m_Curve.Array.data[0].value
-      value: 0.49549866
+      propertyPath: ShapeModule.m_Scale.y
+      value: 1.02
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

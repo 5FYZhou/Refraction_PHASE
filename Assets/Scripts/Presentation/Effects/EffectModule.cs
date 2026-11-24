@@ -1248,6 +1248,9 @@ namespace Refraction.Presentation.Effects
 
                 if (_ps == null) return;
 
+                // 预制体是 playOnAwake，激活当帧就自己播起来了；duration 只能在完全停止时改
+                _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
                 ParticleSystem.MainModule main = _ps.main;
                 main.duration = Mathf.Max(duration, ChargeInMinDuration);
 

@@ -34,5 +34,12 @@ namespace Refraction.Presentation.Effects
             _effects?.SetCharge(_target, _view, on, rampTime);
             _effects?.SetChargeIn(_target, muzzleOffset, on, rampTime, chargeInColor);
         }
+
+        /// <summary>死亡回收时收掉蓄力：粒子的 GameObject 挂在特效根下，不会跟着本体隐藏</summary>
+        public void StopCharging()
+        {
+            _effects?.SetCharge(_target, _view, false, 0f);
+            _effects?.SetChargeIn(_target, Vector2.zero, false, 0f, Color.white);
+        }
     }
 }

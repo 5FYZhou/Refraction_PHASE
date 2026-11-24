@@ -196,6 +196,7 @@ namespace Refraction.Presentation.Actor
         protected override void OnRecycle()
         {
             _bullets?.ClearAll();
+            _hurtFlash?.StopCharging();
         }
 
         protected override void ResetBody()
