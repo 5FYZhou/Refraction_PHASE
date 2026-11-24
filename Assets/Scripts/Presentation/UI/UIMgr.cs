@@ -394,14 +394,19 @@ namespace Refraction.Presentation.UI
                         return;
 
                     panelInfo.isHide = true;
+
+                    BasePanel closing = panelInfo.panel;
+                    GameObject go = closing.gameObject;
+
                     if (isDestory)
                     {
-                        GameObject.Destroy(panelInfo.panel.gameObject);
+                        GameObject.Destroy(go);
                         panelDic.Remove(panelName);
                     }
-                    else
-                        panelInfo.panel.gameObject.SetActive(false);
-                    panelInfo.panel.HideMe();
+                    else if (!closing.TryFadeOutThen(() => { if (go != null) go.SetActive(false); }))
+                        go.SetActive(false);
+
+                    closing.HideMe();
                 }
             }
         }
@@ -523,6 +528,8 @@ namespace Refraction.Presentation.UI
                     return;
 
                 default:
+                    HidePanel<KeySetPanel>();
+                    HidePanel<AudioSetPanel>();
                     HidePanel<SettingsPanel>();
                     return;
             }
