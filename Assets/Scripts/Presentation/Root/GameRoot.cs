@@ -449,18 +449,10 @@ namespace Refraction.Presentation
         {
             if (doorId <= 0) return;
 
-            IDoorReader reader = levelRoot.DoorReader;
-
-            if (reader == null)
+            // 落点压在门的触发器范围内：取门口时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
+            if (!levelRoot.TryGetEntry(doorId, out DoorEntry entry))
             {
-                Debug.LogError($"[GameRoot] 关卡 {levelRoot.name} 没有门读取器，无法解析 id = {doorId} 的门。");
-                return;
-            }
-
-            // 落点压在门的触发器范围内：DoorReader 命中时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
-            if (!reader.TryGetEntry(doorId, out DoorEntry entry))
-            {
-                Debug.LogError($"[GameRoot] 关卡 {reader.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
+                Debug.LogError($"[GameRoot] 关卡 {levelRoot.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
                 return;
             }
 

@@ -658,7 +658,6 @@ GameObject:
   m_Component:
   - component: {fileID: 741908459}
   - component: {fileID: 741908460}
-  - component: {fileID: 741908461}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: LevelRoot
@@ -692,19 +691,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f5212a6954a5cac4382f37ecbcf388de, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  doorReader: {fileID: 741908461}
---- !u!114 &741908461
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 741908458}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76b4c1bd21283174380f093dd1bb20e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &793050435
