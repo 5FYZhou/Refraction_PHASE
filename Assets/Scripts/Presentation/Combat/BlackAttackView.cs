@@ -523,6 +523,7 @@ namespace Refraction.Presentation.Combat
             Mesh mesh = col.CreateMesh(false, false);
 
             if (mesh == null || mesh.vertexCount < 3) mesh = ShapeMesh(col);
+            else Rebase(mesh, col);
 
             if (mesh == null) return;
 
@@ -535,6 +536,23 @@ namespace Refraction.Presentation.Combat
             MeshRenderer mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = material;
             mr.sortingOrder = 30000;
+        }
+
+        /// <summary>CreateMesh 的顶点落在挂着的 Rigidbody2D 空间（没挂则是世界空间），挂到 collider 自己下面前必须换回它的局部空间，否则整个盒节点的位移会被叠加两次</summary>
+        private static void Rebase(Mesh mesh, Collider2D col)
+        {
+            Vector3[] points = mesh.vertices;
+            Rigidbody2D body = col.attachedRigidbody;
+            Transform box = col.transform;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                Vector3 world = body != null ? body.transform.TransformPoint(points[i]) : points[i];
+                points[i] = box.InverseTransformPoint(world);
+            }
+
+            mesh.vertices = points;
+            mesh.RecalculateBounds();
         }
 
         private static Mesh ShapeMesh(Collider2D col)
