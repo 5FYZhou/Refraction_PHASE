@@ -44,7 +44,7 @@ namespace Refraction.Logic.Actor
         {
             _postureGroup = new(config, motor);
             _moveGroup = new(motor, config, buffer, _postureGroup);
-            _attackGroup = new(config, motor, launcher, _postureGroup, blackAttack, Conditions);
+            _attackGroup = new(config, motor, launcher, _postureGroup, blackAttack, Conditions, () => _black);
             _rebound = new(config, blackAttack as IReboundView);
             _transit = new(motor, config, _moveGroup);
             _motor = motor;
@@ -60,7 +60,7 @@ namespace Refraction.Logic.Actor
 
         public Vector2 LastGroundedPos => _lastGroundedPos;
 
-        /// 广播当前血量：装配时给初值，掉血与复活后再发
+        /// 广播当前血量：装配给初值，掉血与复活后再发
         public void Announce()
         {
             EventBus<PlayerHealthChanged>.Publish(new(CurHealth, MaxHealth));
@@ -107,13 +107,17 @@ namespace Refraction.Logic.Actor
 
         private void OnWorldPolarityChanged(WorldPolarityChanged evt)
         {
-            _black = evt.World == WorldPolarity.Black;
+            SetWorld(evt.World);
 
             if (!_black) return;
 
             CancelCharge();
             _afterimages?.Clear();
         }
+
+        public bool IsBlack => _black;
+
+        public void SetWorld(WorldPolarity world) => _black = world == WorldPolarity.Black;
 
         private void AddPolarity(int amount)
         {
@@ -303,7 +307,6 @@ namespace Refraction.Logic.Actor
         {
             EventBus<AfterimageLinkHit>.Unsubscribe(OnAfterimageLinkHit);
             EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
-            _attackGroup.Dispose();
         }
 
         public void BeginTransit(in DoorEntry entry, MovementStateTag enterTag, int enterFace)

@@ -95,6 +95,8 @@ namespace Refraction.Presentation.Actor
         private int _hurtExclude;
         private bool _phasing;
         private bool _grounded = true;
+
+        private bool _shownBlack;
         private float _saveLockUntil;
         private PlayerAniView _aniView;
 
@@ -139,12 +141,10 @@ namespace Refraction.Presentation.Actor
         private void OnEnable()
         {
             EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
-            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
         private void OnDisable()
         {
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
-            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
         /// <summary>场景根装配：接上输入源，再按上一场景那扇门指定的落点摆好；GameRoot 在注册后的下一个驱动帧调用，必须幂等</summary>
@@ -179,6 +179,9 @@ namespace Refraction.Presentation.Actor
             if (_root.TryGetPlayerHealth(out int health)) _logic.SetHealth(health);
             if (_root.TryGetPlayerPolarity(out int polarity)) _logic.SetPolarity(polarity);
 
+            // 世界极性进关先同步一次：新玩家不听历史事件，不同步就会按白形态出手
+            _logic.SetWorld(_root.World);
+
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
@@ -198,7 +201,7 @@ namespace Refraction.Presentation.Actor
 
             _attached = true;
 
-            ApplyInvert(_root.World == WorldPolarity.Black);
+            ApplyInvert(_logic.IsBlack);
 
             // 跨关回档的落点优先于门；首关两者都没有，保持场景里摆的位置
             if (_root.TryConsumeRespawnPoint(out Vector2 respawn))
@@ -313,6 +316,9 @@ namespace Refraction.Presentation.Actor
             PlayActionAudio(prevMove, prevAttack);
             ApplyPhase();
 
+            // 轮询而不是听事件：显示必须跟逻辑同一帧的形态，事件到达顺序由订阅先后决定
+            if (_logic.IsBlack != _shownBlack) ApplyInvert(_logic.IsBlack);
+
             bool grounded = _context.WorldInfo.Grounded;
 
             if (grounded && !_grounded) PlayLand();
@@ -413,13 +419,9 @@ namespace Refraction.Presentation.Actor
             _logic?.OnReboundReflected(dir);
         }
 
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
-        {
-            ApplyInvert(evt.World == WorldPolarity.Black);
-        }
-
         private void ApplyInvert(bool black)
         {
+            _shownBlack = black;
             ApplyParticleColors(black);
 
             if (_root == null || view == null) return;
