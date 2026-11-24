@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>毛毛虫 E_First 的组合根：装配、喂视线、按黑白给 View 取色、按出生快照复位</summary>
-    public sealed class E_FirstController : MonoBehaviour, IManagedEnemy
+    public sealed class E_FirstController : ManagedEnemyController
     {
         [Tooltip("敌人参数资产，运行时只读不改。")]
         [SerializeField]
@@ -48,13 +48,9 @@ namespace Refraction.Presentation.Actor
 
         private readonly EnemySight _sight = new(false);
 
-        private GameRoot _root;
-        private bool _attached;
-        private bool _dead;
         private E_FirstLogic _logic;
         private BulletLogic _bullets;
         private BulletField _bulletField;
-        private EnemySpawnState _spawn;
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
@@ -69,49 +65,27 @@ namespace Refraction.Presentation.Actor
             DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(E_FirstController), _sight);
         }
 
-        private void Start()
-        {
-            _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
+        protected override EnemySpawnState CaptureSpawn() => new(
+            EnemyKind.E_First,
+            transform.position,
+            moveMotor.FaceSign,
+            blackForm,
+            config.maxHealth);
 
-            _root = GameRoot.Instance;
-
-            Attach();
-
-            _spawn = new EnemySpawnState(
-                EnemyKind.E_First,
-                transform.position,
-                moveMotor.FaceSign,
-                blackForm,
-                config.maxHealth);
-
-            EnemyMgr.Join(this);
-        }
-
-        private void OnDestroy()
-        {
-            _logic?.Dispose();
-
-            if (_bulletField != null) Destroy(_bulletField.gameObject);
-
-            EnemyMgr.Leave(this);
-        }
-
-        public EnemySpawnState SpawnState => _spawn;
-
-        public bool IsDead => _dead;
+        protected override bool BodyAlive => _logic != null && _logic.IsAlive;
 
         public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
 
-        private void Attach()
+        protected override void Assemble()
         {
-            if (_attached) return;
+            _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
 
             Require.Assigned(moveMotor, nameof(E_FirstController), nameof(moveMotor));
             Require.Assigned(config, nameof(E_FirstController), nameof(config));
 
             moveMotor.BindConfig(config);
 
-            _hurtFlash = new(_root.Effects, transform, config.flashTime);
+            _hurtFlash = new(Root.Effects, transform, config.flashTime);
             _logic = new E_FirstLogic(moveMotor, config, _hurtFlash, true, bulletMuzzle, blackForm);
 
             HitBoxBinder.Bind(transform, _logic, _logic);
@@ -120,14 +94,10 @@ namespace Refraction.Presentation.Actor
 
             _tintBlack = _logic.Black;
             _tint.Apply(_tintBlack);
-
-            _attached = true;
         }
 
-        public void ManagedTick(float deltaTime)
+        protected override void OnTick(float deltaTime)
         {
-            if (!_attached || _dead) return;
-
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
@@ -137,23 +107,15 @@ namespace Refraction.Presentation.Actor
 
             TickTint();
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
-
-            if (!_logic.IsAlive) _dead = true;
         }
 
-        public void Recycle()
+        protected override void OnRecycle()
         {
             _bullets?.ClearAll();
-            gameObject.SetActive(false);
         }
 
-        public void ResetToSpawn()
+        protected override void ResetBody()
         {
-            if (!_attached) return;
-
-            gameObject.SetActive(false);
-            _dead = false;
-
             _logic?.Dispose();
             _logic = new E_FirstLogic(moveMotor, config, _hurtFlash, true, bulletMuzzle, SpawnState.InitialBlack);
             _logic.SetHealth(SpawnState.InitialHealth);
@@ -173,9 +135,13 @@ namespace Refraction.Presentation.Actor
 
             _tintBlack = _logic.Black;
             _tint.Apply(_tintBlack);
+        }
 
-            // 重新入世：探测器对当前重叠再发一次 Enter，复位清掉的视线才补得回来
-            gameObject.SetActive(true);
+        protected override void OnDispose()
+        {
+            _logic?.Dispose();
+
+            if (_bulletField != null) Destroy(_bulletField.gameObject);
         }
 
         private void TickTint()
@@ -215,7 +181,7 @@ namespace Refraction.Presentation.Actor
 
         private void OnDrawGizmosSelected()
         {
-            if (Application.isPlaying && _root != null) EnemyGizmos.DrawArea(_patrolArea, EnemyGizmos.Patrol);
+            if (Application.isPlaying && Root != null) EnemyGizmos.DrawArea(_patrolArea, EnemyGizmos.Patrol);
             else EnemyGizmos.DrawZone(transform, patrolOffset, patrolSize, EnemyGizmos.Patrol);
 
             EnemyGizmos.DrawSight(transform, EnemyColliderSetup.DetectChildName);

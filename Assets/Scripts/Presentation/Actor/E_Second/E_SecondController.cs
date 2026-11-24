@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Actor
 {
     /// <summary>飞行敌人 E_Second 的组合根：装配、喂玩家位置、按黑白取色、按出生快照复位</summary>
-    public sealed class E_SecondController : MonoBehaviour, IManagedEnemy, IRenderTicked
+    public sealed class E_SecondController : ManagedEnemyController, IRenderTicked
     {
         [Tooltip("敌人参数资产，运行时只读不改。")]
         [SerializeField]
@@ -64,13 +64,9 @@ namespace Refraction.Presentation.Actor
 
         private readonly EnemySight _sight = new(false);
 
-        private GameRoot _root;
-        private bool _attached;
-        private bool _dead;
         private E_SecondLogic _logic;
         private BulletLogic _bullets;
         private BulletField _bulletField;
-        private EnemySpawnState _spawn;
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
@@ -91,40 +87,14 @@ namespace Refraction.Presentation.Actor
             DetectZoneBinder.Bind(transform, EnemyColliderSetup.DetectChildName, nameof(E_SecondController), _sight);
         }
 
-        private void Start()
-        {
-            _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
-            _chaseArea = EnemyArea.Snapshot(transform.position, chaseOffset, chaseSize);
+        protected override EnemySpawnState CaptureSpawn() => new(
+            EnemyKind.E_Second,
+            transform.position,
+            moveMotor.FaceSign,
+            blackForm,
+            config.maxHealth);
 
-            _root = GameRoot.Instance;
-
-            Attach();
-
-            _spawn = new EnemySpawnState(
-                EnemyKind.E_Second,
-                transform.position,
-                moveMotor.FaceSign,
-                blackForm,
-                config.maxHealth);
-
-            EnemyMgr.Join(this);
-        }
-
-        private void OnDestroy()
-        {
-            _logic?.Dispose();
-
-            if (_bulletField != null) Destroy(_bulletField.gameObject);
-
-            EnemyMgr.Leave(this);
-        }
-
-        public EnemySpawnState SpawnState => _spawn;
-
-        public bool IsDead => _dead;
-
-        /// <summary>装配完成前数值全是默认值，调试面板按这个开关决定列不列</summary>
-        public bool Attached => _attached;
+        protected override bool BodyAlive => _logic != null && _logic.IsAlive;
 
         /// <summary>只读给调试面板看状态与两个框，面板不反向写任何东西</summary>
         public E_SecondLogic Logic => _logic;
@@ -164,7 +134,7 @@ namespace Refraction.Presentation.Actor
         /// <summary>渲染帧转 z 轴：目标角随阶段变，逼近速率看 dashTurnSpeed；放物理帧里会被 50Hz 卡成跳格</summary>
         public void RenderTick(float deltaTime)
         {
-            if (!_attached || _dead || viewRoot == null) return;
+            if (!Attached || IsDead || viewRoot == null) return;
 
             float target = ResolveViewAngle();
 
@@ -223,16 +193,17 @@ namespace Refraction.Presentation.Actor
             return viewRoot.lossyScale.x < 0f ? 180f - angle : angle;
         }
 
-        private void Attach()
+        protected override void Assemble()
         {
-            if (_attached) return;
+            _patrolArea = EnemyArea.Snapshot(transform.position, patrolOffset, patrolSize);
+            _chaseArea = EnemyArea.Snapshot(transform.position, chaseOffset, chaseSize);
 
             Require.Assigned(moveMotor, nameof(E_SecondController), nameof(moveMotor));
             Require.Assigned(config, nameof(E_SecondController), nameof(config));
 
             moveMotor.BindConfig(config);
 
-            _hurtFlash = new(_root.Effects, transform, config.flashTime);
+            _hurtFlash = new(Root.Effects, transform, config.flashTime);
             _logic = new E_SecondLogic(moveMotor, config, _hurtFlash, _patrolArea, _chaseArea, blackForm, true, bulletMuzzle);
 
             HitBoxBinder.Bind(transform, _logic, _logic);
@@ -243,14 +214,10 @@ namespace Refraction.Presentation.Actor
             _tint.Apply(_tintBlack);
 
             CacheView();
-
-            _attached = true;
         }
 
-        public void ManagedTick(float deltaTime)
+        protected override void OnTick(float deltaTime)
         {
-            if (!_attached || _dead) return;
-
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
@@ -262,23 +229,15 @@ namespace Refraction.Presentation.Actor
 
             TickTint();
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
-
-            if (!_logic.IsAlive) _dead = true;
         }
 
-        public void Recycle()
+        protected override void OnRecycle()
         {
             _bullets?.ClearAll();
-            gameObject.SetActive(false);
         }
 
-        public void ResetToSpawn()
+        protected override void ResetBody()
         {
-            if (!_attached) return;
-
-            gameObject.SetActive(false);
-            _dead = false;
-
             _logic?.Dispose();
             _logic = new E_SecondLogic(moveMotor, config, _hurtFlash, _patrolArea, _chaseArea, SpawnState.InitialBlack, true, bulletMuzzle);
             _logic.SetHealth(SpawnState.InitialHealth);
@@ -304,9 +263,13 @@ namespace Refraction.Presentation.Actor
             _dashAimed = false;
 
             if (viewRoot != null) viewRoot.localRotation = Quaternion.Euler(0f, 0f, _baseViewAngle);
+        }
 
-            // 重新入世：探测器对当前重叠再发一次 Enter，复位清掉的视线才补得回来
-            gameObject.SetActive(true);
+        protected override void OnDispose()
+        {
+            _logic?.Dispose();
+
+            if (_bulletField != null) Destroy(_bulletField.gameObject);
         }
 
         private void TickTint()
@@ -343,7 +306,7 @@ namespace Refraction.Presentation.Actor
 
         private void OnDrawGizmosSelected()
         {
-            if (Application.isPlaying && _root != null)
+            if (Application.isPlaying && Root != null)
             {
                 EnemyGizmos.DrawArea(_logic != null ? _logic.PatrolArea : _patrolArea, EnemyGizmos.Patrol);
                 EnemyGizmos.DrawArea(_logic != null ? _logic.ChaseArea : _chaseArea, EnemyGizmos.Chase);
