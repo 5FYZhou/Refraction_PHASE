@@ -88,8 +88,6 @@ namespace Refraction.Presentation.Actor
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
         private bool _insideCheckpoint;
-        private IBulletLauncher _launcher;
-        private IBulletLauncher _muzzleLauncher;
         private BlackAttackView _blackAttack;
         private Collider2D _hurt;
         private int _hurtExclude;
@@ -173,7 +171,8 @@ namespace Refraction.Presentation.Actor
             _blackAttack ??= new BlackAttackView(transform, config, () => moveMotor.FaceSign, () => _logic?.OnMeleeHitLanded(), _root.Effects, OnReboundReflected);
             _blackAttack?.SetSparkColors(attackSparkColor, reboundSparkColor);
 
-            _logic = new(moveMotor, config, _buffer, ResolveLauncher(), this, _blackAttack);
+            // 发射口与开火点在 CombatRoot 装配时绑进来（World 序必然晚于 Player），构造期只先给空
+            _logic = new(moveMotor, config, _buffer, null, this, _blackAttack);
 
             // 跨关血量与极性都要在这里恢复：GameRoot 紧接着会 Announce，晚一步界面就先闪一次默认值
             if (_root.TryGetPlayerHealth(out int health)) _logic.SetHealth(health);
@@ -232,24 +231,8 @@ namespace Refraction.Presentation.Actor
 
         public void BindBulletLauncher(IBulletLauncher launcher)
         {
-            _launcher = launcher;
-            _muzzleLauncher = null;
-            _logic?.BindBulletLauncher(ResolveLauncher());
-        }
-
-        private IBulletLauncher ResolveLauncher()
-        {
-            if (_launcher == null) return null;
-
-            return _muzzleLauncher ??= new MuzzleLauncher(this, _launcher);
-        }
-
-        private Vector2 MuzzlePosition()
-        {
-            float progress = _logic != null ? _logic.CrouchProgress : 0f;
-            Vector2 offset = Vector2.Lerp(muzzleStand, muzzleCrouch, progress);
-
-            return (Vector2)transform.position + Mirror(offset, CurrentFace);
+            _logic?.BindBulletLauncher(launcher);
+            _logic?.BindMuzzle(muzzleStand, muzzleCrouch);
         }
 
         private static Vector2 Mirror(Vector2 offset, int face) =>
@@ -272,23 +255,6 @@ namespace Refraction.Presentation.Actor
             Gizmos.DrawLine(stand, crouch);
         }
 #endif
-
-        private sealed class MuzzleLauncher : IBulletLauncher
-        {
-            private readonly PlayerController _owner;
-            private readonly IBulletLauncher _inner;
-
-            public MuzzleLauncher(PlayerController owner, IBulletLauncher inner)
-            {
-                _owner = owner;
-                _inner = inner;
-            }
-
-            public void Launch(in BulletSpawn spawn) =>
-                _inner.Launch(new BulletSpawn(
-                    _owner.MuzzlePosition(), spawn.Direction, spawn.Speed, spawn.Damage,
-                    spawn.KnockbackSpeed, spawn.TransferSpeed));
-        }
 
         public Transform View => view;
 

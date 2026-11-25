@@ -303,6 +303,8 @@ namespace Refraction.Logic.Actor
 
         public void BindBulletLauncher(IBulletLauncher launcher) => _attackGroup.BindLauncher(launcher);
 
+        public void BindMuzzle(Vector2 stand, Vector2 crouch) => _attackGroup.BindMuzzle(stand, crouch);
+
         public void Dispose()
         {
             EventBus<AfterimageLinkHit>.Unsubscribe(OnAfterimageLinkHit);

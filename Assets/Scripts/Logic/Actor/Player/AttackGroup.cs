@@ -3,6 +3,7 @@ using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Move;
+using UnityEngine;
 
 namespace Refraction.Logic.Actor
 {
@@ -71,6 +72,8 @@ namespace Refraction.Logic.Actor
         public bool HoldsMoveFall => Phased is BlackDashState && Phased.Tag != AttackStateTag.BlackDashLevel && Phased.BlocksMovement;
 
         public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
+
+        public void BindMuzzle(Vector2 stand, Vector2 crouch) => _white.BindMuzzle(stand, crouch);
 
         public AttackStateTag Current => machine.CurrentState?.Tag ?? AttackStateTag.None;
 
