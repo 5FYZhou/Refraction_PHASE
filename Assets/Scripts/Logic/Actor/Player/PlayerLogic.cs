@@ -1,4 +1,4 @@
-﻿using Refraction.Data;
+using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
@@ -275,6 +275,9 @@ namespace Refraction.Logic.Actor
         }
 
         protected override void OnTick(in LogicContext ctx) { }
+
+        // 已排队、还没起步那一拍也算过门：相机逐帧钉住要在落位当帧就生效
+        public bool IsTransiting => _transit.IsActive || _hasPendingEntry;
 
         public void SpawnTo(Vector2 pos, bool invulnerable = true)
         {

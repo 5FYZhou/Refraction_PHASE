@@ -1,4 +1,4 @@
-﻿using Refraction.Data;
+using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Move;
@@ -193,6 +193,8 @@ namespace Refraction.Presentation
         public void SpawnAt(Vector2 position, Vector2 velocity)
         {
             _rb.position = position;
+            // 相机跟的是 Transform
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
             _rb.velocity = velocity;
             _ledger.ResetExternal();
         }

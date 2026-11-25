@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cinemachine;
 using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic;
@@ -51,6 +52,9 @@ namespace Refraction.Presentation
         private Coroutine _sceneLoad;
         private bool _levelReady;
         private bool _playerPlaced;
+
+        private PlayerController _player;
+        private CinemachineVirtualCameraBase[] _pinCameras;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
@@ -453,7 +457,7 @@ namespace Refraction.Presentation
             PlaySceneBgm(scene);
         }
 
-        /// <summary>切场景后重置本次切换的临时状态。只在这个时机安全：新场景的 Awake / OnEnable 已跑完，场景根还没在 Start 里注册</summary>
+        /// <summary>切场景后重置临时状态。只在这个时机安全：新场景 Awake / OnEnable 已跑完，场景根还没在 Start 注册</summary>
         private void Rebind()
         {
             if (_inputProvider == null) return;
@@ -461,6 +465,8 @@ namespace Refraction.Presentation
             _levelRoot = null;
             _levelReady = false;
             _playerPlaced = false;
+            _player = null;
+            _pinCameras = null;
 
             // 门索引随旧场景一起没了，落点只能等新场景的 LevelRoot 报到后再解析
             _pendingDoorId = _scenectx.TakeNextDoor(out _pendingTag, out _pendingFace);
@@ -498,11 +504,11 @@ namespace Refraction.Presentation
 
             for (int i = 0; i < batch.Length; i++)
             {
-                // 注册后、Attach 前就被销毁的根要跳过：接口之间的 == null 不走 Unity 的伪 null 重载，必须先转成 Object
+                // 注册后、Attach 前被销毁的根要跳过：接口的 == null 不走伪 null 重载
                 UnityEngine.Object target = batch[i] as UnityEngine.Object;
                 if (target == null) continue;
 
-                // 单个根装配失败不该拖累后面的根：坏掉一个不该让全场景停摆
+                // 单个根装配失败不该拖累后面的根
                 try
                 {
                     batch[i].Attach();
@@ -512,14 +518,63 @@ namespace Refraction.Presentation
                     Debug.LogException(ex);
                 }
 
-                // 玩家装配完立刻广播血量与极性：界面这一帧就有初值
+                // 装配完立刻广播血量与极性：界面这一帧就有初值
                 if (batch[i] is PlayerController player)
                 {
                     player.Announce();
                     player.AnnouncePolarity();
+                    _player = player;
+                    SnapCameras(player.transform);
                     _playerPlaced = true;
                 }
             }
+        }
+
+        /// <summary>把机位搬到玩家处：RawPosition 没过边界，相机要落 FinalPosition</summary>
+        private void SnapCameras(Transform playerT)
+        {
+            CinemachineVirtualCameraBase[] all = FindObjectsOfType<CinemachineVirtualCameraBase>();
+            List<CinemachineVirtualCameraBase> follows = new();
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                Transform follow = all[i].Follow;
+                if (follow == null || (follow != playerT && !follow.IsChildOf(playerT))) continue;
+
+                follows.Add(all[i]);
+                SnapTo(all[i]);
+            }
+
+            _pinCameras = follows.Count > 0 ? follows.ToArray() : null;
+        }
+
+        // 过门跑动期间逐帧钉住：阻尼跟随会让镜头明显拖后
+        private void PinCameraWhileTransiting()
+        {
+            if (_pinCameras == null) return;
+
+            if (_player == null || !_player.IsTransiting)
+            {
+                _pinCameras = null;
+                return;
+            }
+
+            for (int i = 0; i < _pinCameras.Length; i++) SnapTo(_pinCameras[i]);
+        }
+
+        private static void SnapTo(CinemachineVirtualCameraBase cam)
+        {
+            cam.CancelDamping(true);
+
+            CameraState state = cam.State;
+
+            cam.ForceCameraPosition(state.RawPosition, state.RawOrientation);
+
+            Camera main = Camera.main;
+            if (main != null) main.transform.SetPositionAndRotation(state.FinalPosition, state.FinalOrientation);
+
+            // 收尾必须让下次求值重算：否则强制的 Raw 就成了阻尼起点，跟随点一落定就滑一段
+            cam.CancelDamping();
         }
 
         private static int CompareSceneRoots(ISceneRoot a, ISceneRoot b)
@@ -527,7 +582,7 @@ namespace Refraction.Presentation
             return a.Order.CompareTo(b.Order);
         }
 
-        /// <summary>按 Order 升序插入：List.Sort 不稳定，同 Order 的根会被换位，这里用插入排序保住注册顺序</summary>
+        /// <summary>按 Order 升序插入：List.Sort 不稳定，同 Order 的根会被换位</summary>
         private static void InsertByOrder(List<ISceneRoot> list, ISceneRoot root)
         {
             int i = list.Count;
@@ -539,6 +594,7 @@ namespace Refraction.Presentation
         private void Update()
         {
             AttachPending();
+            PinCameraWhileTransiting();
             _inputProvider?.Tick();
             TickUiInput();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
