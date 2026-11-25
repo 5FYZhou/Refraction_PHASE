@@ -79,8 +79,10 @@ namespace Refraction.Presentation.Actor
         /// <summary>每物理帧的玩法推进；未装配或已死时壳不会调到这里</summary>
         protected abstract void OnTick(float deltaTime);
 
-        /// <summary>回收前的手尾：手里还活着的子弹</summary>
-        protected abstract void OnRecycle();
+        /// <summary>回收前的手尾：停自己开的持续表现；发射出去的子弹自己飞完</summary>
+        protected virtual void OnRecycle()
+        {
+        }
 
         /// <summary>复位本体：重建逻辑、清弹、归位、上色；激活与清死亡标记由壳负责</summary>
         protected abstract void ResetBody();

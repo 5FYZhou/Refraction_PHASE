@@ -229,7 +229,6 @@ namespace Refraction.Presentation.Actor
 
         protected override void OnRecycle()
         {
-            _bullets?.Clear();
             _hurtFlash?.StopCharging();
         }
 
@@ -265,8 +264,6 @@ namespace Refraction.Presentation.Actor
         protected override void OnDispose()
         {
             _logic?.Dispose();
-
-            _bullets?.Clear();
         }
 
         private void TickTint()

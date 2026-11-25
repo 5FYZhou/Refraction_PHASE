@@ -109,11 +109,6 @@ namespace Refraction.Presentation.Actor
             TickTint();
         }
 
-        protected override void OnRecycle()
-        {
-            _bullets?.Clear();
-        }
-
         protected override void ResetBody()
         {
             _logic?.Dispose();
@@ -140,8 +135,6 @@ namespace Refraction.Presentation.Actor
         protected override void OnDispose()
         {
             _logic?.Dispose();
-
-            _bullets?.Clear();
         }
 
         private void TickTint()
