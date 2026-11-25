@@ -381,7 +381,19 @@ namespace Refraction.Presentation
             if (!_warnedNoLevel)
             {
                 _warnedNoLevel = true;
-                Debug.LogError($"[GameRoot] 场景 \"{SceneManager.GetActiveScene().name}\" 不是 Level_正整数，存档点在这里不生效。");
+
+                string sceneName = SceneManager.GetActiveScene().name;
+
+                if (_levelRoot == null)
+                {
+                    Debug.LogError($"[GameRoot] 场景 \"{sceneName}\" 里没有 LevelRoot，不算关卡，存档点在这里不生效。");
+                }
+                else
+                {
+                    Debug.LogError(
+                        $"[GameRoot] 关卡根 \"{_levelRoot.name}\" 解不出关卡 id（{_levelRoot.LevelId}），" +
+                        $"场景 \"{sceneName}\" 应命名为 Level_正整数，存档点在这里不生效。");
+                }
             }
 
             return false;
