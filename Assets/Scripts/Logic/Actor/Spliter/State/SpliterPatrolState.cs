@@ -15,6 +15,7 @@ namespace Refraction.Logic.Actor
         private readonly SpliterConfig _config;
 
         private int _dir = 1;
+        private bool _wallTurnArmed = true;
 
         public SpliterPatrolState(SpliterLogic owner, IMoveMotor motor, SpliterConfig config)
         {
@@ -26,6 +27,7 @@ namespace Refraction.Logic.Actor
         public override void Enter(in LogicContext ctx)
         {
             _dir = ctx.WorldInfo.Face >= 0 ? 1 : -1;
+            _wallTurnArmed = true;
         }
 
         public override void Tick(in LogicContext ctx)
@@ -33,10 +35,15 @@ namespace Refraction.Logic.Actor
             // 只动 x：前摇浮动与击退留下的竖直速度每帧清掉，巡逻高度就是进状态时的高度
             _motor.SetVelocityY(0f);
 
-            // 只在面朝的正是前进方向时才认墙，掉头那一帧读到的还是旧一侧的数据
-            if (_dir == ctx.WorldInfo.Face && ctx.WorldInfo.TouchingWall)
+            bool wall = ctx.WorldInfo.TouchingWall;
+
+            // 圆环探墙不分方向，掉头后照样算贴墙：必须等飞离墙才允许下一次因墙掉头，否则每帧翻面
+            if (!wall) _wallTurnArmed = true;
+
+            if (_wallTurnArmed && _dir == ctx.WorldInfo.Face && wall)
             {
                 _dir = -_dir;
+                _wallTurnArmed = false;
             }
             else if (_owner.PatrolArea.HasBounds)
             {
