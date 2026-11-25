@@ -1,4 +1,4 @@
-using Refraction.Data;
+﻿using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using Refraction.Logic.Events;
@@ -279,22 +279,20 @@ namespace Refraction.Logic.Actor
         // 已排队、还没起步那一拍也算过门：相机逐帧钉住要在落位当帧就生效
         public bool IsTransiting => _transit.IsActive || _hasPendingEntry;
 
-        public void SpawnTo(Vector2 pos, bool invulnerable = true)
+        public void SpawnTo(Vector2 pos)
         {
             _afterimages?.Clear();
-            Place(pos, invulnerable);
+            Place(pos);
         }
 
         // 掉虚空不算重生：人回来，残影留在原地
-        public void FallBackTo(Vector2 pos) => Place(pos, true);
+        public void FallBackTo(Vector2 pos) => Place(pos);
 
-        private void Place(Vector2 pos, bool invulnerable)
+        private void Place(Vector2 pos)
         {
             _motor.SpawnAt(pos, Vector2.zero);
 
             CancelCharge();
-
-            if (invulnerable) Conditions.BeginInvulnerable(_config.invulnerableTime);
         }
 
         public void BindAfterimageSpawner(IAfterimageSpawner spawner)
