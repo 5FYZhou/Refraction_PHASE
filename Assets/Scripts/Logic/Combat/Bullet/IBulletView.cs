@@ -40,10 +40,4 @@ namespace Refraction.Logic.Combat
 
         void Kill();
     }
-
-    /// <summary>造视图的端口：预制体与挂点都是表现层的事，逻辑层只说"要一发"</summary>
-    public interface IBulletViewFactory
-    {
-        IBulletView Create(BulletLogic system, int id);
-    }
 }

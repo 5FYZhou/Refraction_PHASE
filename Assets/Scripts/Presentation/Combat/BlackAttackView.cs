@@ -13,7 +13,8 @@ namespace Refraction.Presentation.Combat
     /// 这些盒必须留在 Default 层：敌人受击盒在 ExcludeLayers 里排掉了 Player(7)，挂回玩家层就再也碰不到敌人。
     /// 普攻点亮 BlackDash/Ahead 并摘下来冻在原地，突进点亮 Up / Down / Level 并且整段跟着玩家跑。
     /// 弹反盒（BlackRebound/xxxCollider）相反：不摘下来，跟攻击盒同时开关，靠根节点翻 scale 跟随转身；
-    /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹
+    /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹；
+    /// 命中后就地改写那一发的阵营、伤害与发射者，不销毁重建，也不换预制体
     /// 命中回报有两条路，别混：ProduceDamage 里的 _onHit 取伤害那一刻就回调、不看扣血结果，只给逻辑用
     /// （普攻换命中后坐力 / 突进提前结束）；IHitLanded 要等 AttackBox 确认 TakeDamage 返回 true 才回调，
     /// 接到 PlayerLogic.OnMeleeHitLanded 涨极性并发顿帧。白攻击的子弹不经过本类，所以子弹命中不顿帧。
@@ -48,6 +49,7 @@ namespace Refraction.Presentation.Combat
         private readonly Collider2D _reboundLevel;
         private readonly Transform _reboundRoot;
         private readonly float _reboundBaseScaleX;
+        private readonly Transform _root;
         private readonly AttackBox _dashAhead;
         private readonly AttackBox _dashUp;
         private readonly AttackBox _dashDown;
@@ -65,7 +67,7 @@ namespace Refraction.Presentation.Combat
         private Collider2D _reboundActive;
         private AttackBox _activeBox;
         private Collider2D _hurt;
-        private Func<IBulletLauncher> _launcher;
+        private IHitLanded _hitSink;
         private BlackAttackKind _kind;
         private Action _onHit;
         private Color _attackSparkColor = Color.white;
@@ -81,6 +83,7 @@ namespace Refraction.Presentation.Combat
         {
             _config = config;
             _face = face;
+            _root = root;
             _onHitLanded = onHitLanded;
             _onReflected = onReflected;
             _effects = effects;
@@ -239,38 +242,35 @@ namespace Refraction.Presentation.Combat
             }
         }
 
-        /// <summary>接上玩家自己的开火口与身体受击盒：弹反要借玩家的池重发一发，受击盒用来判优先级</summary>
-        public void BindRebound(Func<IBulletLauncher> launcher, Collider2D hurt)
+        /// <summary>接上玩家自己的命中回报与身体受击盒：弹反只改子弹归属，受击盒用来判优先级</summary>
+        public void BindRebound(IHitLanded hitSink, Collider2D hurt)
         {
-            _launcher = launcher;
+            _hitSink = hitSink;
             _hurt = hurt;
         }
 
-        /// <summary>每物理帧扫一遍活子弹：压在身体上的让给受击，落在弹反范围内的敌弹反向打回去</summary>
-        public void ReboundTick()
+        /// <summary>每物理帧扫一遍活子弹：压在身体上的让给受击，落在弹反范围内的敌弹就地反向</summary>
+        public void ReboundTick(BulletField field)
         {
             Collider2D zone = _reboundActive;
-            if (zone == null) return;
+            if (zone == null || field == null || _root == null) return;
 
-            IBulletLauncher launcher = _launcher?.Invoke();
-            if (launcher == null) return;
+            BulletRebind rebind = new(BulletFaction.Player, _config.bulletDamage, _config.bulletKnockback,
+                _config.bulletTransferSpeed);
 
-            float damage = _config.bulletDamage;
-            float knockback = _config.bulletKnockback;
-            float transfer = _config.bulletTransferSpeed;
-
-            for (int i = Bullet.LiveCount - 1; i >= 0; i--)
+            for (int i = field.LiveCount - 1; i >= 0; i--)
             {
-                Bullet bullet = Bullet.LiveAt(i);
-                if (bullet == null || bullet.PlayerOwned) continue;
+                Bullet bullet = field.LiveAt(i);
+                if (bullet == null || bullet.Faction != BulletFaction.Enemy) continue;
 
                 Vector2 pos = bullet.Position;
                 if (InHurtRange(pos)) continue;
                 if (!zone.OverlapPoint(pos)) continue;
 
+                // 火花要打在反出去的位置与方向上，改写之后再取会被新弹道带走
                 Vector2 reflectDir = bullet.ReflectDirection;
 
-                if (!bullet.TryReflect(launcher, damage, knockback, transfer)) continue;
+                if (!bullet.TryReflect(in rebind, _root, _hitSink)) continue;
 
                 _effects?.PlayReboundSpark(pos, reflectDir, _reboundSparkColor);
                 _onReflected?.Invoke(reflectDir);

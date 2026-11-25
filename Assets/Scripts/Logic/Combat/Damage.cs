@@ -49,6 +49,17 @@ namespace Refraction.Logic.Combat
             KnockbackSpeed = knockbackSpeed;
         }
 
+        public static Damage FromBullet(
+            BulletFaction faction,
+            float amount,
+            Vector2 direction = default,
+            float knockbackSpeed = 0f)
+        {
+            DamageSource source = faction == BulletFaction.Player ? DamageSource.PlayerBullet : DamageSource.EnemyBullet;
+
+            return new Damage(amount, source, direction, knockbackSpeed);
+        }
+
         /// <remarks>正中命中给"上"，方向为零时归一化会出 NaN</remarks>
         public static Damage At(
             Vector2 victim,

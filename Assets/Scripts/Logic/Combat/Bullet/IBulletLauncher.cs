@@ -2,7 +2,7 @@
 
 namespace Refraction.Logic.Combat
 {
-    /// <summary>开火参数：Origin 玩家中心，Direction 单位向量，Speed 每秒，Damage 伤害，KnockbackSpeed 击退初速，TransferSpeed 残影间传输速度</summary>
+    /// <summary>开火参数：Origin 出膛点，Direction 单位向量，Speed 每秒，Damage 伤害，KnockbackSpeed 击退初速，TransferSpeed 残影间传输速度</summary>
     public readonly struct BulletSpawn
     {
         public readonly Vector2 Origin;
@@ -23,7 +23,7 @@ namespace Refraction.Logic.Combat
         }
     }
 
-    /// <summary>开火唯一出口：表现层实例化预制体，逻辑层不碰场景对象</summary>
+    /// <summary>开火唯一出口：逻辑层只交意图，实例与池归表现层</summary>
     public interface IBulletLauncher
     {
         void Launch(in BulletSpawn spawn);

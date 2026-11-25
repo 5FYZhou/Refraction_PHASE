@@ -44,13 +44,10 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 patrolSize;
 
-        private const int BulletPoolSize = 4;
-
         private readonly EnemySight _sight = new(false);
 
         private E_FirstLogic _logic;
-        private BulletLogic _bullets;
-        private BulletField _bulletField;
+        private BulletLauncher _bullets;
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
@@ -90,20 +87,18 @@ namespace Refraction.Presentation.Actor
 
             HitBoxBinder.Bind(transform, _logic, _logic);
 
-            AttachBullets();
-
             _tintBlack = _logic.Black;
             _tint.Apply(_tintBlack);
         }
 
         protected override void OnTick(float deltaTime)
         {
+            EnsureLauncher();
+
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
             _logic.FixedTick(context, _sight.Sense(), SamplePatrolArea());
-
-            _bullets?.Tick(deltaTime);
 
             TickTint();
             _hurtFlash.SetCharging(_logic.ChargingShot, _logic.ChargingTime, _logic.Muzzle(Vector2.zero, moveMotor.FaceSign), chargeInColor);
@@ -111,7 +106,7 @@ namespace Refraction.Presentation.Actor
 
         protected override void OnRecycle()
         {
-            _bullets?.ClearAll();
+            _bullets?.Clear();
             _hurtFlash?.StopCharging();
         }
 
@@ -125,7 +120,7 @@ namespace Refraction.Presentation.Actor
 
             if (_bullets != null)
             {
-                _bullets.ClearAll();
+                _bullets.Clear();
                 _logic.BindLauncher(_bullets);
             }
 
@@ -142,7 +137,7 @@ namespace Refraction.Presentation.Actor
         {
             _logic?.Dispose();
 
-            if (_bulletField != null) Destroy(_bulletField.gameObject);
+            _bullets?.Clear();
         }
 
         private void TickTint()
@@ -155,17 +150,14 @@ namespace Refraction.Presentation.Actor
             _tint.Apply(black);
         }
 
-        private void AttachBullets()
+        /// <summary>发射口按需领取：敌人 Start 早于 CombatRoot.Attach，拿到之前开火自然哑掉</summary>
+        private void EnsureLauncher()
         {
-            if (bulletPrefab == null) return;
+            if (_bullets != null || bulletPrefab == null) return;
 
-            GameObject host = new(nameof(BulletField));
+            _bullets = CombatRoot.Acquire(bulletPrefab, transform, BulletFaction.Enemy);
 
-            _bulletField = host.AddComponent<BulletField>();
-            _bulletField.Init(bulletPrefab, transform, null, BulletPoolSize, 1);
-
-            _bullets = new BulletLogic(_bulletField, false);
-            _logic.BindLauncher(_bullets);
+            if (_bullets != null) _logic?.BindLauncher(_bullets);
         }
 
         /// <summary>逻辑只认左右边界：快照里的高度留给编辑器画框，纵向不参与判定</summary>

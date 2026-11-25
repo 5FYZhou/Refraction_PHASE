@@ -1,81 +1,37 @@
-using Refraction.Foundation;
+using System.Collections.Generic;
 using Refraction.Logic.Combat;
 using UnityEngine;
 
 namespace Refraction.Presentation.Combat
 {
-    /// <summary>子弹的外壳来源：按预制体造视图并交代开火者与命中回调，逻辑层只说要几发，不碰 Instantiate</summary>
-    public sealed class BulletField : MonoBehaviour, IBulletViewFactory
+    /// <summary>全局活跃子弹场：登记在飞的实例、注销失效的，并按固定帧推进整套弹道</summary>
+    /// <remarks>不持池也不造实例，那些归 CombatRoot。容器必须是根对象：转身靠翻角色根节点 scale.x，挂在角色下面会把子弹镜像到另一侧</remarks>
+    public sealed class BulletField : MonoBehaviour
     {
-        private const int PoolSize = 32;
-        private const int PrewarmCount = 8;
+        private readonly List<Bullet> _live = new();
 
-        private GameObject _prefab;
-        private Transform _owner;
-        private IHitLanded _hitSink;
-        private Pool<Bullet> _pool;
+        private BulletLogic _system;
 
-        public void Init(GameObject prefab, Transform owner, IHitLanded hitSink, int maxSize = PoolSize, int prewarm = PrewarmCount)
+        public int LiveCount => _live.Count;
+
+        public void Init(BulletLogic system)
         {
-            // 容器必须是根对象：MoveMotor 转身靠翻根节点 scale.x，挂在角色下面会把子弹位置镜像到另一侧
             transform.SetParent(null, true);
 
-            _prefab = prefab;
-            _owner = owner;
-            _hitSink = hitSink;
-
-            if (_prefab == null)
-            {
-                Debug.LogError("[BulletField] 子弹预制体为空，本次开火不会生成子弹。");
-                return;
-            }
-
-            _pool = new Pool<Bullet>(
-                CreateBullet,
-                onGet: Take,
-                onRelease: Put,
-                name: nameof(Bullet),
-                maxSize: Mathf.Max(1, maxSize),
-                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
-
-            _pool.Prewarm(prewarm);
+            _system = system;
         }
 
-        public IBulletView Create(BulletLogic system, int id)
+        public Bullet LiveAt(int index) => _live[index];
+
+        public void Register(Bullet bullet)
         {
-            if (_pool == null || !_pool.TryGet(out Bullet bullet)) return null;
-
-            bullet.Bind(this, system, id, _owner, _hitSink);
-
-            return bullet;
+            if (bullet != null && !_live.Contains(bullet)) _live.Add(bullet);
         }
 
-        /// <summary>子弹结算完或撞毁后回到这里：池要它，不是 Destroy</summary>
-        public void Recycle(Bullet bullet) => _pool?.Release(bullet);
+        public void Unregister(Bullet bullet) => _live.Remove(bullet);
 
-        private Bullet CreateBullet()
-        {
-            GameObject go = Instantiate(_prefab, transform);
+        public void Tick(float deltaTime) => _system?.Tick(deltaTime);
 
-            // 预制体根节点带着自己的局部坐标，池里复用前先落回容器原点，出膛位置一律由 Apply 决定
-            go.transform.localPosition = Vector3.zero;
-
-            Bullet bullet = go.GetComponent<Bullet>();
-            if (bullet == null) bullet = go.AddComponent<Bullet>();
-
-            go.SetActive(false);
-
-            return bullet;
-        }
-
-        private static void Take(Bullet bullet) => bullet.gameObject.SetActive(true);
-
-        private static void Put(Bullet bullet)
-        {
-            bullet.Reset();
-            bullet.gameObject.SetActive(false);
-        }
-
-        private void OnDestroy() => _pool?.Dispose();
+        private void OnDestroy() => _live.Clear();
     }
 }

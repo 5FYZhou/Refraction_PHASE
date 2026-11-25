@@ -191,7 +191,7 @@ namespace Refraction.Presentation.Actor
 
             if (_hurt != null) _hurtExclude = _hurt.excludeLayers;
 
-            _blackAttack.BindRebound(() => _launcher, _hurt);
+            _blackAttack.BindRebound(_logic, _hurt);
 
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
             if (spawnT != null && _checkpoint == null)
@@ -325,7 +325,7 @@ namespace Refraction.Presentation.Actor
 
             _grounded = grounded;
 
-            _blackAttack?.ReboundTick();
+            _blackAttack?.ReboundTick(_root != null && _root.Combat != null ? _root.Combat.Bullets : null);
 
             EventBus<PlayerDebugSnapshotTaken>.Publish(new(
                 _context.WorldInfo.FrameStartVelocity,

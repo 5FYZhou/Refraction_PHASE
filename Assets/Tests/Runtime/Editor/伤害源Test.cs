@@ -92,34 +92,22 @@ namespace Refraction.Tests
         [Test]
         public void 子弹的伤害源_按阵营分()
         {
-            假子弹视图工厂 factory = new();
+            BulletLogic system = new();
 
-            BulletLogic playerSide = new(factory, true);
-            BulletLogic enemySide = new(factory, false);
+            system.Launch(new BulletShooter(0, 0, BulletFaction.Player),
+                new BulletSpawn(Vector2.zero, Vector2.right, 10f, 1f));
+            system.Launch(new BulletShooter(1, 0, BulletFaction.Enemy),
+                new BulletSpawn(Vector2.zero, Vector2.left, 10f, 1f));
 
-            playerSide.Launch(new BulletSpawn(Vector2.zero, Vector2.right, 10f, 1f));
-            enemySide.Launch(new BulletSpawn(Vector2.zero, Vector2.left, 10f, 1f));
+            Assert.IsTrue(system.TryTakeRequest(out BulletRequest playerShot), "玩家的发射请求要先被取走");
+            Assert.IsTrue(system.TryTakeRequest(out BulletRequest enemyShot), "敌人的发射请求同样");
 
-            Assert.AreEqual(DamageSource.PlayerBullet, playerSide.DamageOf(0).Source, "玩家这套开出来的子弹记成玩家子弹");
-            Assert.AreEqual(DamageSource.EnemyBullet, enemySide.DamageOf(0).Source, "敌人这套开出来的子弹记成敌人子弹");
+            Assert.AreEqual(DamageSource.PlayerBullet, playerShot.Damage.Source, "玩家这一侧开出来的子弹记成玩家子弹");
+            Assert.AreEqual(DamageSource.EnemyBullet, enemyShot.Damage.Source, "敌人这一侧开出来的子弹记成敌人子弹");
         }
 
         private PlayerLogic 造玩家() =>
             new(_motor, _playerConfig, new InputBuffer(0.1f, 60), null, null);
-
-        private sealed class 假子弹视图 : IBulletView
-        {
-            public Vector2 Position { get; private set; }
-
-            public void Apply(in BulletPose pose) => Position = pose.Pos;
-
-            public void Kill() { }
-        }
-
-        private sealed class 假子弹视图工厂 : IBulletViewFactory
-        {
-            public IBulletView Create(BulletLogic system, int id) => new 假子弹视图();
-        }
 
         private sealed class FakeMotor : IMoveMotor
         {

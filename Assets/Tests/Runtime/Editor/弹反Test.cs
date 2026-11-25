@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Refraction.Data;
 using Refraction.Logic.Combat;
 using Refraction.Presentation.Actor;
@@ -106,35 +105,49 @@ namespace Refraction.Tests
         }
 
         [Test]
-        public void 弹反_反向同速_伤害换成玩家子弹()
+        public void 弹反_就地改写归属_反向同速且不换实例()
         {
-            GameObject host = new("BulletField");
-            BulletField field = host.AddComponent<BulletField>();
-            真子弹工厂 factory = new(field);
-            BulletLogic enemy = new(factory, false);
-            记开火 launcher = new();
+            BulletLogic system = new();
+            GameObject fieldHost = new("BulletField");
+            BulletField field = fieldHost.AddComponent<BulletField>();
+            GameObject bulletHost = new("Bullet");
+            bulletHost.AddComponent<BoxCollider2D>().isTrigger = true;
 
-            enemy.Launch(new BulletSpawn(new Vector2(3f, 1f), new Vector2(-1f, 0f), 12f, 9f, 4f, 26f));
+            Bullet bullet = bulletHost.AddComponent<Bullet>();
 
-            Bullet bullet = factory.Last;
+            system.Launch(
+                new BulletShooter(1, 0, BulletFaction.Enemy),
+                new BulletSpawn(new Vector2(3f, 1f), Vector2.left, 12f, 9f, 4f, 8f));
 
-            Assert.IsFalse(bullet.PlayerOwned, "敌人打出的子弹不属于玩家这一侧");
+            Assert.IsTrue(system.TryTakeRequest(out BulletRequest request), "发射先记成请求，等 CombatRoot 取走");
 
-            Assert.IsTrue(bullet.TryReflect(launcher, 1f, 3f, 26f), "飞行中的敌弹应该能被弹反");
-            Assert.AreEqual(1, launcher.Spawns.Count, "弹反要由玩家那一侧的发射口重发一发");
+            bullet.Initialize(null, field, system, in request, null, null);
+            system.AttachView(request.Id, bullet);
 
-            BulletSpawn spawn = launcher.Spawns[0];
+            Assert.AreEqual(BulletFaction.Enemy, bullet.Faction, "敌人打出的子弹属于敌方");
+            Assert.AreEqual(1, field.LiveCount, "实例要登记进活跃子弹场");
+            Assert.AreEqual(1, system.Count, "逻辑层账上就这一发");
 
-            Assert.AreEqual(1f, spawn.Direction.x, Eps, "子弹向相反方向飞出");
-            Assert.AreEqual(0f, spawn.Direction.y, Eps, "反向不引入额外竖直分量");
-            Assert.AreEqual(12f, spawn.Speed, Eps, "飞行速度沿用打进弹反范围的那一发");
-            Assert.AreEqual(1f, spawn.Damage, Eps, "弹反后重新附上玩家的子弹伤害");
-            Assert.AreEqual(3f, spawn.KnockbackSpeed, Eps, "击退也换成玩家配置那一份");
-            Assert.AreEqual(26f, spawn.TransferSpeed, Eps, "弹反出来的子弹照样能进残影");
-            Assert.AreEqual(0, enemy.Count, "原弹在弹反当帧就从敌方系统里收走");
+            Vector2 inbound = bullet.ReflectDirection;
 
-            Object.DestroyImmediate(host);
-            Object.DestroyImmediate(factory.Last.gameObject);
+            Assert.AreEqual(1f, inbound.x, Eps, "弹反方向取当前弹道的反向");
+
+            BulletRebind rebind = new(BulletFaction.Player, 1f, 3f, 26f);
+
+            Assert.IsTrue(bullet.TryReflect(in rebind, null, null), "飞行中的敌弹应该能被弹反");
+            Assert.AreEqual(BulletFaction.Player, bullet.Faction, "弹反后这一发归玩家，同籍判定自然换边");
+            Assert.AreEqual(1f, bullet.ProduceDamage().Amount, Eps, "伤害换成弹反者那一份");
+            Assert.AreEqual(3f, bullet.ProduceDamage().KnockbackSpeed, Eps, "击退也换成弹反者那一份");
+
+            Rigidbody2D body = bullet.GetComponent<Rigidbody2D>();
+
+            Assert.AreEqual(12f, body.velocity.x, Eps, "弹反后按原速朝反方向飞出");
+            Assert.AreEqual(0f, body.velocity.y, Eps, "反向不引入额外竖直分量");
+            Assert.AreEqual(1, system.Count, "原子弹继续在飞，没有销毁重发");
+            Assert.AreEqual(1, field.LiveCount, "也没有换实例");
+
+            Object.DestroyImmediate(bulletHost);
+            Object.DestroyImmediate(fieldHost);
         }
 
         [Test]
@@ -146,13 +159,13 @@ namespace Refraction.Tests
             hurt.size = new Vector2(0.9f, 1.8f);
 
             BlackAttackView view = new(scene.Root.transform, _config, () => 1);
-            view.BindRebound(() => null, hurt);
+            view.BindRebound(null, hurt);
 
             Assert.IsTrue(view.InHurtRange(Vector2.zero), "身体中心属于受击范围");
             Assert.IsTrue(view.InHurtRange(new Vector2(0.4f, 0.8f)), "受击盒右上角仍在受击范围内");
             Assert.IsFalse(view.InHurtRange(new Vector2(1.2f, 0f)), "身体外的弹反范围不算受击");
 
-            view.BindRebound(() => null, null);
+            view.BindRebound(null, null);
 
             Assert.IsFalse(view.InHurtRange(Vector2.zero), "没有受击盒时不挡弹反");
         }
@@ -222,35 +235,6 @@ namespace Refraction.Tests
                 go.AddComponent<BoxCollider2D>();
                 go.AddComponent<AttackBox>();
                 return go;
-            }
-        }
-
-        private sealed class 记开火 : IBulletLauncher
-        {
-            public readonly List<BulletSpawn> Spawns = new();
-
-            public void Launch(in BulletSpawn spawn) => Spawns.Add(spawn);
-        }
-
-        private sealed class 真子弹工厂 : IBulletViewFactory
-        {
-            private readonly BulletField _home;
-
-            public Bullet Last;
-
-            public 真子弹工厂(BulletField home) => _home = home;
-
-            public IBulletView Create(BulletLogic system, int id)
-            {
-                GameObject go = new("Bullet");
-                go.AddComponent<BoxCollider2D>().isTrigger = true;
-
-                Bullet bullet = go.AddComponent<Bullet>();
-                bullet.Bind(_home, system, id, null, null);
-
-                Last = bullet;
-
-                return bullet;
             }
         }
     }

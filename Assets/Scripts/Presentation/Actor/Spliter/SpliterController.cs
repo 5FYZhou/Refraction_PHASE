@@ -68,15 +68,13 @@ namespace Refraction.Presentation.Actor
 
         private const string ReboundChildName = "ReboundCollider";
         private const string ViewChildName = "View";
-        private const int BulletPoolSize = 6;
         private const float DirEps = 1e-6f;
         private const float MaxViewAngle = 90f;
 
         private readonly EnemySight _sight = new(false);
 
         private SpliterLogic _logic;
-        private BulletLogic _bullets;
-        private BulletField _bulletField;
+        private BulletLauncher _bullets;
 
         private EnemyTint _tint;
         private HurtFlash _hurtFlash;
@@ -124,8 +122,6 @@ namespace Refraction.Presentation.Actor
 
             HitBoxBinder.Bind(transform, _logic, _logic);
 
-            AttachBullets();
-
             _tintBlack = _logic.Black;
             _tint.Apply(_tintBlack);
 
@@ -134,14 +130,14 @@ namespace Refraction.Presentation.Actor
 
         protected override void OnTick(float deltaTime)
         {
+            EnsureLauncher();
+
             WorldInfo worldInfo = moveMotor.SampleWorld();
             LogicContext context = new(default, worldInfo, new(Time.fixedTime, Time.fixedDeltaTime));
 
             _logic.FixedTick(context, _sight.Sense());
 
             TickAimLock();
-
-            _bullets?.Tick(deltaTime);
 
             TickTint();
             _reboundFlash?.Tick(deltaTime);
@@ -168,21 +164,22 @@ namespace Refraction.Presentation.Actor
         /// <summary>弹反入口：只认玩家阵营的飞行子弹；形态、冷却与当前阶段都归逻辑层判</summary>
         public void OnReboundEnter(Collider2D other)
         {
-            if (!Attached || IsDead || other == null || _bullets == null) return;
+            if (!Attached || IsDead || other == null) return;
 
             Bullet bullet = other.GetComponentInParent<Bullet>();
-            if (bullet == null || !bullet.PlayerOwned) return;
+            if (bullet == null || bullet.Faction != BulletFaction.Player) return;
 
             float now = Time.fixedTime;
             if (!_logic.CanRebound(now)) return;
 
             Damage damage = bullet.ProduceDamage();
 
-            // 这两样必须在反射之前取：TryReflect 会把子弹回池，Reset 会清零速度并把位置复位
+            // 位置与方向要在改写之前取：改写之后 ReflectDirection 就是新弹道了
             Vector2 reflectDir = bullet.ReflectDirection;
             Vector2 reboundAt = bullet.Position;
+            BulletRebind rebind = new(BulletFaction.Enemy, damage.Amount, damage.KnockbackSpeed);
 
-            if (!bullet.TryReflect(_bullets, damage.Amount, damage.KnockbackSpeed, 0f)) return;
+            if (!bullet.TryReflect(in rebind, transform, null)) return;
 
             _logic.MarkRebounded(now);
             Root.Audio?.EnqueueSfx(AudioId.WeaponClashEnemy);
@@ -195,7 +192,7 @@ namespace Refraction.Presentation.Actor
 
         protected override void OnRecycle()
         {
-            _bullets?.ClearAll();
+            _bullets?.Clear();
             _hurtFlash?.StopCharging();
         }
 
@@ -209,7 +206,7 @@ namespace Refraction.Presentation.Actor
 
             if (_bullets != null)
             {
-                _bullets.ClearAll();
+                _bullets.Clear();
                 _logic.BindLauncher(_bullets);
             }
 
@@ -233,7 +230,7 @@ namespace Refraction.Presentation.Actor
             _logic?.Dispose();
             _reboundFlash?.Dispose();
 
-            if (_bulletField != null) Destroy(_bulletField.gameObject);
+            _bullets?.Clear();
         }
 
         private float ResolveViewAngle()
@@ -319,17 +316,14 @@ namespace Refraction.Presentation.Actor
             _reboundFlash = new ReboundFlash(trigger, reboundFlashTime);
         }
 
-        private void AttachBullets()
+        /// <summary>发射口按需领取：敌人 Start 早于 CombatRoot.Attach，拿到之前开火自然哑掉</summary>
+        private void EnsureLauncher()
         {
-            if (bulletPrefab == null) return;
+            if (_bullets != null || bulletPrefab == null) return;
 
-            GameObject host = new(nameof(BulletField));
+            _bullets = CombatRoot.Acquire(bulletPrefab, transform, BulletFaction.Enemy);
 
-            _bulletField = host.AddComponent<BulletField>();
-            _bulletField.Init(bulletPrefab, transform, null, BulletPoolSize, 1);
-
-            _bullets = new BulletLogic(_bulletField, false);
-            _logic.BindLauncher(_bullets);
+            if (_bullets != null) _logic?.BindLauncher(_bullets);
         }
 
 #if UNITY_EDITOR

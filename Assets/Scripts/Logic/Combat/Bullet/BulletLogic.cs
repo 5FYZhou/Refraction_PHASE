@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace Refraction.Logic.Combat
 {
-    /// <summary>子弹系统：开火唯一出口是 Launch，之后每发的状态、路径与出射方向全在这里推</summary>
-    /// <remarks>只管逻辑：视图经 IBulletViewFactory 造，姿势经 IBulletView 下发，撞击与否由表现层把触发器回调报回来</remarks>
-    public sealed class BulletLogic : IBulletLauncher
+    /// <summary>子弹系统：全场景只有一份，发射先记成请求，姿势与路径在 Tick 里推</summary>
+    /// <remarks>不造实例、不管池：请求由 CombatRoot 取走并落地，视图由它交回来。阵营只写进 Damage</remarks>
+    public sealed class BulletLogic
     {
         private const float ArriveEps = 1e-4f;
         private const float DirEps = 1e-6f;
@@ -13,7 +13,6 @@ namespace Refraction.Logic.Combat
         private sealed class Shot
         {
             public IBulletView View;
-            public Damage Damage;
             public AfterimageLogic Logic;
             public Vector2 Pos;
             public Vector2 Dir;
@@ -22,6 +21,7 @@ namespace Refraction.Logic.Combat
             public float TransferSpeed;
             public BulletState State;
             public int Id;
+            public int OwnerId;
             public int Step;
             public int Node;
             public int SegFrom = -1;
@@ -32,51 +32,79 @@ namespace Refraction.Logic.Combat
         }
 
         private readonly List<Shot> _live = new();
-        private readonly IBulletViewFactory _factory;
+        private readonly List<BulletRequest> _pending = new();
 
         private int _nextId;
-
-        /// <summary>true = 玩家这一套。弹反要把敌弹换成玩家子弹，视图靠它认自己属于哪边</summary>
-        public bool PlayerOwned { get; }
-
-        public BulletLogic(IBulletViewFactory factory, bool playerOwned)
-        {
-            _factory = factory;
-            PlayerOwned = playerOwned;
-        }
+        private int _head;
 
         public int Count => _live.Count;
 
-        /// <summary>玩家逻辑层开火的唯一入口：先记账再要视图，视图在 Bind 时会回读伤害</summary>
-        public void Launch(in BulletSpawn spawn)
+        /// <summary>逻辑层开火的唯一入口：先记账再挂请求，实例由 CombatRoot 在同一帧取走</summary>
+        public void Launch(in BulletShooter shooter, in BulletSpawn spawn)
         {
-            if (_factory == null) return;
-
             Shot shot = new()
             {
                 Id = _nextId++,
+                OwnerId = shooter.OwnerId,
                 Pos = spawn.Origin,
                 Dir = spawn.Direction,
                 Speed = spawn.Speed,
                 TransferSpeed = spawn.TransferSpeed,
                 State = BulletState.Flying,
-                Damage = new Damage(
-                    spawn.Damage,
-                    PlayerOwned ? DamageSource.PlayerBullet : DamageSource.EnemyBullet,
-                    spawn.Direction,
-                    spawn.KnockbackSpeed)
             };
 
             _live.Add(shot);
 
-            shot.View = _factory.Create(this, shot.Id);
-            if (shot.View == null)
+            _pending.Add(new BulletRequest(
+                shot.Id,
+                in shooter,
+                Damage.FromBullet(shooter.Faction, spawn.Damage, spawn.Direction, spawn.KnockbackSpeed),
+                spawn.Origin,
+                spawn.Direction,
+                spawn.Speed,
+                spawn.TransferSpeed));
+        }
+
+        /// <summary>取一条还没落地的请求：CombatRoot 每帧排空，取完即清表，不留旧请求</summary>
+        public bool TryTakeRequest(out BulletRequest request)
+        {
+            if (_head >= _pending.Count)
             {
-                _live.Remove(shot);
-                return;
+                request = default;
+                return false;
             }
 
+            request = _pending[_head++];
+
+            if (_head < _pending.Count) return true;
+
+            _pending.Clear();
+            _head = 0;
+
+            return true;
+        }
+
+        /// <summary>视图落地后交回来：挂上并立刻摆到出膛姿势，别等下一次 Tick</summary>
+        public void AttachView(int id, IBulletView view)
+        {
+            Shot shot = Find(id);
+
+            if (shot == null) return;
+
+            shot.View = view;
             shot.View.Apply(Pose(shot));
+        }
+
+        /// <summary>弹反改写弹道：视图那边已经反向，这里跟着改，否则下一次 Apply 会把朝向摆回去</summary>
+        public void Redirect(int id, Vector2 dir, float speed, float transferSpeed)
+        {
+            Shot shot = Find(id);
+
+            if (shot == null) return;
+
+            shot.Dir = dir;
+            shot.Speed = speed;
+            shot.TransferSpeed = transferSpeed;
         }
 
         /// <summary>每物理帧推一次：飞行中的只跟读位置，传输中的逐段走，走完或目标失效就地出射</summary>
@@ -86,6 +114,9 @@ namespace Refraction.Logic.Combat
             {
                 Shot shot = _live[i];
                 if (shot.Dead) continue;
+
+                // 请求还没被 CombatRoot 落地，这一发还没有身体
+                if (shot.View == null) continue;
 
                 if (shot.State == BulletState.Flying) shot.Pos = shot.View.Position;
                 else Advance(shot, deltaTime);
@@ -121,14 +152,7 @@ namespace Refraction.Logic.Combat
             return true;
         }
 
-        public Damage DamageOf(int id)
-        {
-            Shot shot = Find(id);
-
-            return shot != null ? shot.Damage : default;
-        }
-
-        /// <summary>收一发：撞到 bound、地面，或命中敌人结算完时调这里，本层摘账再让视图回池</summary>
+        /// <summary>收一发：撞到 bound、地面，或命中结算完时调这里，本层摘账再让视图回池</summary>
         public void Kill(int id)
         {
             Shot shot = Find(id);
@@ -140,16 +164,14 @@ namespace Refraction.Logic.Combat
             shot.View?.Kill();
         }
 
-        /// <summary>清空在飞的全部子弹：敌人复位时用，视图照常回池，不留旧弹在半空</summary>
-        public void ClearAll()
+        /// <summary>只清某个发射者的子弹：一只敌人复位不该顺手抹掉别人的弹</summary>
+        public void ClearOwner(int ownerId)
         {
             for (int i = _live.Count - 1; i >= 0; i--)
             {
-                Shot shot = _live[i];
+                if (_live[i].OwnerId != ownerId) continue;
 
-                shot.Dead = true;
-                _live.RemoveAt(i);
-                shot.View?.Kill();
+                Kill(_live[i].Id);
             }
         }
 

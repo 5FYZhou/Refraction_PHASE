@@ -5,10 +5,9 @@ using UnityEngine;
 namespace Refraction.Presentation.Combat
 {
     /// <summary>临时测试用：按固定间隔朝固定方向连发敌籍子弹，给弹反与受击判定喂靶子，验完即删</summary>
-    /// <remarks>发出去的子弹 PlayerOwned = false，和敌人开火同籍，弹反才会把它当敌弹打回去</remarks>
+    /// <remarks>发射口向 CombatRoot 领，走的是和敌人同一条请求与池；弹反只改阵营，不换实例</remarks>
     public sealed class BulletSprayTester : MonoBehaviour, ISceneRoot, IPhysicsTicked
     {
-        private const int PoolSize = 8;
         private const float MinInterval = 0.05f;
 
         public int Order => SceneOrder.World;
@@ -34,8 +33,8 @@ namespace Refraction.Presentation.Combat
         private float damage;
 
         private GameRoot _root;
-        private BulletLogic _bullets;
-        private BulletField _field;
+        private GameObject _prefab;
+        private BulletLauncher _launcher;
         private float _wait;
 
         private void Start()
@@ -46,37 +45,18 @@ namespace Refraction.Presentation.Combat
 
         private void OnDestroy()
         {
-            if (_field != null) Destroy(_field.gameObject);
-
             if (_root != null) _root.UnregisterSceneRoot(this);
         }
 
         public void Attach()
         {
-            if (_bullets != null) return;
-
-            GameObject prefab = bulletPrefab != null ? bulletPrefab : Resources.Load<GameObject>(ResPath.BulletPrefab);
-
-            if (prefab == null)
-            {
-                Debug.LogError("[BulletSprayTester] 没给子弹预制体，Resources 里也没找到，本次不会开火。");
-                return;
-            }
-
-            GameObject host = new(nameof(BulletField));
-
-            _field = host.AddComponent<BulletField>();
-            _field.Init(prefab, transform, null, PoolSize, 1);
-
-            _bullets = new BulletLogic(_field, false);
+            _prefab = bulletPrefab != null ? bulletPrefab : Resources.Load<GameObject>(ResPath.BulletPrefab);
         }
 
         public void FixedTick(float deltaTime)
         {
-            // 子弹系统要每物理帧推一次姿势，缺了它会停在出膛位置
-            _bullets?.Tick(deltaTime);
-
-            if (_bullets == null) return;
+            if (_launcher == null) _launcher = CombatRoot.Acquire(_prefab, transform, BulletFaction.Enemy);
+            if (_launcher == null) return;
 
             _wait -= deltaTime;
 
@@ -89,7 +69,7 @@ namespace Refraction.Presentation.Combat
 
         private void Fire()
         {
-            _bullets.Launch(new BulletSpawn(transform.position, Heading, speed, damage));
+            _launcher.Launch(new BulletSpawn(transform.position, Heading, speed, damage));
         }
 
         private Vector2 Heading
