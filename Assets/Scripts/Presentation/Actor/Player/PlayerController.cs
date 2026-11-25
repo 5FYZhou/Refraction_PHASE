@@ -277,9 +277,11 @@ namespace Refraction.Presentation.Actor
 
             MovementStateTag prevMove = _logic.CurrentTag;
             AttackStateTag prevAttack = _logic.AttackTag;
+            ChargePhase prevCharge = _logic.ChargeStage;
+            bool prevPhasing = _logic.IsPhasing;
 
             _logic.FixedTick(_context);
-            PlayActionAudio(prevMove, prevAttack);
+            PlayActionAudio(prevMove, prevAttack, prevCharge, prevPhasing);
             ApplyPhase();
 
             // 轮询而不是听事件：显示必须跟逻辑同一帧的形态，事件到达顺序由订阅先后决定
@@ -347,17 +349,24 @@ namespace Refraction.Presentation.Actor
             _root.Effects?.PlayLand(bottom.position, _landColor);
         }
 
-        private void PlayActionAudio(MovementStateTag prevMove, AttackStateTag prevAttack)
+        private void PlayActionAudio(MovementStateTag prevMove, AttackStateTag prevAttack, ChargePhase prevCharge, bool prevPhasing)
         {
             AudioManager audio = _root != null ? _root.Audio : null;
 
             if (audio == null) return;
 
+            if (_logic.ChargeStage == ChargePhase.Charging && prevCharge != ChargePhase.Charging) audio.EnqueueSfx(AudioId.Charge);
+
+            bool phasing = _logic.IsPhasing && !prevPhasing;
+
+            // 蓄满后的这次冲刺会吃掉一枚残影，只有它算「残影冲刺」
+            if (phasing) audio.EnqueueSfx(AudioId.AfterimageDash);
+
             MovementStateTag move = _logic.CurrentTag;
 
             if (move != prevMove)
             {
-                if (move == MovementStateTag.Dash) audio.EnqueueSfx(AudioId.Dash);
+                if (move == MovementStateTag.Dash && !phasing) audio.EnqueueSfx(AudioId.Dash);
                 else if (move == MovementStateTag.Jump || move == MovementStateTag.AirJump) audio.EnqueueSfx(AudioId.Jump);
             }
 

@@ -414,7 +414,7 @@ namespace Refraction.Presentation.Combat
 
             _hitSink?.OnHitLanded();
 
-            if (Faction == BulletFaction.Player) GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.HitBody);
+            if (Faction == BulletFaction.Player) GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.WhiteAttackHit);
 
             PlayHitSpark(_hitCollider);
             _system?.Kill(_id);

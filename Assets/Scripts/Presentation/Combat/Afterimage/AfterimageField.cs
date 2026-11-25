@@ -361,6 +361,8 @@ namespace Refraction.Presentation.Combat
             _hot[key] = count + 1;
 
             HitAlong(from, to);
+
+            GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.LinkTrigger);
         }
 
         /// <summary>子弹走完这一段（或中途放弃）：没人再走了就恢复常态透明度</summary>

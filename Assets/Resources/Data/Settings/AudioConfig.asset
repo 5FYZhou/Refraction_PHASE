@@ -86,6 +86,36 @@ MonoBehaviour:
     - "\u6B66\u5668\u78B0\u649E2"
     volume: 1
     randomize: 1
+  - id: 14
+    fileNames:
+    - "\u5145\u80FD"
+    volume: 1
+    randomize: 0
+  - id: 15
+    fileNames:
+    - "\u53CD\u8F6C"
+    volume: 1
+    randomize: 0
+  - id: 16
+    fileNames:
+    - "\u6298\u8DC3\u8FDE\u7EBF\u89E6\u53D1"
+    volume: 1
+    randomize: 1
+  - id: 17
+    fileNames:
+    - "\u654C\u4EBA\u6B7B\u4EA1"
+    volume: 1
+    randomize: 0
+  - id: 18
+    fileNames:
+    - "\u6B8B\u5F71\u51B2\u523A"
+    volume: 1
+    randomize: 1
+  - id: 19
+    fileNames:
+    - "\u767D\u653B\u51FB.\u547D\u4E2D"
+    volume: 1
+    randomize: 1
   - id: 101
     fileNames:
     - scene 1
@@ -114,5 +144,10 @@ MonoBehaviour:
   - id: 106
     fileNames:
     - boss fight 3
+    volume: 1
+    randomize: 0
+  - id: 107
+    fileNames:
+    - "\u4E3B\u754C\u9762"
     volume: 1
     randomize: 0

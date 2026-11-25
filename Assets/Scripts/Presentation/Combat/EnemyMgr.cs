@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Refraction.Data;
 using Refraction.Presentation.Actor;
 
 namespace Refraction.Presentation.Combat
@@ -83,6 +84,7 @@ namespace Refraction.Presentation.Combat
                 if (enemy.IsDead)
                 {
                     _dead.Add(enemy);
+                    GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.EnemyDeath);
                     enemy.Recycle();
                     continue;
                 }

@@ -149,6 +149,8 @@ namespace Refraction.Presentation
 
         private void OnRequestWorldReverse(RequestWorldReverse evt)
         {
+            _audio?.EnqueueSfx(AudioId.WorldReverse);
+
             if (evt.requestWhite)
             {
                 _scenectx.SetWorld(WorldPolarity.White);
@@ -271,7 +273,15 @@ namespace Refraction.Presentation
             _uiMgr ??= new UIMgr();
             _uiMgr.Init();
 
-            _audio.EnqueueBgm(AudioId.BgmScene3);
+            PlaySceneBgm(SceneManager.GetActiveScene());
+        }
+
+        /// <summary>按场景名挑 BGM：开始场景放主界面曲，其余（关卡与测试场景）沿用场景曲</summary>
+        private void PlaySceneBgm(Scene scene)
+        {
+            if (_audio == null) return;
+
+            _audio.EnqueueBgm(scene.name == SceneName.Begin ? AudioId.BgmMenu : AudioId.BgmScene3);
         }
 
         public void RegisterService(IService service)
@@ -440,6 +450,7 @@ namespace Refraction.Presentation
             if (mode != LoadSceneMode.Single) return;
 
             Rebind();
+            PlaySceneBgm(scene);
         }
 
         /// <summary>切场景后重置本次切换的临时状态。只在这个时机安全：新场景的 Awake / OnEnable 已跑完，场景根还没在 Start 里注册</summary>

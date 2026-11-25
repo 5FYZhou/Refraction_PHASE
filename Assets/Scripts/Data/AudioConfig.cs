@@ -48,6 +48,24 @@ namespace Refraction.Data
         /// <summary>敌人弹反成功</summary>
         WeaponClashEnemy = 13,
 
+        /// <summary>蓄力开始</summary>
+        Charge = 14,
+
+        /// <summary>世界反转</summary>
+        WorldReverse = 15,
+
+        /// <summary>折跃连线被子弹触发</summary>
+        LinkTrigger = 16,
+
+        /// <summary>敌人死亡</summary>
+        EnemyDeath = 17,
+
+        /// <summary>残影冲刺</summary>
+        AfterimageDash = 18,
+
+        /// <summary>白攻击命中</summary>
+        WhiteAttackHit = 19,
+
         /// <summary>场景 BGM 1</summary>
         BgmScene1 = 101,
 
@@ -65,6 +83,9 @@ namespace Refraction.Data
 
         /// <summary>Boss BGM 3</summary>
         BgmBoss3 = 106,
+
+        /// <summary>主界面 BGM</summary>
+        BgmMenu = 107,
     }
 
     /// <summary>音频配置：全局音量与抖动参数在前，枚举到文件名的配对表在后</summary>
@@ -154,12 +175,19 @@ namespace Refraction.Data
             Make(AudioId.SaveBell, false, "短铃铛"),
             Make(AudioId.WeaponClash, true, "武器碰撞"),
             Make(AudioId.WeaponClashEnemy, true, "武器碰撞2"),
+            Make(AudioId.Charge, false, "充能"),
+            Make(AudioId.WorldReverse, false, "反转"),
+            Make(AudioId.LinkTrigger, true, "折跃连线触发"),
+            Make(AudioId.EnemyDeath, false, "敌人死亡"),
+            Make(AudioId.AfterimageDash, true, "残影冲刺"),
+            Make(AudioId.WhiteAttackHit, true, "白攻击.命中"),
             Make(AudioId.BgmScene1, false, "scene 1"),
             Make(AudioId.BgmScene2, false, "scene 2"),
             Make(AudioId.BgmScene3, false, "scene 3"),
             Make(AudioId.BgmBoss1, false, "boss fight 1"),
             Make(AudioId.BgmBoss2, false, "boss fight 2"),
             Make(AudioId.BgmBoss3, false, "boss fight 3"),
+            Make(AudioId.BgmMenu, false, "主界面"),
         };
 
         private static Entry Make(AudioId id, bool randomize, params string[] fileNames) => new()
