@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Refraction.Foundation;
+using UnityEngine;
 
 namespace Refraction.Data
 {
@@ -10,8 +11,6 @@ namespace Refraction.Data
     [CreateAssetMenu(fileName = "EnemyColliderConfig", menuName = "Refraction/Settings/EnemyCollider")]
     public sealed class EnemyColliderConfig : ScriptableObject
     {
-        private const string ResourcePath = "Data/Enemy/EnemyColliderConfig";
-
         private static EnemyColliderConfig _default;
 
         [Tooltip("身体盒（实体，非触发器）的子物体名：按名字找，找不到只报警告。")]
@@ -46,13 +45,13 @@ namespace Refraction.Data
             {
                 if (_default != null) return _default;
 
-                _default = Resources.Load<EnemyColliderConfig>(ResourcePath);
+                _default = Resources.Load<EnemyColliderConfig>(ResPath.EnemyColliderConfig);
 
                 if (_default == null)
                 {
                     _default = CreateInstance<EnemyColliderConfig>();
                     _default.hideFlags = HideFlags.HideAndDontSave;
-                    Debug.LogWarning($"[敌人碰撞体] 缺 Resources/{ResourcePath}.asset：临时用脚本默认值，资产里改不到。");
+                    Debug.LogWarning($"[敌人碰撞体] 缺 Resources/{ResPath.EnemyColliderConfig}.asset：临时用脚本默认值，资产里改不到。");
                 }
 
                 return _default;

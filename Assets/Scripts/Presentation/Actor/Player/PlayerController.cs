@@ -37,7 +37,7 @@ namespace Refraction.Presentation.Actor
         private MoveMotor moveMotor;
 
 
-        [Tooltip("存档点锚点：场景里的 Spawn 对象，玩家站在它的碰撞体范围内按 W 存档。留空表示本关没有存档点。")]
+        [Tooltip("存档点锚点：场景里的 Spawn 对象。该存档点勾了自动存档就进范围即存，否则按 W 存。留空表示本关没有存档点。")]
         [SerializeField]
         private Transform spawnT;
 
@@ -49,7 +49,7 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Vector2 muzzleCrouch = new(0.6f, -0.15f);
 
-        [Tooltip("白攻击的子弹预制体：留空则退回 Resources/Prefabs/Bullet。弹反反打复用同一条池。")]
+        [Tooltip("白攻击的子弹预制体：留空则退回 Resources/Prefabs/Bullet/Bullet。弹反反打复用同一条池。")]
         [SerializeField]
         private GameObject bulletPrefab;
 
@@ -87,6 +87,7 @@ namespace Refraction.Presentation.Actor
         private PlayerLogic _logic;
         private IAfterimageSpawner _afterimageSpawner;
         private Spawn _checkpoint;
+        private bool _insideCheckpoint;
         private IBulletLauncher _launcher;
         private IBulletLauncher _muzzleLauncher;
         private BlackAttackView _blackAttack;
@@ -94,6 +95,8 @@ namespace Refraction.Presentation.Actor
         private int _hurtExclude;
         private bool _phasing;
         private bool _grounded = true;
+
+        private bool _shownBlack;
         private float _saveLockUntil;
         private PlayerAniView _aniView;
 
@@ -138,12 +141,10 @@ namespace Refraction.Presentation.Actor
         private void OnEnable()
         {
             EventBus<RequestPlayerPosChange>.Subscribe(OnRequestPlayerPosChange);
-            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
         private void OnDisable()
         {
             EventBus<RequestPlayerPosChange>.Unsubscribe(OnRequestPlayerPosChange);
-            EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
         }
 
         /// <summary>场景根装配：接上输入源，再按上一场景那扇门指定的落点摆好；GameRoot 在注册后的下一个驱动帧调用，必须幂等</summary>
@@ -178,6 +179,9 @@ namespace Refraction.Presentation.Actor
             if (_root.TryGetPlayerHealth(out int health)) _logic.SetHealth(health);
             if (_root.TryGetPlayerPolarity(out int polarity)) _logic.SetPolarity(polarity);
 
+            // 世界极性进关先同步一次：新玩家不听历史事件，不同步就会按白形态出手
+            _logic.SetWorld(_root.World);
+
             if (_afterimageSpawner != null) _logic.BindAfterimageSpawner(_afterimageSpawner);
 
             var hurtBox = transform.GetComponentInChildren<HurtBox>();
@@ -197,7 +201,7 @@ namespace Refraction.Presentation.Actor
 
             _attached = true;
 
-            ApplyInvert(_root.World == WorldPolarity.Black);
+            ApplyInvert(_logic.IsBlack);
 
             // 跨关回档的落点优先于门；首关两者都没有，保持场景里摆的位置
             if (_root.TryConsumeRespawnPoint(out Vector2 respawn))
@@ -312,6 +316,9 @@ namespace Refraction.Presentation.Actor
             PlayActionAudio(prevMove, prevAttack);
             ApplyPhase();
 
+            // 轮询而不是听事件：显示必须跟逻辑同一帧的形态，事件到达顺序由订阅先后决定
+            if (_logic.IsBlack != _shownBlack) ApplyInvert(_logic.IsBlack);
+
             bool grounded = _context.WorldInfo.Grounded;
 
             if (grounded && !_grounded) PlayLand();
@@ -355,7 +362,14 @@ namespace Refraction.Presentation.Actor
                 }
             }
 
-            if (_context.InputSnapshot.SavePressed) TrySaveCheckpoint();
+            bool insideCheckpoint = _checkpoint != null && _checkpoint.HasPlayer;
+            bool enteredCheckpoint = insideCheckpoint && !_insideCheckpoint;
+            _insideCheckpoint = insideCheckpoint;
+
+            if (insideCheckpoint && (_context.InputSnapshot.SavePressed || (_checkpoint.AutoSave && enteredCheckpoint)))
+            {
+                TrySaveCheckpoint();
+            }
         }
 
         private void PlayLand()
@@ -405,13 +419,9 @@ namespace Refraction.Presentation.Actor
             _logic?.OnReboundReflected(dir);
         }
 
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt)
-        {
-            ApplyInvert(evt.World == WorldPolarity.Black);
-        }
-
         private void ApplyInvert(bool black)
         {
+            _shownBlack = black;
             ApplyParticleColors(black);
 
             if (_root == null || view == null) return;
@@ -436,15 +446,27 @@ namespace Refraction.Presentation.Actor
             // 先复活再决定回哪：跨关回档的新玩家要从上下文读血，这里不落满血就会带着 0 血重开
             _logic.Revive();
 
+            _root.Effects?.SetMoveDust(bottom, false, _moveDustColor);
+            _root.Effects?.SetChargeDash(ViewCenter(), Vector2.zero, false, 0f);
+
+            EventBus<RequestWorldReverse>.Publish(new(true));
+
             if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
             {
+                _root.UIMgr.Transition?.Blink();
                 _logic.SpawnTo(checkpoint);
+                EventBus<PlayerRespawned>.Publish(default);
                 return;
             }
 
+            // 跨关回档走转场，遮罩由它自己拉；同关复活在这里闪一下
             if (_root.TryStartRespawnInCheckpointLevel()) return;
 
+            _root.UIMgr.Transition?.Blink();
+
             if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
+
+            EventBus<PlayerRespawned>.Publish(default);
         }
 
         private void TrySaveCheckpoint()
@@ -465,6 +487,8 @@ namespace Refraction.Presentation.Actor
             _root.Effects?.Play(EffectType.DamageFlash, view, config.saveFlashTime);
 
             _saveLockUntil = Time.fixedTime + config.saveInputLockTime;
+
+            EventBus<CheckpointActivated>.Publish(default);
         }
 
         private Vector2 ViewCenter()
@@ -560,7 +584,7 @@ namespace Refraction.Presentation.Actor
         {
             Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
 
-            _logic.SpawnTo(pivot);
+            _logic.SpawnTo(pivot, invulnerable: false);
             _logic.BeginTransit(in entry, enterTag, enterFace);
         }
 

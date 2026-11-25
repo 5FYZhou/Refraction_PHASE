@@ -1,3 +1,4 @@
+using Refraction.Foundation;
 using Refraction.Logic.Combat;
 using UnityEngine;
 
@@ -7,13 +8,12 @@ namespace Refraction.Presentation.Combat
     /// <remarks>发出去的子弹 PlayerOwned = false，和敌人开火同籍，弹反才会把它当敌弹打回去</remarks>
     public sealed class BulletSprayTester : MonoBehaviour, ISceneRoot, IPhysicsTicked
     {
-        private const string DefaultBulletPath = "Prefabs/Bullet";
         private const int PoolSize = 8;
         private const float MinInterval = 0.05f;
 
         public int Order => SceneOrder.World;
 
-        [Tooltip("要发射的子弹预制体。留空则退到 Resources/Prefabs/Bullet。")]
+        [Tooltip("要发射的子弹预制体。留空则退到 Resources/Prefabs/Bullet/Bullet。")]
         [SerializeField]
         private GameObject bulletPrefab;
 
@@ -55,7 +55,7 @@ namespace Refraction.Presentation.Combat
         {
             if (_bullets != null) return;
 
-            GameObject prefab = bulletPrefab != null ? bulletPrefab : Resources.Load<GameObject>(DefaultBulletPath);
+            GameObject prefab = bulletPrefab != null ? bulletPrefab : Resources.Load<GameObject>(ResPath.BulletPrefab);
 
             if (prefab == null)
             {

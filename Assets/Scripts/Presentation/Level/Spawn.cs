@@ -6,10 +6,16 @@ namespace Refraction.Presentation.Level
     /// <summary>存档点：用自己的触发器认玩家身体，颜色随世界极性取反（rgb 取反、alpha 不动）</summary>
     public sealed class Spawn : MonoBehaviour, IReverse
     {
+        [Tooltip("勾上后玩家一踏进触发范围就自动存档，不用按 W。")]
+        [SerializeField]
+        private bool autoSave;
+
         private Collider2D _zone;
         private Collider2D _playerBody;
         private bool _resolved;
         private GameRoot _root;
+
+        public bool AutoSave => autoSave;
 
         /// <summary>锚点位置，按地面上的一点理解：调用方要自己补上脚底到枢轴的偏移</summary>
         public Vector2 Point => transform.position;
@@ -40,7 +46,7 @@ namespace Refraction.Presentation.Level
 
         private void OnDestroy()
         {
-            _root?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverse(this);
         }
 
         private void OnDisable() => HasPlayer = false;
@@ -63,7 +69,7 @@ namespace Refraction.Presentation.Level
         public void Attach()
         {
             _root ??= GameRoot.Instance;
-            _root?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverse(this);
         }
 
         public void Apply(WorldPolarity world)

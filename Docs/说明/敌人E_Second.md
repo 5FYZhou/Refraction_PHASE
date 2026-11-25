@@ -131,7 +131,7 @@
 ## 九、预制体接线（本次只写了脚本）
 
 - 根节点：`Rigidbody2D`（Dynamic）+ `E_SecondMotor` + `E_SecondController` + 身体碰撞体 + `HurtBox` + `AttackBox`。
-- `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data` 下新建），装配时注入给 `E_SecondMotor`。
+- `config` 只挂在 `E_SecondController` 上（`E_SecondConfig` 资产需要自己在 `Resources/Data/Enemy` 下新建），装配时注入给 `E_SecondMotor`。
 - **`E_SecondMotor.wallMask` 必须勾上墙所在的层**（现有预制体勾的是 `Ground`，墙与地面一起算，所以贴地飞时脚下那层也算撞到），留空等于永远探不到墙，返回态就撞不了墙。
 - `View` 子物体下放 Sprite，所有 `SpriteRenderer` 都会跟着换色。
 - 冲刺转向的节点是控制器上的 `viewRoot`：留空自动按名字找 `View`；它当前的 `localEulerAngles.z` 会被记成「初始角」，所以想让怪物平时就有个倾角，直接摆 `View` 的旋转即可，不用改代码。

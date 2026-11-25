@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: DihOsH/8U3IsO0/ksE/LxWlzLDE3ydKXLkoq5JPuvocXGIFz6KD/dUE=
+guid: XnpNvC+vVC3xVdIrgeoYyBZSJsZyoYqTBQtXpfl41WTjIWhh4FJM97k=
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -44,12 +44,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 550
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -140,7 +140,70 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: downward_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1601
+        height: 1601
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71c4e665e9b01af41959d9444b210d92
+      internalID: -694932076
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: downward_1
+      rect:
+        serializedVersion: 2
+        x: 1601
+        y: 0
+        width: 1601
+        height: 1601
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f97c64cc0ed703341ac0eb99336f3d49
+      internalID: 870859085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: downward_2
+      rect:
+        serializedVersion: 2
+        x: 3202
+        y: 0
+        width: 1601
+        height: 1601
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c1d16d345cb98cf47b83243e547cb73b
+      internalID: 1322733439
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -151,7 +214,10 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      downward_0: -694932076
+      downward_1: 870859085
+      downward_2: 1322733439
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

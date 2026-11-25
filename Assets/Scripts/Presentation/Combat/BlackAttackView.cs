@@ -16,7 +16,8 @@ namespace Refraction.Presentation.Combat
     /// 子弹的碰撞表排掉了 Default 层，所以弹反不用触发器判定，改成每物理帧拿盒子的真实形状扫活子弹
     /// 命中回报有两条路，别混：ProduceDamage 里的 _onHit 取伤害那一刻就回调、不看扣血结果，只给逻辑用
     /// （普攻换命中后坐力 / 突进提前结束）；IHitLanded 要等 AttackBox 确认 TakeDamage 返回 true 才回调，
-    /// 接到 PlayerLogic.OnMeleeHitLanded 涨极性并发顿帧。白攻击的子弹不经过本类，所以子弹命中不顿帧</remarks>
+    /// 接到 PlayerLogic.OnMeleeHitLanded 涨极性并发顿帧。白攻击的子弹不经过本类，所以子弹命中不顿帧。
+    /// 那三块调试网格的颜色与开关读 Data/BlackAttackVisualConfig，缺资产时退回脚本默认值</remarks>
     public sealed class BlackAttackView : IBlackAttackView, IReboundView, IAttacker, IHitLanded, IHitBodyLanded
     {
         private const string ReboundRootPath = "BlackRebound";
@@ -36,12 +37,6 @@ namespace Refraction.Presentation.Combat
         private const string SweepName = "DashSweep";
 
         private const float Diagonal = 0.70710678f;
-
-        private static readonly Color RangeColor = new(0.65f, 0.35f, 1f, 0.3f);
-
-        private static readonly Color ReboundColor = new(1f, 0.92f, 0.02f, 0.35f);
-
-        private static readonly Color SweepColor = new(0.2f, 1f, 0.35f, 0.22f);
 
         private static Material _rangeMaterial;
         private static Material _reboundMaterial;
@@ -109,16 +104,22 @@ namespace Refraction.Presentation.Combat
             BindDash(_dashDown);
             BindDash(_dashLevel);
 
-            // 弹反盒同样按真实碰撞形状画，换成明黄；盒不点亮时子物体跟着隐藏，和攻击盒一致
-            Paint(_reboundAhead, ReboundMaterial);
-            Paint(_reboundUp, ReboundMaterial);
-            Paint(_reboundDown, ReboundMaterial);
-            Paint(_reboundLevel, ReboundMaterial);
+            // 弹反盒同样按真实碰撞形状画；盒不点亮时子物体跟着隐藏，和攻击盒一致。三块网格的颜色与开关都读 SO
+            if (Visuals.drawRebound)
+            {
+                Paint(_reboundAhead, ReboundMaterial);
+                Paint(_reboundUp, ReboundMaterial);
+                Paint(_reboundDown, ReboundMaterial);
+                Paint(_reboundLevel, ReboundMaterial);
+            }
 
-            Paint(_dashAhead);
-            Paint(_dashUp);
-            Paint(_dashDown);
-            Paint(_dashLevel);
+            if (Visuals.drawAttack)
+            {
+                Paint(_dashAhead);
+                Paint(_dashUp);
+                Paint(_dashDown);
+                Paint(_dashLevel);
+            }
 
             End();
             HideRebound();
@@ -158,7 +159,8 @@ namespace Refraction.Presentation.Combat
             _dashHits.Clear();
             SetActive(DashBoxOf(kind), true);
             _activeBox = DashBoxOf(kind);
-            PaintSweep(kind);
+
+            if (Visuals.drawSweep) PaintSweep(kind);
         }
 
         public void End()
@@ -523,6 +525,7 @@ namespace Refraction.Presentation.Combat
             Mesh mesh = col.CreateMesh(false, false);
 
             if (mesh == null || mesh.vertexCount < 3) mesh = ShapeMesh(col);
+            else Rebase(mesh, col);
 
             if (mesh == null) return;
 
@@ -535,6 +538,23 @@ namespace Refraction.Presentation.Combat
             MeshRenderer mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = material;
             mr.sortingOrder = 30000;
+        }
+
+        /// <summary>CreateMesh 的顶点落在挂着的 Rigidbody2D 空间（没挂则是世界空间），挂到 collider 自己下面前必须换回它的局部空间，否则整个盒节点的位移会被叠加两次</summary>
+        private static void Rebase(Mesh mesh, Collider2D col)
+        {
+            Vector3[] points = mesh.vertices;
+            Rigidbody2D body = col.attachedRigidbody;
+            Transform box = col.transform;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                Vector3 world = body != null ? body.transform.TransformPoint(points[i]) : points[i];
+                points[i] = box.InverseTransformPoint(world);
+            }
+
+            mesh.vertices = points;
+            mesh.RecalculateBounds();
         }
 
         private static Mesh ShapeMesh(Collider2D col)
@@ -591,15 +611,23 @@ namespace Refraction.Presentation.Combat
             }
         }
 
-        private static Material RangeMaterial => MaterialOf(RangeColor, ref _rangeMaterial);
+        private static BlackAttackVisualConfig Visuals => BlackAttackVisualConfig.Default;
 
-        private static Material ReboundMaterial => MaterialOf(ReboundColor, ref _reboundMaterial);
+        private static Material RangeMaterial => MaterialOf(Visuals.attackColor, ref _rangeMaterial);
 
-        private static Material SweepMaterial => MaterialOf(SweepColor, ref _sweepMaterial);
+        private static Material ReboundMaterial => MaterialOf(Visuals.reboundColor, ref _reboundMaterial);
 
+        private static Material SweepMaterial => MaterialOf(Visuals.sweepColor, ref _sweepMaterial);
+
+        /// <summary>材质按颜色缓存，SO 里改完颜色下一次取材质就同步过去，不用重进游戏</summary>
         private static Material MaterialOf(Color color, ref Material cache)
         {
-            if (cache != null) return cache;
+            if (cache != null)
+            {
+                if (cache.color != color) cache.color = color;
+
+                return cache;
+            }
 
             Shader shader = Shader.Find("Sprites/Default");
 

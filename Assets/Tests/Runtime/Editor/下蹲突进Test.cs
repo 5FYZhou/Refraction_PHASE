@@ -19,6 +19,7 @@ namespace Refraction.Tests
         private PlayerConfig _config;
         private PostureGroup _posture;
         private AttackGroup _group;
+        private bool _black;
 
         [SetUp]
         public void 建立攻击组()
@@ -34,16 +35,14 @@ namespace Refraction.Tests
 
             FakeMotor motor = new();
             _posture = new PostureGroup(_config, motor);
-            _group = new AttackGroup(_config, motor, null, _posture, null, null);
+            _group = new AttackGroup(_config, motor, null, _posture, null, null, () => _black);
 
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
         }
 
         [TearDown]
         public void 释放攻击组()
         {
-            _group.Dispose();
-            EventBus<WorldPolarityChanged>.Clear();
             Object.DestroyImmediate(_config);
         }
 

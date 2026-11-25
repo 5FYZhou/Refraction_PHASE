@@ -140,6 +140,19 @@ namespace Refraction.Logic.Combat
             shot.View?.Kill();
         }
 
+        /// <summary>清空在飞的全部子弹：敌人复位时用，视图照常回池，不留旧弹在半空</summary>
+        public void ClearAll()
+        {
+            for (int i = _live.Count - 1; i >= 0; i--)
+            {
+                Shot shot = _live[i];
+
+                shot.Dead = true;
+                _live.RemoveAt(i);
+                shot.View?.Kill();
+            }
+        }
+
         /// <summary>视图被外部销毁（换场景、编辑器删对象）时清账，不能在账上留一发没有身体的子弹</summary>
         public void Forget(int id)
         {

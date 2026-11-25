@@ -25,6 +25,16 @@ namespace Refraction.Logic.Events
         }
     }
 
+    public readonly struct RequestLoadScene
+    {
+        public readonly string sceneName;
+
+        public RequestLoadScene(string sceneName)
+        {
+            this.sceneName = sceneName;
+        }
+    }
+
     public readonly struct RequestPlayerPosChange
     {
         public readonly DoorEntry Entry;
@@ -76,6 +86,11 @@ namespace Refraction.Logic.Events
 
     public readonly struct RequestWorldReverse
     {
+        public readonly bool requestWhite;
+        public RequestWorldReverse(bool requestWhite = false)
+        {
+            this.requestWhite = requestWhite;
+        }
     }
     #endregion
 
@@ -129,6 +144,14 @@ namespace Refraction.Logic.Events
             this.cur = cur;
             this.max = max;
         }
+    }
+
+    public readonly struct CheckpointActivated
+    {
+    }
+
+    public readonly struct PlayerRespawned
+    {
     }
 
     public readonly struct AfterimageLinkHit
