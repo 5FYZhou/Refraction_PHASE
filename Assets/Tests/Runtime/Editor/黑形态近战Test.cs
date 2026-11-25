@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using Refraction.Data;
+using Refraction.Foundation;
 using Refraction.Logic;
 using Refraction.Logic.Actor;
 using Refraction.Logic.Combat;
@@ -164,8 +165,8 @@ namespace Refraction.Tests
         [Test]
         public void 判定盒层_不被敌人受击盒排除()
         {
-            GameObject player = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/Player.prefab");
-            GameObject enemy = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Prefabs/Enemy.prefab");
+            GameObject player = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ResPath.AssetsPlayerPrefab);
+            GameObject enemy = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ResPath.AssetsEnemyPrefab);
 
             Assert.IsNotNull(player, "找不到玩家预制体，判定盒的层就没人守了");
             Assert.IsNotNull(enemy, "找不到敌人预制体");

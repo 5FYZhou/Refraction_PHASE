@@ -80,7 +80,7 @@ dotnet build Assembly-CSharp.csproj
 
 ## 4. 数据、调参与表现权责边界 (Data vs SO vs Art)
 
-1. **调参 SO（`Assets/Scripts/Data/*.cs` + `Assets/Resources/PlayerConfig.asset`）**：
+1. **调参 SO（`Assets/Scripts/Data/*.cs` + `Assets/Resources/Data/PlayerConfig.asset`）**：
    - 归程序管辖：移动/跳跃/冲刺/重力的运动学参数、输入缓冲窗口、姿态倍率与时长都在 `PlayerConfig`。
    - 编辑器内实时生效，无需重编译；**所有手感数值只许落在这里，不许散成代码里的魔法常量**。
    - 新增参数：先加字段 + 中文 `Tooltip` + `[Min]`/`[Range]` 约束，再在 asset 上调；`Tooltip` 里写清**单位与量纲**（速度 / 加速度 / 秒 / 倍率），这是逻辑层唯一能读到的契约。
@@ -165,6 +165,7 @@ dotnet build Assembly-CSharp.csproj
       裸 `dotnet build Assembly-CSharp.csproj` 只能算等价下限：它不重扫文件表，新文件可能被漏编。
 - [ ] 8. 测试按 §9 写在 `Assets/Tests/Runtime/Editor/`、**中文 + `Test`** 命名；写完后**没有自己跑测试、没有动编辑器进程**。
 - [ ] 9. 新增或改名的事件符合 §10：请求以 `Request` 开头，事实是过去式；订阅点与 `Unsubscribe` 成对，无残留旧名。
+- [ ] 10. 改动涉及策划可调项（SO 字段、预制体可调字段、资源路径）时，已在 §12 的当天交接文件里补条目；没有漏记、没有新建错日期、没有回写历史文件。
 
 ---
 
@@ -221,10 +222,48 @@ dotnet build Assembly-CSharp.csproj
 | 场景根契约与 Order | `Assets/Scripts/Presentation/ISceneRoot.cs` |
 | 事件定义（请求 / 事实） | `Assets/Scripts/Logic/Event/Events.cs` |
 | 逻辑入参快照（输入/世界/时间） | `Assets/Scripts/Logic/Context.cs` |
-| 全部手感参数 | `Assets/Resources/PlayerConfig.asset` |
+| 全部手感参数 | `Assets/Resources/Data/PlayerConfig.asset` |
+| 敌人数值与共用碰撞体规则 | `Assets/Resources/Data/*.asset`、`Assets/Resources/Data/Enemy/EnemyColliderConfig.asset` |
+| 程策交接（策划可调项变更记录） | `Docs/程策交接/YYYY-MM-DD.md`（规则见 `Docs/README.md`） |
 | 输入绑定 | `Assets/Scripts/Presentation/Input/InputSys.inputactions` |
 | 输入生成物（禁改） | `Assets/Scripts/Generated/InputSys.cs` |
 | 测试位置 | `Assets/Tests/Runtime/Editor/`（中文 + `Test.cs`） |
 | 状态机说明 | `Docs/说明/玩家状态机.md` |
 | 注释规范 | `Docs/工程/注释规范.md` |
 | 门禁脚本（注释 / 编译） | `Tools/comment-lint.ps1`、`Tools/compile-gate.ps1`（说明见 `Tools/README.md`） |
+
+---
+
+## 12. 程策交接 (Designer Handover Log)
+
+策划与美术不看代码。凡是他们**能在 Inspector 或资产里调**的东西发生增删改，都必须在
+`Docs/程策交接/YYYY-MM-DD.md`（本地日期，一天一个文件）里留一条。**这份记录由 AI 维护，策划侧只读。**
+
+**必须记的**
+
+- 新增整份 `.asset`（SO）：**只写它叫什么、放在哪**，字段含义交给 Inspector 的 `Tooltip`，不复述。
+- SO 字段新增 / 改名 / 删字段 / 改默认值——只写「哪个资产多了什么」，不列数值。
+- 预制体上被策划调的可调字段：新增字段、挪节点、删字段。
+- `Assets/Resources/` 下预制体与资产**改名、挪目录**（策划的旧路径会直接失效）。
+- 新增的可视化开关 / 调试绘制项。
+
+**不用记的**
+
+- 纯内部实现：私有方法、状态机内部、性能优化、纯表现代码。
+- 只在代码里生效、Inspector 上不可见的东西。
+- **2026-11-24 之前就存在的可调项**：策划已经知道，不追述、不补登记。
+
+**写法**（完整规则在 `Docs/README.md`，不要另立一套）
+
+1. 大标题 = 对象：`## 玩家`、`## 敌人-Warrior`、`## 场景-存档点`、`## 场景-视差背景`；
+   同一对象在一个文件里只出现一次。
+2. 小标题**只写有内容的**，顺序固定 `### 新增` / `### 修改` / `### 删除`；某类今天没有就不写，**不写「无」占位**。
+3. 每条一行：`- 名称（Inspector 显示名 / 代码字段名） — 完整路径 ▸ 节点 ▸ 组件`。名称在前、路径在后，
+   中间用 `—`；路径**必须真实可点**，不许写「在 Player 上」。
+4. **默认不写说明**，一项一句话 ≤ 30 字（路径、名称不计）。只有「不写就会理解错」时才补一句短括号：
+   局部坐标要填正数、改了要重进、资产还没建。
+5. **不写**：字段列表、单位量纲、默认值、调参建议、Tooltip 原文、变更史、TODO、调用链。
+
+**时机**：和代码改动同一次交付完成，不许"下次补"。当天文件不存在就新建（标题 + 只含有内容的小标题，
+一条也算）；**只追加当天文件**，历史日期只在写错时订正。
+`Docs/**/*.txt` 需求文档仍然只读（§3），交接写的是"现在能调什么"，两者不混。

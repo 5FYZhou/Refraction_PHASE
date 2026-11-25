@@ -36,6 +36,15 @@ namespace Refraction.Presentation.Actor
             return new EnemyTargetInfo(true, Visible, pos, body.center, body.extents);
         }
 
+        /// <summary>复位：复活的敌人不能带着上一轮的玩家引用与视线，重新靠触发器进来</summary>
+        public void Reset()
+        {
+            Visible = false;
+            _player = null;
+            _playerTransform = null;
+            _body = null;
+        }
+
         public void OnDetectEnter(Collider2D other)
         {
             if (other == null) return;

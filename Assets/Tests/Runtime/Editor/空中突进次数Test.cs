@@ -20,6 +20,7 @@ namespace Refraction.Tests
         private ConditionGroup _conditions;
         private AttackGroup _group;
         private 记盒子 _view;
+        private bool _black;
 
         [SetUp]
         public void 建立攻击组()
@@ -40,16 +41,14 @@ namespace Refraction.Tests
             PostureGroup posture = new(_config, motor);
             _conditions = new ConditionGroup(motor, _config);
             _view = new();
-            _group = new AttackGroup(_config, motor, null, posture, _view, _conditions);
+            _group = new AttackGroup(_config, motor, null, posture, _view, _conditions, () => _black);
 
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
         }
 
         [TearDown]
         public void 释放攻击组()
         {
-            _group.Dispose();
-            EventBus<WorldPolarityChanged>.Clear();
             Object.DestroyImmediate(_config);
         }
 

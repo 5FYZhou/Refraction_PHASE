@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Refraction.Data;
 using Refraction.Foundation;
@@ -11,6 +12,7 @@ using Refraction.Logic.Level;
 using Refraction.Logic.Service;
 using Refraction.Presentation.Actor;
 using Refraction.Presentation.Audio;
+using Refraction.Presentation.Combat;
 using Refraction.Presentation.Effects;
 using Refraction.Presentation.Input;
 using Refraction.Presentation.Level;
@@ -25,36 +27,39 @@ namespace Refraction.Presentation
     {
         private readonly List<ISceneRoot> _sceneRoots = new();
         private readonly List<ISceneRoot> _pendingAttach = new();
-        private readonly List<IReverse> _pendingReverse = new();
         private readonly List<IService> _services = new();
         private readonly SceneContext _scenectx = new();
 
         private InputProvider _inputProvider;
         private InputKeyMgr _inputKeys;
-        private DoorReader _doorReader;
         private UIMgr _uiMgr;
         private ResMgr _resMgr;
         private PauseService _pauseService;
         private HitStopService _hitStopService;
-        private LevelManager _levelMgr;
+        private LevelRoot _levelRoot;
         private EffectModule _effects;
         private AudioManager _audio;
         private GameManager _gameMgr;
         private UIInputProvider _uiInputProvider;
 
+        private int _pendingDoorId;
+        private MovementStateTag _pendingTag;
+        private int _pendingFace;
+
         private bool _warnedNoLevel;
-        private bool _levelPending;
+
+        private Coroutine _sceneLoad;
+        private bool _levelReady;
+        private bool _playerPlaced;
 
         /// <summary>给场景根用的输入源。玩家在自己的 Attach 里从这里取。</summary>
         public InputProvider Input => _inputProvider;
 
         public InputKeyMgr InputKeys => _inputKeys;
 
-        public IDoorReader DoorReader => _doorReader;
-
         public WorldPolarity World => _scenectx.World;
 
-        public int LevelId => _doorReader != null ? _doorReader.LevelId : 0;
+        public int LevelId => _levelRoot != null ? _levelRoot.LevelId : 0;
 
         public UIMgr UIMgr { get => _uiMgr ??= new UIMgr(); }
         public ResMgr ResMgr { get => _resMgr ??= new ResMgr(); }
@@ -68,6 +73,8 @@ namespace Refraction.Presentation
         public AudioManager Audio => _audio;
 
         public GameManager Game => _gameMgr;
+
+        public CombatRoot Combat { get; private set; }
 
         public IReadOnlyList<ISceneRoot> SceneRoots => _sceneRoots;
 
@@ -100,6 +107,7 @@ namespace Refraction.Presentation
 
             _inputProvider.Init();
             EventBus<RequestWorldReverse>.Subscribe(OnRequestWorldReverse);
+            EventBus<RequestLoadScene>.Subscribe(OnRequestLoadScene);
             EventBus<PlayerHealthChanged>.Subscribe(OnPlayerHealthChanged);
             EventBus<PlayerPolarityChanged>.Subscribe(OnPlayerPolarityChanged);
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -109,6 +117,7 @@ namespace Refraction.Presentation
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             EventBus<RequestWorldReverse>.Unsubscribe(OnRequestWorldReverse);
+            EventBus<RequestLoadScene>.Unsubscribe(OnRequestLoadScene);
             EventBus<PlayerHealthChanged>.Unsubscribe(OnPlayerHealthChanged);
             EventBus<PlayerPolarityChanged>.Unsubscribe(OnPlayerPolarityChanged);
 
@@ -126,21 +135,104 @@ namespace Refraction.Presentation
 
             _sceneRoots.Clear();
             _pendingAttach.Clear();
-            _pendingReverse.Clear();
             _scenectx.Reset();
-            _doorReader = null;
 
-            _levelMgr?.Dispose();
-            _levelMgr = null;
-            _levelPending = false;
+            _levelRoot = null;
+            _pendingDoorId = 0;
+            _pendingTag = MovementStateTag.None;
+            _pendingFace = 0;
+
+            Combat = null;
 
             _effects?.Destroy();
         }
 
         private void OnRequestWorldReverse(RequestWorldReverse evt)
         {
-            _scenectx.ReverseWorld();
+            if (evt.requestWhite)
+            {
+                _scenectx.SetWorld(WorldPolarity.White);
+            }
+            else
+                _scenectx.ReverseWorld();
             EventBus<WorldPolarityChanged>.Publish(new(_scenectx.World));
+        }
+
+        private void OnRequestLoadScene(RequestLoadScene evt)
+        {
+            if (_sceneLoad != null)
+            {
+                Debug.LogError($"[GameRoot] 上一段转场还没结束，拒绝再次加载 \"{evt.sceneName}\"。");
+                return;
+            }
+
+            _sceneLoad = StartCoroutine(CoSceneTransition(evt.sceneName));
+        }
+
+        private IEnumerator CoSceneTransition(string sceneName)
+        {
+            _levelReady = false;
+            _playerPlaced = false;
+
+            _gameMgr?.BeginSceneTransition();
+
+            TransitionMask mask = _uiMgr != null ? _uiMgr.Transition : null;
+
+            if (mask != null) yield return mask.CoFadeIn();
+
+            yield return null;
+
+            bool loaded = true;
+
+            try
+            {
+                SceneManager.LoadScene(sceneName);
+            }
+            catch (Exception ex)
+            {
+                loaded = false;
+                Debug.LogError($"[GameRoot] 加载场景 \"{sceneName}\" 失败：{ex.Message}");
+            }
+
+            if (!loaded)
+            {
+                if (mask != null) yield return mask.CoFadeOut();
+
+                _gameMgr?.FinishSceneTransition(false);
+                _sceneLoad = null;
+                yield break;
+            }
+
+            float waited = 0f;
+            float timeout = mask != null ? mask.ReadyTimeout : 3f;
+
+            while (!TransitionReady() && waited < timeout)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (!TransitionReady())
+            {
+                Debug.LogWarning($"[GameRoot] 场景 \"{sceneName}\" 在 {timeout} 秒内没等到关卡装配 + 玩家就位，按超时淡出。");
+            }
+
+            if (mask != null) yield return mask.CoFadeOut();
+
+            _gameMgr?.FinishSceneTransition(true);
+
+            if (_gameMgr != null && _gameMgr.CurState == GameState.SceneTransition)
+            {
+                Debug.LogError($"[GameRoot] 场景 \"{sceneName}\" 没有声明入口状态（SceneFlowConfig），转场收不了尾。");
+            }
+
+            _sceneLoad = null;
+        }
+
+        /// <summary>玩家只在关卡场景里等：开始场景没有 LevelRoot，等不到就该直接淡出</summary>
+        private bool TransitionReady()
+        {
+            return _levelReady && (_playerPlaced || _levelRoot == null);
         }
 
         private void OnPlayerHealthChanged(PlayerHealthChanged evt)
@@ -173,16 +265,11 @@ namespace Refraction.Presentation
             _audio = new AudioManager(transform);
             RegisterService(_audio);
 
-            // 不能用 gameObject.scene：base.Awake 已把自己 DontDestroyOnLoad，取到的是 DontDestroyOnLoad 场景
-            _doorReader = FindOrCreateDoorReader(SceneManager.GetActiveScene());
-
             _gameMgr = new(_pauseService);
             _uiInputProvider = new();
             _uiInputProvider.Init();
             _uiMgr ??= new UIMgr();
             _uiMgr.Init();
-
-            _levelPending = true;
 
             _audio.EnqueueBgm(AudioId.BgmScene3);
         }
@@ -193,6 +280,13 @@ namespace Refraction.Presentation
 
             _services.Add(service);
             service.Init();
+        }
+
+        public void BindCombatRoot(CombatRoot combat) => Combat = combat;
+
+        public void UnbindCombatRoot(CombatRoot combat)
+        {
+            if (Combat == combat) Combat = null;
         }
 
         private void TickServices(float deltaTime, float unscaledDeltaTime)
@@ -237,25 +331,24 @@ namespace Refraction.Presentation
             _pendingAttach.Remove(root);
         }
 
-        public void RegisterReverse(IReverse reverse)
+        /// <summary>关卡根装配完才报到：这里只用已就绪的关卡解析进门落点，不自己找、不自己建</summary>
+        public void BindLevelRoot(LevelRoot levelRoot)
         {
-            if (reverse == null) return;
+            if (levelRoot == null || _levelRoot == levelRoot) return;
 
-            if (_levelMgr != null && !_levelPending)
-            {
-                _levelMgr.RegisterReverse(reverse);
-                return;
-            }
+            _levelRoot = levelRoot;
 
-            if (!_pendingReverse.Contains(reverse)) _pendingReverse.Add(reverse);
+            ResolveEntryPoint(levelRoot, _pendingDoorId, _pendingTag, _pendingFace);
+
+            _pendingDoorId = 0;
+            _pendingTag = MovementStateTag.None;
+            _pendingFace = 0;
+            _levelReady = true;
         }
 
-        public void UnregisterReverse(IReverse reverse)
+        public void UnbindLevelRoot(LevelRoot levelRoot)
         {
-            if (reverse == null) return;
-
-            _pendingReverse.Remove(reverse);
-            _levelMgr?.RemoveReverse(reverse);
+            if (_levelRoot == levelRoot) _levelRoot = null;
         }
 
         /// <summary>跨关：记下这次加载要落到的门，LevelManager 在 LoadScene 之前通过它交棒</summary>
@@ -319,17 +412,9 @@ namespace Refraction.Presentation
 
             _scenectx.BeginRespawn(point);
 
-            try
-            {
-                SceneManager.LoadScene(sceneName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _scenectx.CancelRespawn();
-                Debug.LogError($"[GameRoot] 加载存档关 \"{sceneName}\" 失败：{ex.Message}");
-                return false;
-            }
+            EventBus<RequestLoadScene>.Publish(new RequestLoadScene(sceneName));
+
+            return true;
         }
 
         public bool TryConsumeRespawnPoint(out Vector2 pivot)
@@ -342,97 +427,49 @@ namespace Refraction.Presentation
             // 只接单场景切换。附加加载（菜单、UI 叠层）不该动玩家和地面。
             if (mode != LoadSceneMode.Single) return;
 
-            Rebind(scene);
+            Rebind();
         }
 
-        /// <summary>切场景后重挂世界侧。只在这个时机安全：新场景的 Awake / OnEnable 已跑完，场景根还没在 Start 里注册</summary>
-        private void Rebind(Scene scene)
+        /// <summary>切场景后重置本次切换的临时状态。只在这个时机安全：新场景的 Awake / OnEnable 已跑完，场景根还没在 Start 里注册</summary>
+        private void Rebind()
         {
             if (_inputProvider == null) return;
 
-            int pendingDoorId = _scenectx.TakeNextDoor(out MovementStateTag pendingTag, out int pendingFace);
+            _levelRoot = null;
+            _levelReady = false;
+            _playerPlaced = false;
 
-            _levelMgr?.Dispose();
-            _levelMgr = null;
-            _pendingReverse.Clear();
+            // 门索引随旧场景一起没了，落点只能等新场景的 LevelRoot 报到后再解析
+            _pendingDoorId = _scenectx.TakeNextDoor(out _pendingTag, out _pendingFace);
 
-            // 门索引同样每关一份：它持有的是上一个场景的 Door，切场景后必然失效
-            _doorReader = FindOrCreateDoorReader(scene);
-
-            // 落点先算好：玩家下个驱动帧才 Attach，那会儿再回来找门就晚了，也容易撞上“门已经销毁”
             _scenectx.ClearEntry();
-            if (pendingDoorId > 0) ResolveEntryPoint(scene, pendingDoorId, pendingTag, pendingFace);
-
-            _levelPending = true;
         }
 
-        private void ResolveEntryPoint(Scene scene, int doorId, MovementStateTag enterTag, int enterFace)
+        private void ResolveEntryPoint(LevelRoot levelRoot, int doorId, MovementStateTag enterTag, int enterFace)
         {
-            if (_doorReader == null)
-            {
-                Debug.LogError($"[GameRoot] 没有门读取器，无法解析场景 \"{scene.name}\" 里 id = {doorId} 的门。");
-                return;
-            }
+            if (doorId <= 0) return;
 
-            // 落点压在门的触发器范围内：DoorReader 命中时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
-            if (!_doorReader.TryGetEntry(doorId, out DoorEntry entry))
+            // 落点压在门的触发器范围内：取门口时会顺手屏蔽该门，不然下一个物理步又会发一次切场景请求，两个场景来回弹
+            if (!levelRoot.TryGetEntry(doorId, out DoorEntry entry))
             {
-                Debug.LogError($"[GameRoot] 关卡 {_doorReader.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
+                Debug.LogError($"[GameRoot] 关卡 {levelRoot.LevelId} 里找不到 id = {doorId} 的门，玩家保持场景里的摆放位置。");
                 return;
             }
 
             _scenectx.SetEntry(in entry, enterTag, enterFace);
         }
 
-        /// <summary>取本关的门读取器：场景里没挂就运行时补一个，门索引是装配期必需品，缺了玩家落不到指定的门</summary>
-        private static DoorReader FindOrCreateDoorReader(Scene scene)
-        {
-            DoorReader reader = FindInScene<DoorReader>(scene);
-            if (reader != null) return reader;
-
-            GameObject go = new("[DoorReader]");
-            SceneManager.MoveGameObjectToScene(go, scene);
-            reader = go.AddComponent<DoorReader>();
-
-            Debug.LogWarning($"[GameRoot] 场景 \"{scene.name}\" 里没挂 DoorReader，已在运行时补一个，建议在场景里显式挂上。");
-            return reader;
-        }
-
-        /// <summary>只在指定场景里找组件。不能用 FindObjectOfType：常驻对象和别的场景也会被命中。</summary>
-        private static T FindInScene<T>(Scene scene) where T : Component
-        {
-            GameObject[] roots = scene.GetRootGameObjects();
-
-            for (int i = 0; i < roots.Length; i++)
-            {
-                T found = roots[i].GetComponentInChildren<T>(true);
-                if (found != null) return found;
-            }
-
-            return null;
-        }
-
-        private void AttachLevel()
-        {
-            if (!_levelPending) return;
-            _levelPending = false;
-
-            _levelMgr = new LevelManager(LevelId, _doorReader, _scenectx.World, this);
-            _levelMgr.Init();
-
-            for (int i = 0; i < _pendingReverse.Count; i++)
-            {
-                _levelMgr.RegisterReverse(_pendingReverse[i]);
-            }
-
-            _pendingReverse.Clear();
-        }
-
         /// <summary>把这一帧新注册的场景根按 Order 顺序 Attach 掉。Attach 里再注册的，下一帧继续。</summary>
         private void AttachPending()
         {
-            if (_pendingAttach.Count == 0) return;
+            if (_pendingAttach.Count > 0) AttachBatch();
 
+            // 场景里没有 LevelRoot（开始场景）就没人来报到，别让转场一直等到超时
+            if (!_levelReady && _levelRoot == null) _levelReady = true;
+        }
+
+        private void AttachBatch()
+        {
             ISceneRoot[] batch = _pendingAttach.ToArray();
             _pendingAttach.Clear();
 
@@ -457,6 +494,7 @@ namespace Refraction.Presentation
                 {
                     player.Announce();
                     player.AnnouncePolarity();
+                    _playerPlaced = true;
                 }
             }
         }
@@ -478,18 +516,41 @@ namespace Refraction.Presentation
         private void Update()
         {
             AttachPending();
-            AttachLevel();
             _inputProvider?.Tick();
+            TickUiInput();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             _effects?.Tick(Time.deltaTime);
             TickSceneRootsRender(Time.deltaTime);
+        }
+
+        private void TickUiInput()
+        {
+            if (_uiInputProvider == null) return;
+
+            _uiInputProvider.Sample();
+
+            if (!_uiInputProvider.ConsumeSnapshot().EscPressed) return;
+
+            if (_uiMgr != null && _uiMgr.TryCloseTopmostPanel()) return;
+
+            if (_gameMgr == null) return;
+
+            switch (_gameMgr.CurState)
+            {
+                case GameState.Running:
+                    _gameMgr.ChangeState(GameState.Paused);
+                    return;
+
+                case GameState.Paused:
+                    _gameMgr.Resume();
+                    return;
+            }
         }
 
         private void FixedUpdate()
         {
             // 先装配再驱动：场景根的第一帧就要能跑
             AttachPending();
-            AttachLevel();
             TickSceneRootsPhysics(Time.fixedDeltaTime);
         }
 

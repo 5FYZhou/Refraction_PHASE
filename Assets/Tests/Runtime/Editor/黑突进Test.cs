@@ -22,6 +22,7 @@ namespace Refraction.Tests
         private 记表现的黑攻击 _view;
         private ConditionGroup _conditions;
         private AttackGroup _attack;
+        private bool _black;
 
         [SetUp]
         public void 建立攻击组()
@@ -45,17 +46,14 @@ namespace Refraction.Tests
             _motor = new();
             _view = new();
             _conditions = new(_motor, _config);
-            _attack = new(_config, _motor, null, null, _view, _conditions);
+            _attack = new(_config, _motor, null, null, _view, _conditions, () => _black);
 
-            // 极性必须在订阅之后发：攻击组构造里才订阅，先发它收不到
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
         }
 
         [TearDown]
         public void 释放攻击组()
         {
-            _attack.Dispose();
-            EventBus<WorldPolarityChanged>.Clear();
             Object.DestroyImmediate(_config);
         }
 
@@ -343,7 +341,10 @@ namespace Refraction.Tests
             走到(0.11f, 1f, false);
             走到(0.31f, 1f, false);
 
-            走到(0.35f, -1f, true, grounded: false);
+            走到(0.44f, 1f, true, grounded: false);
+            Assert.AreEqual(AttackStateTag.None, _attack.Current, "斜上自己那份冷却还没过，离地也按不出来");
+
+            走到(0.46f, -1f, true, grounded: false);
 
             Assert.AreEqual(AttackStateTag.BlackDashDown, _attack.Current, "斜下有自己的冷却，斜上在冷却也不挡它");
         }

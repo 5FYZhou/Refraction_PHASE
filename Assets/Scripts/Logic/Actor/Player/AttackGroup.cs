@@ -1,8 +1,7 @@
-﻿using Refraction.Data;
+﻿using System;
+using Refraction.Data;
 using Refraction.Foundation;
 using Refraction.Logic.Combat;
-using Refraction.Logic.Events;
-using Refraction.Logic.Level;
 using Refraction.Logic.Move;
 
 namespace Refraction.Logic.Actor
@@ -25,17 +24,18 @@ namespace Refraction.Logic.Actor
         private readonly BlackDashState _dashLevel;
         private readonly ConditionGroup _conditions;
         private readonly PostureGroup _posture;
-        private bool _black;
+        private readonly Func<bool> _isBlack;
         private int _airDash;
         private float _lastGroundedTime = float.NegativeInfinity;
         private bool _coyoteUsed;
         private bool _wasGrounded;
 
-        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null, ConditionGroup conditions = null)
+        public AttackGroup(PlayerConfig config, IStateMove motor, IBulletLauncher launcher, PostureGroup posture, IBlackAttackView blackView = null, ConditionGroup conditions = null, Func<bool> isBlack = null)
         {
             _config = config;
             _conditions = conditions;
             _posture = posture;
+            _isBlack = isBlack;
             _airDash = config.blackDashAirCount;
             _white = new WhiteAttackState(config, motor, launcher, posture);
 
@@ -55,11 +55,9 @@ namespace Refraction.Logic.Actor
             RegisterState(_dashLevel);
 
             blackView?.SetHitHandler(OnBlackHit);
-
-            EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
-        public bool IsBlack => _black;
+        public bool IsBlack => _isBlack != null && _isBlack();
 
         /// <summary>前摇与本体压住移动组，连状态都不推进</summary>
         public bool BlocksMovement => Phased != null && Phased.BlocksMovement;
@@ -104,8 +102,6 @@ namespace Refraction.Logic.Actor
             _wasGrounded = grounded;
         }
 
-        public void Dispose() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
-
         private void AbortOnHurt(in LogicContext ctx)
         {
             if (_conditions == null || !_conditions.IsHurt) return;
@@ -116,8 +112,6 @@ namespace Refraction.Logic.Actor
 
             ChangeState(AttackStateTag.None, in ctx);
         }
-
-        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => _black = evt.World == WorldPolarity.Black;
 
         private void OnBlackHit()
         {
@@ -163,7 +157,7 @@ namespace Refraction.Logic.Actor
             if (!ctx.InputSnapshot.Attack) return false;
             if (!CanPreempt()) return false;
 
-            if (!_black)
+            if (!IsBlack)
             {
                 if (!_cooldown.CanUse(ctx.GameTime.now)) return false;
 

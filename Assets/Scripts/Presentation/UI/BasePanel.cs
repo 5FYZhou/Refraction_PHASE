@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using Refraction.Data;
 using TMPro;
 using UnityEngine;
@@ -26,12 +28,19 @@ namespace Refraction.Presentation.UI
         public abstract bool CanBeHideByKey { get; }
         public abstract bool LiveWithScene { get; }
 
+        protected virtual float FadeTime => 0f;
+
+        private CanvasGroup _fade;
+        private Coroutine _fadeRoutine;
+        private Action _afterFade;
+
         protected virtual void Awake()
         {
             components.Clear();
             FindComponentsOnChildren();
             RegisterSelf();
             ApplyTxtStyle();
+            SetupFade();
         }
 
         protected virtual void OnDestroy()
@@ -51,12 +60,86 @@ namespace Refraction.Presentation.UI
         #region 基础行为
         public virtual void ShowMe()
         {
-
+            FadeTo(1f, null);
         }
 
         public virtual void HideMe()
         {
 
+        }
+
+        public bool TryFadeOutThen(Action done)
+        {
+            if (FadeTime <= 0f || _fade == null || !gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            FadeTo(0f, done);
+
+            return true;
+        }
+
+        protected void FadeOutSilently()
+        {
+            FadeTo(0f, null);
+        }
+
+        protected void FadeInSilently()
+        {
+            FadeTo(1f, null);
+        }
+
+        private void SetupFade()
+        {
+            if (FadeTime <= 0f) return;
+
+            if (!TryGetComponent(out _fade)) _fade = gameObject.AddComponent<CanvasGroup>();
+
+            _fade.alpha = 0f;
+            _fade.blocksRaycasts = false;
+            _fade.interactable = false;
+        }
+
+        private void FadeTo(float target, Action done)
+        {
+            if (_fade == null)
+            {
+                done?.Invoke();
+
+                return;
+            }
+
+            if (_fadeRoutine != null) StopCoroutine(_fadeRoutine);
+
+            _afterFade = done;
+            _fadeRoutine = StartCoroutine(FadeRoutine(target));
+        }
+
+        private IEnumerator FadeRoutine(float target)
+        {
+            bool solid = target > 0.5f;
+
+            _fade.blocksRaycasts = solid;
+            _fade.interactable = solid;
+
+            float from = _fade.alpha;
+            float elapsed = 0f;
+
+            while (elapsed < FadeTime)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                _fade.alpha = Mathf.Lerp(from, target, Mathf.Clamp01(elapsed / FadeTime));
+
+                yield return null;
+            }
+
+            _fade.alpha = target;
+            _fadeRoutine = null;
+
+            Action done = _afterFade;
+            _afterFade = null;
+            done?.Invoke();
         }
 
         protected virtual void OnButtonClicked(string name)

@@ -68,7 +68,6 @@
     "Assets/Scripts/Presentation/Combat/CombatRoot.cs": 0,
     "Assets/Scripts/Presentation/ISceneRoot.cs": 382,
     "Assets/Scripts/Presentation/Level/Door.cs": 124,
-    "Assets/Scripts/Presentation/Level/DoorReader.cs": 466,
     "Assets/Scripts/Presentation/Level/GroundIniter.cs": 267,
     "Assets/Scripts/Presentation/Move/EnemyMotor.cs": 1286,
     "Assets/Scripts/Presentation/Move/MoveMotor.cs": 741,

@@ -3,6 +3,7 @@ using System.Text;
 using Refraction.Logic.Events;
 using Refraction.Logic.Level;
 using Refraction.Presentation.Actor;
+using Refraction.Presentation.Combat;
 using TMPro;
 using UnityEngine;
 
@@ -127,23 +128,26 @@ namespace Refraction.Presentation.UI
 
         private void AppendEnemies()
         {
-            if (_enemyText == null || root == null) return;
+            if (_enemyText == null || root == null || root.Combat == null) return;
+
+            EnemyMgr mgr = root.Combat.Enemies;
+
+            if (mgr == null) return;
 
             _enemyBuilder.Clear();
-            _enemyBuilder.Append("敌人");
+            _enemyBuilder.Append("敌人 活").Append(mgr.ActiveCount)
+                         .Append(" 尸").Append(mgr.DeadCount)
+                         .Append(" 刷").Append(mgr.ResetCount);
 
-            bool any = false;
-            IReadOnlyList<ISceneRoot> roots = root.SceneRoots;
+            IReadOnlyList<IManagedEnemy> enemies = mgr.Active;
 
-            for (int i = 0; i < roots.Count; i++)
+            for (int i = 0; i < enemies.Count; i++)
             {
-                EnemyController enemy = roots[i] as EnemyController;
+                EnemyController enemy = enemies[i] as EnemyController;
 
                 if (enemy != null)
                 {
                     if (!enemy.AIEnabled) continue;
-
-                    any = true;
 
                     _enemyBuilder.Append("\n").Append(enemy.name)
                                  .Append(" 目标").Append(enemy.HasTarget ? "有" : "无")
@@ -152,15 +156,12 @@ namespace Refraction.Presentation.UI
                     continue;
                 }
 
-                E_SecondController flyer = roots[i] as E_SecondController;
+                E_SecondController flyer = enemies[i] as E_SecondController;
 
                 if (flyer == null || !flyer.Attached) continue;
 
-                any = true;
                 flyer.AppendDebug(_enemyBuilder);
             }
-
-            if (!any) _enemyBuilder.Append(" 无");
 
             _enemyText.SetText(_enemyBuilder);
         }

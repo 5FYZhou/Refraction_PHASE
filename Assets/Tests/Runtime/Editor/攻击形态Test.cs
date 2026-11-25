@@ -18,6 +18,7 @@ namespace Refraction.Tests
         private ConditionGroup _conditions;
         private AttackGroup _group;
         private 记盒子 _view;
+        private bool _black;
 
         [SetUp]
         public void 建立攻击组()
@@ -35,14 +36,12 @@ namespace Refraction.Tests
             PostureGroup posture = new(_config, motor);
             _conditions = new ConditionGroup(motor, _config);
             _view = new();
-            _group = new AttackGroup(_config, motor, null, posture, _view, _conditions);
+            _group = new AttackGroup(_config, motor, null, posture, _view, _conditions, () => _black);
         }
 
         [TearDown]
         public void 释放攻击组()
         {
-            _group.Dispose();
-            EventBus<WorldPolarityChanged>.Clear();
             Object.DestroyImmediate(_config);
         }
 
@@ -105,7 +104,7 @@ namespace Refraction.Tests
         public void 反转后攻击进普攻前摇()
         {
             _group.Tick(Ctx(0f, false));
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
 
             Assert.IsTrue(_group.IsBlack, "世界转黑后形态应跟着变黑");
 
@@ -119,7 +118,7 @@ namespace Refraction.Tests
         public void 黑链_前摇到本体到后摇到空闲()
         {
             _group.Tick(Ctx(0f, false));
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
 
             _group.Tick(Ctx(Dt, true));
             Assert.AreEqual(AttackStateTag.FlatAttack, _group.Current, "普攻先走前摇");
@@ -153,7 +152,7 @@ namespace Refraction.Tests
             _config.blackDashRecoverTime = 0f;
 
             _group.Tick(Ctx(0f, false));
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
 
             _group.Tick(Ctx(0.01f, true));
             Assert.AreEqual(AttackStateTag.FlatAttack, _group.Current, "平劈走普攻");
@@ -184,7 +183,7 @@ namespace Refraction.Tests
             _config.blackDashRecoverTime = 0f;
 
             _group.Tick(Ctx(0f, false));
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
 
             _group.Tick(Ctx(Dt, true));
             _group.Tick(Ctx(0.13f, false));
@@ -204,7 +203,7 @@ namespace Refraction.Tests
             _group.Tick(Ctx(Dt, true));
             Assert.AreEqual(AttackStateTag.WhiteAttackPrepare, _group.Current, "先进入白前摇");
 
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
             Assert.IsTrue(_group.IsBlack, "反转已经把形态翻成黑");
 
             _group.Tick(Ctx(0.13f, false));
@@ -217,20 +216,21 @@ namespace Refraction.Tests
         [Test]
         public void 世界转黑转白_形态跟着同步()
         {
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
             Assert.IsTrue(_group.IsBlack, "世界转黑进入黑形态");
 
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.White));
+            _black = false;
             Assert.IsFalse(_group.IsBlack, "世界转白回到白形态");
         }
 
         [Test]
-        public void 退订后不再跟随世界极性()
+        public void 形态不缓存_每帧都读回调()
         {
-            _group.Dispose();
-            EventBus<WorldPolarityChanged>.Publish(new(WorldPolarity.Black));
+            _black = true;
+            Assert.IsTrue(_group.IsBlack, "注入的回调变黑当帧就生效");
 
-            Assert.IsFalse(_group.IsBlack, "Dispose 之后不该再收到世界极性");
+            _black = false;
+            Assert.IsFalse(_group.IsBlack, "回调变白同样当帧生效，说明自己没存副本");
         }
 
         /// <summary>只记开关状态的假表现端：判定盒到底点没点亮，就是它说了算</summary>

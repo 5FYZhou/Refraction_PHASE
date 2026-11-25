@@ -2,7 +2,7 @@
 
 > 依据代码：`Logic/Actor/E_First/E_FirstLogic.cs`（继承 `EnemyLogicBase`）、`E_FirstMoveGroup`、`E_FirstAttackState`。
 > 与 `Enemy` / `E_Second` 零共用：只复用 `EnemyLogicBase`、`EnemyTargetInfo`、`StateGroup`、`MoveMotor`、`BulletLogic` 这些框架件。
-> 数值全在 `Assets/Resources/Data/E_FirstConfig.asset`（需自己新建）。
+> 数值全在 `Assets/Resources/Data/Enemy/E_FirstConfig.asset`（需自己新建）。
 
 ## 一、文件
 

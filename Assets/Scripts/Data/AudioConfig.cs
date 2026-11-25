@@ -1,4 +1,5 @@
 using System;
+using Refraction.Foundation;
 using UnityEngine;
 
 namespace Refraction.Data
@@ -66,13 +67,11 @@ namespace Refraction.Data
         BgmBoss3 = 106,
     }
 
-    /// <summary>音频配置：枚举到文件名的唯一映射，外加音量与 BGM 淡变时长</summary>
-    /// <remarks>资产放 Resources/Data/AudioConfig.asset，缺则退回脚本默认表；文件名不带扩展名、相对 Resources/Sound；配多条时一次性音效随机取，循环音与 BGM 取第一条。</remarks>
+    /// <summary>音频配置：全局音量与抖动参数在前，枚举到文件名的配对表在后</summary>
+    /// <remarks>资产放 Resources/Data/Settings/AudioConfig.asset，缺则退回脚本默认表；文件名不带扩展名、相对 Resources/Sound；配多条时一次性音效随机取，循环音与 BGM 取第一条。</remarks>
     [CreateAssetMenu(fileName = "AudioConfig", menuName = "Refraction/Settings/Audio")]
     public sealed class AudioConfig : ScriptableObject
     {
-        private const string ResourcePath = "Data/AudioConfig";
-
         private static AudioConfig _default;
 
         [Serializable]
@@ -83,11 +82,14 @@ namespace Refraction.Data
 
             [Tooltip("Resources/Sound 下的文件名，不带扩展名。配多条 = 每次随机取一条；第一条也用于循环音与 BGM")]
             public string[] fileNames;
-        }
 
-        [Tooltip("枚举到文件名的映射：同一编号必须唯一，文件名留空表示这一条不生效。")]
-        [SerializeField]
-        private Entry[] entries = DefaultEntries();
+            [Tooltip("这一条自己的音量（0~1），播放时与上面的全局音量相乘")]
+            [Range(0f, 1f)]
+            public float volume;
+
+            [Tooltip("这一条是否加随机音量与音调；上面 randomVariation 关掉时一律不抖")]
+            public bool randomize;
+        }
 
         [Tooltip("背景音乐音量，0~1")]
         [Range(0f, 1f)]
@@ -101,6 +103,21 @@ namespace Refraction.Data
         [Min(0f)]
         public float bgmFadeDuration = 0.3f;
 
+        [Tooltip("随机抖动的总开关：关掉后所有音效都不抖，逐条开关见下方配对表")]
+        public bool randomVariation = true;
+
+        [Tooltip("音量抖动幅度：在条目音量上乘 1 ± 该值，0 = 不抖")]
+        [Range(0f, 0.5f)]
+        public float randomVolumeRange = 0.08f;
+
+        [Tooltip("音调抖动幅度：播放音高乘 1 ± 该值，0 = 不抖")]
+        [Range(0f, 0.5f)]
+        public float randomPitchRange = 0.06f;
+
+        [Tooltip("枚举到文件名的映射：同一编号必须唯一，文件名留空表示这一条不生效。")]
+        [SerializeField]
+        private Entry[] entries = DefaultEntries();
+
         public Entry[] Entries => entries ?? Array.Empty<Entry>();
 
         public static AudioConfig Default
@@ -109,13 +126,13 @@ namespace Refraction.Data
             {
                 if (_default != null) return _default;
 
-                _default = Resources.Load<AudioConfig>(ResourcePath);
+                _default = Resources.Load<AudioConfig>(ResPath.AudioConfig);
 
                 if (_default == null)
                 {
                     _default = CreateInstance<AudioConfig>();
                     _default.hideFlags = HideFlags.HideAndDontSave;
-                    Debug.LogWarning($"[音频] 缺 Resources/{ResourcePath}.asset：临时用脚本默认表，资产里改不到。");
+                    Debug.LogWarning($"[音频] 缺 Resources/{ResPath.AudioConfig}.asset：临时用脚本默认表，资产里改不到。");
                 }
 
                 return _default;
@@ -124,25 +141,33 @@ namespace Refraction.Data
 
         private static Entry[] DefaultEntries() => new[]
         {
-            new Entry { id = AudioId.Dash, fileNames = new[] { "冲刺" } },
-            new Entry { id = AudioId.HitBody, fileNames = new[] { "命中身体" } },
-            new Entry { id = AudioId.HitShell, fileNames = new[] { "命中硬壳" } },
-            new Entry { id = AudioId.SwordSwing, fileNames = new[] { "挥剑" } },
-            new Entry { id = AudioId.SwordWave, fileNames = new[] { "剑气(光波)" } },
-            new Entry { id = AudioId.Move, fileNames = new[] { "移动" } },
-            new Entry { id = AudioId.Land, fileNames = new[] { "落地" } },
-            new Entry { id = AudioId.Jump, fileNames = new[] { "跳跃" } },
-            new Entry { id = AudioId.Hurt, fileNames = new[] { "受伤1", "受伤2", "受伤3" } },
-            new Entry { id = AudioId.Death, fileNames = new[] { "死亡1" } },
-            new Entry { id = AudioId.SaveBell, fileNames = new[] { "短铃铛" } },
-            new Entry { id = AudioId.WeaponClash, fileNames = new[] { "武器碰撞" } },
-            new Entry { id = AudioId.WeaponClashEnemy, fileNames = new[] { "武器碰撞2" } },
-            new Entry { id = AudioId.BgmScene1, fileNames = new[] { "scene 1" } },
-            new Entry { id = AudioId.BgmScene2, fileNames = new[] { "scene 2" } },
-            new Entry { id = AudioId.BgmScene3, fileNames = new[] { "scene 3" } },
-            new Entry { id = AudioId.BgmBoss1, fileNames = new[] { "boss fight 1" } },
-            new Entry { id = AudioId.BgmBoss2, fileNames = new[] { "boss fight 2" } },
-            new Entry { id = AudioId.BgmBoss3, fileNames = new[] { "boss fight 3" } },
+            Make(AudioId.Dash, true, "冲刺"),
+            Make(AudioId.HitBody, true, "命中身体"),
+            Make(AudioId.HitShell, false, "命中硬壳"),
+            Make(AudioId.SwordSwing, true, "挥剑"),
+            Make(AudioId.SwordWave, false, "剑气(光波)"),
+            Make(AudioId.Move, false, "移动"),
+            Make(AudioId.Land, true, "落地"),
+            Make(AudioId.Jump, true, "跳跃"),
+            Make(AudioId.Hurt, false, "受伤1", "受伤2", "受伤3"),
+            Make(AudioId.Death, false, "死亡1"),
+            Make(AudioId.SaveBell, false, "短铃铛"),
+            Make(AudioId.WeaponClash, true, "武器碰撞"),
+            Make(AudioId.WeaponClashEnemy, true, "武器碰撞2"),
+            Make(AudioId.BgmScene1, false, "scene 1"),
+            Make(AudioId.BgmScene2, false, "scene 2"),
+            Make(AudioId.BgmScene3, false, "scene 3"),
+            Make(AudioId.BgmBoss1, false, "boss fight 1"),
+            Make(AudioId.BgmBoss2, false, "boss fight 2"),
+            Make(AudioId.BgmBoss3, false, "boss fight 3"),
+        };
+
+        private static Entry Make(AudioId id, bool randomize, params string[] fileNames) => new()
+        {
+            id = id,
+            fileNames = fileNames,
+            volume = 1f,
+            randomize = randomize,
         };
     }
 }

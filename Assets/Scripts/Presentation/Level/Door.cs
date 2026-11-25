@@ -45,6 +45,13 @@ namespace Refraction.Presentation.Level
             _leftAnchor = transform.Find(leftName);
             _rightAnchor = transform.Find(rightName);
             _selfAnchor = transform.Find(selfName);
+
+            LevelRoot.RegisterDoor(this);
+        }
+
+        private void OnDestroy()
+        {
+            LevelRoot.UnregisterDoor(this);
         }
 
         /// <summary>接下来 seconds 秒内不响应进入：落点就压在门触发器里，不屏蔽会被自己立刻再送走；只延长不缩短</summary>

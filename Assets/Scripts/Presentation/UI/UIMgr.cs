@@ -9,6 +9,7 @@ using Refraction.Presentation.UI;
 using Refraction.Presentation;
 using UnityEngine.TextCore.Text;
 using Refraction.Data;
+using Refraction.Foundation;
 
 namespace Refraction.Presentation.UI
 {
@@ -63,6 +64,8 @@ namespace Refraction.Presentation.UI
 
         public bool IsReady { get; private set; }
 
+        public TransitionMask Transition { get; private set; }
+
 
         private bool _warnedDuplicateEventSystem;
 
@@ -71,15 +74,9 @@ namespace Refraction.Presentation.UI
         private Transform topLayer;
         private Transform systemLayer;
 
-        // 资源 Key = Resources 相对路径，不带扩展名
-        private const string UI_CAMERA_KEY = "ui/UICamera";
-        private const string UI_CANVAS_KEY = "ui/Canvas";
-        private const string UI_EVENT_SYS_KEY = "ui/EventSystem";
-        private const string UI_PANEL_PREFIX = "ui/Panel/";
+        private const int UI_SORTING_ORDER = 100;
 
         // 样式表与字资产只取一次：ResMgr.Load 每次都加引用计数
-        private const string UI_STYLE_KEY = "Data/UIStyleConfig";
-
         private UIStyleConfig styleConfig;
         private bool warnedStyleConfig;
 
@@ -110,11 +107,12 @@ namespace Refraction.Presentation.UI
                 return;
             }
 
-            uiCamera = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_CAMERA_KEY)).GetComponent<Camera>();
+            uiCamera = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(ResPath.UICamera)).GetComponent<Camera>();
             GameObject.DontDestroyOnLoad(uiCamera.gameObject);
 
-            uiCanvas = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_CANVAS_KEY)).GetComponent<Canvas>();
+            uiCanvas = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(ResPath.UICanvas)).GetComponent<Canvas>();
             uiCanvas.worldCamera = uiCamera;
+            uiCanvas.sortingOrder = UI_SORTING_ORDER;
             GameObject.DontDestroyOnLoad(uiCanvas.gameObject);
 
             bottomLayer = uiCanvas.transform.Find("Bottom");
@@ -124,8 +122,12 @@ namespace Refraction.Presentation.UI
 
             DisableSceneEventSystems();
 
-            uiEventSystem = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(UI_EVENT_SYS_KEY)).GetComponent<EventSystem>();
+            uiEventSystem = GameObject.Instantiate(GameRoot.Instance.ResMgr.Load<GameObject>(ResPath.UIEventSystem)).GetComponent<EventSystem>();
             GameObject.DontDestroyOnLoad(uiEventSystem.gameObject);
+
+            Transition = systemLayer != null ? TransitionMask.Create(systemLayer) : null;
+
+            EventBus<GameStateChanged>.Subscribe(OnGameStateChanged);
 
             IsReady = true;
         }
@@ -136,6 +138,8 @@ namespace Refraction.Presentation.UI
             if (!IsReady) return;
 
             IsReady = false;
+
+            EventBus<GameStateChanged>.Unsubscribe(OnGameStateChanged);
 
             panelDic.Clear();
 
@@ -151,6 +155,7 @@ namespace Refraction.Presentation.UI
             uiEventSystem = null;
             uiCanvas = null;
             uiCamera = null;
+            Transition = null;
             bottomLayer = null;
             middleLayer = null;
             topLayer = null;
@@ -163,12 +168,12 @@ namespace Refraction.Presentation.UI
         {
             if (styleConfig == null)
             {
-                styleConfig = GameRoot.Instance.ResMgr.Load<UIStyleConfig>(UI_STYLE_KEY);
+                styleConfig = GameRoot.Instance.ResMgr.Load<UIStyleConfig>(ResPath.UIStyleConfig);
 
                 if (styleConfig == null && !warnedStyleConfig)
                 {
                     warnedStyleConfig = true;
-                    Debug.LogWarning($"[UI] 缺少样式表 Resources/{UI_STYLE_KEY}.asset，面板将保留预制体字体");
+                    Debug.LogWarning($"[UI] 缺少样式表 Resources/{ResPath.UIStyleConfig}.asset，面板将保留预制体字体");
                 }
             }
 
@@ -331,7 +336,7 @@ namespace Refraction.Presentation.UI
             panelDic.Add(panelName, new PanelInfo<T>(this, callBack));
 
             // 协程必须由常驻的 GameRoot 托管
-            GameRoot.Instance.ResMgr.LoadAsync<GameObject>(UI_PANEL_PREFIX + panelName, (res) =>
+            GameRoot.Instance.ResMgr.LoadAsync<GameObject>(ResPath.UIPanelFolder + panelName, (res) =>
             {
 
                 PanelInfo<T> panelInfo = panelDic[panelName] as PanelInfo<T>;
@@ -349,7 +354,7 @@ namespace Refraction.Presentation.UI
                 {
                     GameObject.Destroy(panelObj);
                     panelDic.Remove(panelName);
-                    Debug.LogError($"[UI] 预制体 {UI_PANEL_PREFIX}{panelName} 上没有 {typeof(T).Name} 组件。");
+                    Debug.LogError($"[UI] 预制体 {ResPath.UIPanelFolder}{panelName} 上没有 {typeof(T).Name} 组件。");
                     return;
                 }
 
@@ -360,11 +365,13 @@ namespace Refraction.Presentation.UI
                 if (father == null)
                     father = middleLayer;
                 panelObj.transform.SetParent(father, false);
+                panelObj.transform.SetAsLastSibling();
 
                 panel.ShowMe();
                 panelInfo.callBack?.Invoke(panel);
                 // 回调只发一次
                 panelInfo.callBack = null;
+                openPanels[panel.Layer].Push(panelInfo);
 
             });
         }
@@ -387,14 +394,19 @@ namespace Refraction.Presentation.UI
                         return;
 
                     panelInfo.isHide = true;
+
+                    BasePanel closing = panelInfo.panel;
+                    GameObject go = closing.gameObject;
+
                     if (isDestory)
                     {
-                        GameObject.Destroy(panelInfo.panel.gameObject);
+                        GameObject.Destroy(go);
                         panelDic.Remove(panelName);
                     }
-                    else
-                        panelInfo.panel.gameObject.SetActive(false);
-                    panelInfo.panel.HideMe();
+                    else if (!closing.TryFadeOutThen(() => { if (go != null) go.SetActive(false); }))
+                        go.SetActive(false);
+
+                    closing.HideMe();
                 }
             }
         }
@@ -499,6 +511,28 @@ namespace Refraction.Presentation.UI
             }
 
             if (!enabled) uiEventSystem.SetSelectedGameObject(null);
+        }
+
+        private void OnGameStateChanged(GameStateChanged evt)
+        {
+            SetUIInputEnabled(!evt.sceneBusy);
+
+            switch (evt.state)
+            {
+                case Logic.GameState.Paused:
+                    if (!IsPanelOpen<SettingsPanel>()) ShowPanel<SettingsPanel>();
+                    return;
+
+                case Logic.GameState.None:
+                    Debug.LogError("[UI] 收到 None 状态，面板集合未定义。");
+                    return;
+
+                default:
+                    HidePanel<KeySetPanel>();
+                    HidePanel<AudioSetPanel>();
+                    HidePanel<SettingsPanel>();
+                    return;
+            }
         }
 
     }
