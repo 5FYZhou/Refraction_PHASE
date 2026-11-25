@@ -46,11 +46,6 @@ namespace Refraction.Presentation.Combat
         private const string ViewName = "View";
         private const string NumName = "Num";
 
-        // 淡出与闪烁先写死：末态透明度、闪烁窗口、闪烁频率
-        private const float FadeEndAlpha = 0.12f;
-        private const float BlinkWindow = 1f;
-        private const float BlinkHz = 6f;
-
         private readonly Dictionary<int, Slot> _live = new();
         private readonly List<int> _stale = new();
         private readonly List<SpriteRenderer> _lines = new();
@@ -65,6 +60,7 @@ namespace Refraction.Presentation.Combat
         private Pool<Slot> _slots;
         private AfterimageLogic _afterimages;
         private PlayerConfig _config;
+        private AfterimageVisualConfig _visual;
         private Transform _view;
         private Transform _playerRoot;
         private SpriteRenderer _viewRenderer;
@@ -80,6 +76,7 @@ namespace Refraction.Presentation.Combat
         {
             _afterimages = afterimages;
             _config = config;
+            _visual = AfterimageVisualConfig.Default;
             _view = view;
             _playerRoot = playerRoot;
             _prefab = prefab;
@@ -273,26 +270,30 @@ namespace Refraction.Presentation.Combat
                 tint = _viewRenderer.color;
             }
 
-            tint.a = 1f;
-            slot.Tint = tint;
+            Color shade = _visual.afterimageColor;
+
+            // 配置色只当乘子：View 在黑世界是黑的，残影也就跟着黑，白光下发白，同时还能整体偏色
+            slot.Tint = new Color(tint.r * shade.r, tint.g * shade.g, tint.b * shade.b, 1f);
         }
 
-        /// <summary>淡到写死的终止透明度，最后一秒开始闪：残影快到点要先看得出来，否则像凭空消失</summary>
+        /// <summary>淡到配置的终止透明度，消失前那一段开始闪：残影快到点要先看得出来，否则像凭空消失</summary>
         private void ApplyFade(Slot slot, in Afterimage snap, float now)
         {
             if (slot.Renderer == null) return;
 
-            float alpha = _config.afterimageAlpha;
+            float alpha = _visual.afterimageColor.a;
 
             if (snap.Duration > 0f)
             {
                 float age = now - snap.SpawnTime;
-                alpha = Mathf.Lerp(_config.afterimageAlpha, FadeEndAlpha, Mathf.Clamp01(age / snap.Duration));
+                alpha = Mathf.Lerp(_visual.afterimageColor.a, _visual.fadeEndAlpha, Mathf.Clamp01(age / snap.Duration));
 
-                if (snap.Duration - age <= BlinkWindow)
+                if (snap.Duration - age <= _visual.blinkWindow)
                 {
-                    float blink = 0.5f + 0.5f * Mathf.Sin(age * BlinkHz * Mathf.PI * 2f);
-                    alpha *= 0.25f + 0.75f * blink;
+                    float blink = 0.5f + 0.5f * Mathf.Sin(age * _visual.blinkHz * Mathf.PI * 2f);
+                    float floor = _visual.blinkMinAlphaScale;
+
+                    alpha *= floor + (1f - floor) * blink;
                 }
             }
 
@@ -331,13 +332,13 @@ namespace Refraction.Presentation.Combat
                 Transform tr = line.transform;
                 tr.position = new Vector3((from.x + to.x) * 0.5f, (from.y + to.y) * 0.5f, _z);
                 tr.rotation = Quaternion.Euler(0f, 0f, angle);
-                tr.localScale = new Vector3(length, _config.afterimageLinkThickness, 1f);
+                tr.localScale = new Vector3(length, _visual.linkThickness, 1f);
 
                 int next = (i + 1) % count;
 
                 line.color = _hot.ContainsKey(LinkKey(ledger[i].Index, ledger[next].Index))
-                    ? Opaque(_config.afterimageLinkColor)
-                    : _config.afterimageLinkColor;
+                    ? _visual.linkHotColor
+                    : _visual.linkColor;
 
                 if (!line.gameObject.activeSelf) line.gameObject.SetActive(true);
             }
@@ -390,7 +391,7 @@ namespace Refraction.Presentation.Combat
 
             SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
             sr.sprite = SquareSprite;
-            sr.color = _config.afterimageLinkColor;
+            sr.color = _visual.linkColor;
 
             if (_viewRenderer != null)
             {
@@ -416,7 +417,7 @@ namespace Refraction.Presentation.Combat
             if (length <= 1e-4f) return;
 
             float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
-            Vector2 size = new(length, _config.afterimageLinkThickness);
+            Vector2 size = new(length, _visual.linkThickness);
             Vector2 center = (from + to) * 0.5f;
 
             _hitBoxes.Clear();
@@ -441,12 +442,6 @@ namespace Refraction.Presentation.Combat
         }
 
         private static long LinkKey(int from, int to) => ((long)from << 32) | (uint)to;
-
-        private static Color Opaque(Color color)
-        {
-            color.a = 1f;
-            return color;
-        }
 
         /// <summary>1×1 白图按 1 像素 = 1 米生成、中心枢轴：拉 localScale 就是一条粗细可调的实心方块，不必依赖美术给方形图</summary>
         private static Sprite _square;

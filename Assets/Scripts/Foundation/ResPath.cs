@@ -7,6 +7,7 @@ namespace Refraction.Foundation
         public const string AudioConfig = "Data/Settings/AudioConfig";
         public const string UIStyleConfig = "Data/Settings/UIStyleConfig";
         public const string BlackAttackVisualConfig = "Data/Player/BlackAttackVisualConfig";
+        public const string AfterimageVisualConfig = "Data/Player/AfterimageVisualConfig";
         public const string EnemyColliderConfig = "Data/Enemy/EnemyColliderConfig";
 
         public const string BulletPrefab = "Prefabs/Bullet/Bullet";

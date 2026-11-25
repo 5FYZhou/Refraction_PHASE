@@ -318,20 +318,9 @@ namespace Refraction.Data
         [Min(0f)]
         public float afterimageLinkDamage = 1f;
 
-        [Tooltip("折跃连线的判定粗细（米）：连线的判定方块宽度与画面上线的粗细共用这一个值。")]
-        [Min(0.01f)]
-        public float afterimageLinkThickness = 0.25f;
-
         [Tooltip("残影的感应范围（米）：只有生成顺序相邻、且间距在这个范围内的一对残影才连线。\n防止在超远的两处落影，拉出一条横穿地图的长线；0 表示不限距离。")]
         [Min(0f)]
         public float afterimageLinkSenseRadius = 6f;
-
-        [Tooltip("残影落地时的透明度（起始值，不是恒定值）：之后随时间淡到表现层写死的终止透明度。")]
-        [Range(0f, 1f)]
-        public float afterimageAlpha = 0.35f;
-
-        [Tooltip("折跃连线的颜色。")]
-        public Color afterimageLinkColor = new(0.55f, 0.9f, 1f, 0.9f);
 
         [Tooltip("子弹在残影之间传输时的移动速度（单位/秒）：从当前残影中心直线走向下一枚的速度。\n0 表示瞬间抵达下一枚，看不到中间过程。")]
         [Min(0f)]
