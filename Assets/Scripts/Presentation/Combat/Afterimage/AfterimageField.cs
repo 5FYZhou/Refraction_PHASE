@@ -437,6 +437,7 @@ namespace Refraction.Presentation.Combat
                 Damage damage = new(_config.afterimageLinkDamage, DamageSource.AfterimageLink);
                 if (!box.Hurtable.TakeDamage(in damage)) continue;
 
+                GameRoot.Instance?.Audio?.EnqueueSfx(AudioId.WhiteAttackHit);
                 EventBus<AfterimageLinkHit>.Publish(new(hit.bounds.center, _config.afterimageLinkDamage));
             }
         }

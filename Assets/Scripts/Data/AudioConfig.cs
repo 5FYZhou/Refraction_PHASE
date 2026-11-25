@@ -110,6 +110,9 @@ namespace Refraction.Data
 
             [Tooltip("这一条是否加随机音量与音调；上面 randomVariation 关掉时一律不抖")]
             public bool randomize;
+
+            [Tooltip("同一编号是否共用一个 AudioSource：true = 下次播放打断上一条并从头再播，false = 各占一条源可重叠")]
+            public bool single;
         }
 
         [Tooltip("背景音乐音量，0~1")]
@@ -175,7 +178,7 @@ namespace Refraction.Data
             Make(AudioId.SaveBell, false, "短铃铛"),
             Make(AudioId.WeaponClash, true, "武器碰撞"),
             Make(AudioId.WeaponClashEnemy, true, "武器碰撞2"),
-            Make(AudioId.Charge, false, "充能"),
+            Solo(AudioId.Charge, "充能"),
             Make(AudioId.WorldReverse, false, "反转"),
             Make(AudioId.LinkTrigger, true, "折跃连线触发"),
             Make(AudioId.EnemyDeath, false, "敌人死亡"),
@@ -196,6 +199,14 @@ namespace Refraction.Data
             fileNames = fileNames,
             volume = 1f,
             randomize = randomize,
+        };
+
+        private static Entry Solo(AudioId id, params string[] fileNames) => new()
+        {
+            id = id,
+            fileNames = fileNames,
+            volume = 1f,
+            single = true,
         };
     }
 }

@@ -56,6 +56,7 @@ namespace Refraction.Presentation.Audio
 
         private sealed class Playing
         {
+            public AudioId Id;
             public GameObject Go;
             public AudioSource Source;
             public float Mix;
@@ -63,6 +64,7 @@ namespace Refraction.Presentation.Audio
 
             public void Reset()
             {
+                Id = AudioId.None;
                 Go = null;
                 Source = null;
                 Mix = 0f;
@@ -74,6 +76,7 @@ namespace Refraction.Presentation.Audio
         private readonly Dictionary<AudioId, string[]> _idToFiles = new();
         private readonly Dictionary<AudioId, float> _idVolume = new();
         private readonly Dictionary<AudioId, bool> _idRandomize = new();
+        private readonly Dictionary<AudioId, bool> _idSingle = new();
         private readonly Dictionary<AudioId, AudioClip[]> _clips = new();
         private readonly HashSet<AudioId> _warned = new();
         private readonly Queue<Request> _requests = new();
@@ -273,6 +276,7 @@ namespace Refraction.Presentation.Audio
             _idToFiles.Clear();
             _idVolume.Clear();
             _idRandomize.Clear();
+            _idSingle.Clear();
             _clips.Clear();
             _warned.Clear();
             _bgmProgress.Clear();
@@ -349,13 +353,12 @@ namespace Refraction.Presentation.Audio
 
             if (clip == null) return;
 
-            if (_playing.Count >= MaxConcurrentSfx) return;
+            bool single = SingleSource(id);
 
-            // 同 clip 去重：同一音效正在播时不重复叠加（防刷屏，也省 voice）
-            for (int i = 0; i < _playing.Count; i++)
-            {
-                if (_playing[i].Source.clip == clip) return;
-            }
+            // 单源类型：这一条还在播就原地打断重来，不另占 voice
+            if (single && Restart(id, clip)) return;
+
+            if (_playing.Count >= MaxConcurrentSfx) return;
 
             GameObject go = _voicePool.Get();
 
@@ -368,6 +371,36 @@ namespace Refraction.Presentation.Audio
             // 池复用前保险：确保上一轮残留已停
             if (source.isPlaying) source.Stop();
 
+            Playing entry = _entryPool.Get();
+            entry.Go = go;
+            entry.Source = source;
+
+            PlayOn(entry, id, clip);
+
+            _playing.Add(entry);
+        }
+
+        private bool Restart(AudioId id, AudioClip clip)
+        {
+            for (int i = 0; i < _playing.Count; i++)
+            {
+                Playing entry = _playing[i];
+
+                if (entry.Id != id) continue;
+
+                entry.Source.Stop();
+                PlayOn(entry, id, clip);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private void PlayOn(Playing entry, AudioId id, AudioClip clip)
+        {
+            AudioSource source = entry.Source;
+
             float mix = EntryVolume(id) * RandomVolume(id);
 
             source.clip = clip;
@@ -377,13 +410,9 @@ namespace Refraction.Presentation.Audio
             source.loop = false;
             source.Play();
 
-            Playing entry = _entryPool.Get();
-            entry.Go = go;
-            entry.Source = source;
+            entry.Id = id;
             entry.Mix = mix;
             entry.Remaining = clip.length;
-
-            _playing.Add(entry);
         }
 
         private void PlayBgm(AudioId id, bool resumeLastTime, bool isLoop, bool fade)
@@ -609,6 +638,7 @@ namespace Refraction.Presentation.Audio
             _idToFiles.Clear();
             _idVolume.Clear();
             _idRandomize.Clear();
+            _idSingle.Clear();
 
             AudioConfig.Entry[] entries = config.Entries;
 
@@ -639,6 +669,7 @@ namespace Refraction.Presentation.Audio
 
                 _idVolume[entry.id] = Mathf.Clamp01(entry.volume);
                 _idRandomize[entry.id] = entry.randomize;
+                _idSingle[entry.id] = entry.single;
             }
         }
 
@@ -710,6 +741,8 @@ namespace Refraction.Presentation.Audio
         private float EntryVolume(AudioId id) => _idVolume.TryGetValue(id, out float volume) ? volume : 1f;
 
         private bool Varied(AudioId id) => _randomVariation && _idRandomize.TryGetValue(id, out bool on) && on;
+
+        private bool SingleSource(AudioId id) => _idSingle.TryGetValue(id, out bool on) && on;
 
         private float RandomVolume(AudioId id)
         {

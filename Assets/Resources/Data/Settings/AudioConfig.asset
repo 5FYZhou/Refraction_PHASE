@@ -91,6 +91,7 @@ MonoBehaviour:
     - "\u5145\u80FD"
     volume: 1
     randomize: 0
+    single: 1
   - id: 15
     fileNames:
     - "\u53CD\u8F6C"

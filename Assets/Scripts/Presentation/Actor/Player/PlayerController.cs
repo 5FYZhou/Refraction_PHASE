@@ -374,7 +374,9 @@ namespace Refraction.Presentation.Actor
 
             if (attack == prevAttack || attack == AttackStateTag.None) return;
 
-            audio.EnqueueSfx(IsBlackDash(attack) ? AudioId.Dash : AudioId.SwordSwing);
+            bool beginsSwing = prevAttack == AttackStateTag.None || prevAttack == AttackStateTag.WhiteAttackRecover;
+
+            if (beginsSwing) audio.EnqueueSfx(IsBlackDash(attack) ? AudioId.Dash : AudioId.SwordSwing);
         }
 
         private static bool IsBlackDash(AttackStateTag tag)
