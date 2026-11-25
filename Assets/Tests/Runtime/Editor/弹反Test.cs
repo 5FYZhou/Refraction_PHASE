@@ -151,6 +151,49 @@ namespace Refraction.Tests
         }
 
         [Test]
+        public void 弹反_换敌我两位_穿墙不变()
+        {
+            const int GroundLayer = 6;
+            const int PlayerLayer = 7;
+            const int EnemyLayer = 8;
+
+            BulletLogic system = new();
+            GameObject fieldHost = new("BulletField");
+            BulletField field = fieldHost.AddComponent<BulletField>();
+            GameObject bulletHost = new("Bullet");
+            BoxCollider2D box = bulletHost.AddComponent<BoxCollider2D>();
+
+            box.isTrigger = true;
+
+            Bullet bullet = bulletHost.AddComponent<Bullet>();
+
+            system.Launch(
+                new BulletShooter(1, 0, BulletFaction.Enemy),
+                new BulletSpawn(new Vector2(3f, 1f), Vector2.left, 12f, 9f, 4f, 8f));
+
+            Assert.IsTrue(system.TryTakeRequest(out BulletRequest request), "发射先记成请求");
+
+            bullet.Initialize(null, field, system, in request, null, null);
+
+            Assert.IsTrue(排掉了(box, EnemyLayer), "敌弹初发要排敌人层，别打到自己人");
+            Assert.IsTrue(排掉了(box, GroundLayer), "敌弹初发就穿墙：地面层排掉");
+            Assert.IsFalse(排掉了(box, PlayerLayer), "敌弹初发要留着玩家层，否则打不到人");
+
+            BulletRebind rebind = new(BulletFaction.Player, 1f, 3f, 26f);
+
+            Assert.IsTrue(bullet.TryReflect(in rebind, null, null), "飞行中的敌弹应该能被弹反");
+
+            Assert.IsFalse(排掉了(box, EnemyLayer), "弹反后归玩家，敌人层不能再排，否则打不到敌人");
+            Assert.IsTrue(排掉了(box, PlayerLayer), "玩家自己的受击盒要排掉");
+            Assert.IsTrue(排掉了(box, GroundLayer), "穿墙跟着子弹出处，弹反不动这一位");
+
+            Object.DestroyImmediate(bulletHost);
+            Object.DestroyImmediate(fieldHost);
+        }
+
+        private static bool 排掉了(Collider2D collider, int layer) => (collider.excludeLayers & (1 << layer)) != 0;
+
+        [Test]
         public void 身体里的子弹_按受击优先_不算弹反()
         {
             using 玩家层级 scene = new();

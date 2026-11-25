@@ -15,9 +15,10 @@ namespace Refraction.Presentation.Combat
         private const int PlayerLayer = 7;
         private const int EnemyLayer = 8;
 
+        // 穿墙不跟阵营走：只看这颗子弹是谁射出来的，弹反只换敌我两位
         private static readonly int PlayerBulletMask = (1 << DefaultLayer) | (1 << PlayerLayer);
 
-        private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << GroundLayer) | (1 << EnemyLayer);
+        private static readonly int EnemyBulletMask = (1 << DefaultLayer) | (1 << EnemyLayer);
 
         [SerializeField] private Color particleColor;
 
@@ -40,6 +41,7 @@ namespace Refraction.Presentation.Combat
         private HurtBox _hurtBox;
         private Collider2D _hitCollider;
         private bool _bound;
+        private bool _throughWall;
         private bool _hit;
         private bool _trailPending;
         private int _trailFrame;
@@ -63,6 +65,7 @@ namespace Refraction.Presentation.Combat
             _owner = owner;
             _hitSink = hitSink;
             _damage = request.Damage;
+            _throughWall = request.Shooter.Faction == BulletFaction.Enemy;
             _hit = false;
             _bound = false;
             _state = BulletState.Flying;
@@ -112,6 +115,8 @@ namespace Refraction.Presentation.Combat
             int mask = Faction == BulletFaction.Player ? PlayerBulletMask : EnemyBulletMask;
 
             mask |= 1 << gameObject.layer;
+
+            if (_throughWall) mask |= 1 << GroundLayer;
 
             for (int i = 0; i < _colliders.Length; i++) _colliders[i].excludeLayers = mask;
         }
@@ -185,7 +190,7 @@ namespace Refraction.Presentation.Combat
             else Destroy(gameObject);
         }
 
-        /// <summary>弹反：只换阵营、伤害、发射者与弹道，外观与母池不动</summary>
+        /// <summary>弹反：换阵营、伤害、发射者与弹道；命中面换敌我两位，穿墙不变</summary>
         public bool TryReflect(in BulletRebind rebind, Transform owner, IHitLanded hitSink)
         {
             if (_system == null || _state != BulletState.Flying) return false;
