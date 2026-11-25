@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cinemachine;
@@ -153,7 +153,8 @@ namespace Refraction.Presentation
 
         private void OnRequestWorldReverse(RequestWorldReverse evt)
         {
-            _audio?.EnqueueSfx(AudioId.WorldReverse);
+            if(!(evt.requestWhite && _scenectx.World == WorldPolarity.White))
+                _audio?.EnqueueSfx(AudioId.WorldReverse);
 
             if (evt.requestWhite)
             {
