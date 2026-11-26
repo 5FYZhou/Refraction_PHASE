@@ -203,6 +203,8 @@ namespace Refraction.Presentation.Combat
             }
 
             _head = Instantiate(prefab, playerController.transform.position, Quaternion.identity, transform);
+
+            _root.Effects?.SetInvert(_head.transform, playerController.IsBlack);
         }
 
         private void EndDeath()

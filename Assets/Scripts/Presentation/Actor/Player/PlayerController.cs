@@ -232,6 +232,8 @@ namespace Refraction.Presentation.Actor
         /// -1 朝左，1 朝右；跨场景后新玩家还没有朝向
         public int CurrentFace => _attached && moveMotor != null ? moveMotor.FaceSign : 1;
 
+        public bool IsBlack => _attached && _logic != null && _logic.IsBlack;
+
         public void Announce() => _logic?.Announce();
 
         public void AnnouncePolarity() => _logic?.AnnouncePolarity();
@@ -429,6 +431,7 @@ namespace Refraction.Presentation.Actor
             _moveDustColor = Tint(moveDustColor, invert);
             _landColor = Tint(landColor, invert);
             _savePointSparkColor = Tint(savePointSparkColor, invert);
+            _playerDieColor = Tint(playerDieColor, invert);
         }
 
         private static Color Tint(Color color, bool invert) =>
@@ -443,9 +446,7 @@ namespace Refraction.Presentation.Actor
             _root.Audio?.SetLoopSfx(AudioId.Move, false);
 
             // 死亡期间逻辑不推进，先把这一帧的速度清零，否则尸体会按最后的惯性滑出去
-            moveMotor.SnapVelocity(Vector2.zero);
-            moveMotor.CommitGates(new Logic.Move.MoveGates());
-            moveMotor.Commit();
+            moveMotor.SetMotorEnabled(false);
 
             _logic.CancelCharge();
             _chargeBar?.Tick(ChargePhase.None, 0f, 0f);
@@ -455,7 +456,7 @@ namespace Refraction.Presentation.Actor
 
             _root.Effects?.SetMoveDust(bottom, false, _moveDustColor);
             _root.Effects?.SetChargeDash(ViewCenter(), Vector2.zero, false, 0f);
-            _root.Effects?.PlayPlayerDie(ViewCenter());
+            _root.Effects?.PlayPlayerDie(ViewCenter(), _playerDieColor);
 
             SetCollidersEnabled(false);
         }
@@ -472,6 +473,7 @@ namespace Refraction.Presentation.Actor
         {
             if (!_dead) return;
 
+            moveMotor.SetMotorEnabled(true);
             _logic.Revive();
 
             _dead = false;
@@ -634,7 +636,7 @@ namespace Refraction.Presentation.Actor
         {
             Vector2 pivot = new(entry.Point.x, entry.Point.y - moveMotor.FeetOffsetY);
 
-            _logic.SpawnTo(pivot);
+            _logic.SpawnTo(pivot, false);
             _logic.BeginTransit(in entry, enterTag, enterFace);
         }
 

@@ -279,18 +279,20 @@ namespace Refraction.Logic.Actor
         // 已排队、还没起步那一拍也算过门：相机逐帧钉住要在落位当帧就生效
         public bool IsTransiting => _transit.IsActive || _hasPendingEntry;
 
-        public void SpawnTo(Vector2 pos)
+        public void SpawnTo(Vector2 pos, bool invulnerable = true)
         {
             _afterimages?.Clear();
-            Place(pos);
+            Place(pos, invulnerable);
         }
 
         // 掉虚空不算重生：人回来，残影留在原地
-        public void FallBackTo(Vector2 pos) => Place(pos);
+        public void FallBackTo(Vector2 pos, bool invulnerable = false) => Place(pos, invulnerable);
 
-        private void Place(Vector2 pos)
+        private void Place(Vector2 pos, bool invulnerable)
         {
             _motor.SpawnAt(pos, Vector2.zero);
+
+            if (invulnerable) Conditions.BeginInvulnerable(_config.invulnerableTime);
 
             CancelCharge();
         }
@@ -324,16 +326,16 @@ namespace Refraction.Logic.Actor
         public bool InterruptCrouch(in LogicContext ctx) => _postureGroup.InterruptToStand(ctx);
 
         /// <summary>回到最近踩地点；没记下过返回 false（调用方自行处理），且不清空记录，连续掉落仍回同一点</summary>
-        public bool RespawnToLastGrounded() => ToLastGrounded(true);
+        public bool RespawnToLastGrounded() => ToLastGrounded(true, true);
 
-        public bool FallBackToLastGrounded() => ToLastGrounded(false);
+        public bool FallBackToLastGrounded() => ToLastGrounded(false, false);
 
-        private bool ToLastGrounded(bool clearAfterimages)
+        private bool ToLastGrounded(bool clearAfterimages, bool invulnerable)
         {
             if (!_hasGroundedPos) return false;
 
-            if (clearAfterimages) SpawnTo(_lastGroundedPos);
-            else FallBackTo(_lastGroundedPos);
+            if (clearAfterimages) SpawnTo(_lastGroundedPos, invulnerable);
+            else FallBackTo(_lastGroundedPos, invulnerable);
 
             return true;
         }
@@ -350,6 +352,7 @@ namespace Refraction.Logic.Actor
         {
             ResetHealth();
             Conditions.ClearHurt();
+            Conditions.BeginInvulnerable(_config.invulnerableTime);
             _polarity.Clear();
             Announce();
             AnnouncePolarity();

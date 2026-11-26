@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Refraction.Presentation
 {
-    /// <summary>表现层移动执行器基类：只做刚体初始化与速度账本，物理探测与身体尺寸由子类给，移动规则和帧序见 Docs/说明/玩家状态机.md</summary>
+    /// <summary>移动执行器基类：只做刚体初始化与速度账本，探测与身体尺寸由子类给，规则与帧序见 Docs/说明/玩家状态机.md</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D))]
     public abstract class MoveMotor : MonoBehaviour, IMoveMotor
@@ -23,10 +23,10 @@ namespace Refraction.Presentation
 
         protected CharacterConfig Config => _config;
 
-        /// <summary>已初始化为 Dynamic 且 gravityScale = 0 的刚体：重力由账本统一施加，物理重力再叠一层跳跃高度就失控</summary>
+        /// <summary>已初始化为 Dynamic、gravityScale = 0 的刚体：重力由账本施加，物理重力再叠一层跳跃高度就失控</summary>
         protected Rigidbody2D Body => _rb;
 
-        /// <summary>站立碰撞体高度（不含运行时压缩）</summary>
+        /// <summary>站立碰撞体高度（不含压缩）</summary>
         public abstract float BodyHeight { get; }
 
         public abstract float FeetOffsetY { get; }
@@ -56,7 +56,7 @@ namespace Refraction.Presentation
             }
         }
 
-        /// <summary>角色朝向符号：-1 朝左，1 朝右。朝向还没定过时退回到缩放方向。</summary>
+        /// <summary>朝向符号：-1 朝左，1 朝右。没定过时退回缩放方向。</summary>
         public int FaceSign
         {
             get
@@ -77,7 +77,7 @@ namespace Refraction.Presentation
             if (_config != null) _ledger.Configure(_config);
         }
 
-        /// <summary>参数由 Controller 在装配时注入，Awake 时还读不到</summary>
+        /// <summary>参数由 Controller 装配时注入，Awake 时读不到</summary>
         public void BindConfig(CharacterConfig config)
         {
             _config = Require.Assigned(config, nameof(MoveMotor), nameof(config));
@@ -96,7 +96,7 @@ namespace Refraction.Presentation
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
-        /// <summary>采样一次世界：先探地面并贴回，再探墙——贴地会改刚体位置，顺序反了墙探针量到的是没贴地的身体</summary>
+        /// <summary>采样世界：先探地并贴回，再探墙——贴地会改位置，顺序反了墙探针量到的是没贴地的身体</summary>
         public WorldInfo SampleWorld()
         {
             bool grounded = SampleGround();
@@ -108,13 +108,13 @@ namespace Refraction.Presentation
             return new WorldInfo(grounded, touchingWall, _rb.velocity, facing, _rb.position, ledgeAhead);
         }
 
-        /// <summary>探朝向那一侧的悬崖，默认没有：只有不想走下平台的角色才实现</summary>
+        /// <summary>探朝向侧的悬崖，默认没有：不想走下平台的角色才实现</summary>
         protected virtual bool SampleLedge(int side) => false;
 
-        /// <summary>探地面并返回是否踩地；贴回地面必须在这里做，逻辑层一旦读到踩地就不再施加重力，人会长悬在半空</summary>
+        /// <summary>探地面并返回是否踩地；贴回必须在这里做，逻辑层读到踩地就不加重力，人会悬在半空</summary>
         protected abstract bool SampleGround();
 
-        /// <summary>探墙并返回是否贴墙；side 是角色朝向（-1 左 / 1 右），探针与扫描方向都得随它镜像</summary>
+        /// <summary>探墙并返回是否贴墙；side 是朝向（-1 左 / 1 右），探针与扫描方向都要随它镜像</summary>
         protected abstract bool SampleWall(int side);
 
         public void BeginStep(float now, float deltaTime)
@@ -152,6 +152,8 @@ namespace Refraction.Presentation
 
         public void Commit()
         {
+            if (!MotorEnabled) return;
+
             _ledger.Commit();
         }
 
@@ -167,7 +169,7 @@ namespace Refraction.Presentation
 
         public void SetGravityEnable(bool enable) => _ledger.SetGravityEnable(enable);
 
-        /// <summary>必须在 ApplyGravity 之前调：ledger 在同一帧读这个值，晚了要等下一帧才生效</summary>
+        /// <summary>必须在 ApplyGravity 前调：ledger 同帧读这个值，晚了要等下一帧</summary>
         public void SetGravity(float gravity) => _ledger.SetGravity(gravity);
 
         private void SetFace(Vector2 face)
@@ -181,7 +183,7 @@ namespace Refraction.Presentation
             _hasGates = true;
         }
 
-        /// <summary>帧末最后一步：门禁写的是绝对速度，排在 Commit 之后才不会被子类状态与重力覆盖</summary>
+        /// <summary>帧末最后一步：门禁写绝对速度，排在 Commit 之后才不会被子类状态与重力覆盖</summary>
         public void ApplyGates()
         {
             if (!_hasGates) return;
@@ -190,7 +192,7 @@ namespace Refraction.Presentation
             _ledger.ApplyGates(in _gates);
         }
 
-        /// <summary>关闭后当帧清空刚体速度：逻辑停跑时没人 Commit，残余惯性只能在这里抹掉</summary>
+        /// <summary>关闭时当帧清空速度：逻辑停跑后没人 Commit，残余惯性只能在这里抹</summary>
         public bool MotorEnabled { get; private set; } = true;
 
         public void SetMotorEnabled(bool enable)

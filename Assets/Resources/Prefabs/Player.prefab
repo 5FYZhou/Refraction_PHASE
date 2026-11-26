@@ -829,6 +829,7 @@ MonoBehaviour:
   moveDustColor: {r: 1, g: 1, b: 1, a: 1}
   landColor: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
   savePointSparkColor: {r: 1, g: 1, b: 1, a: 1}
+  playerDieColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &8012155498594749596
 MonoBehaviour:
   m_ObjectHideFlags: 0
