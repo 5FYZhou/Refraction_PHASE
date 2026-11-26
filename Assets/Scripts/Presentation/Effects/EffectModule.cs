@@ -35,12 +35,14 @@ namespace Refraction.Presentation.Effects
         private const int ReboundSparkPoolSize = 8;
         private const int LandPoolSize = 4;
         private const int SavePointSparkPoolSize = 4;
+        private const int PlayerDiePoolSize = 4;
         private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
         private const int ReboundSparkPrewarm = 2;
         private const int LandPrewarm = 1;
         private const int SavePointSparkPrewarm = 1;
+        private const int PlayerDiePrewarm = 1;
         private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
         private const float ChargeInMinDuration = 0.05f;
@@ -73,6 +75,7 @@ namespace Refraction.Presentation.Effects
         private readonly List<Spark> _liveReboundSparks = new();
         private readonly List<Spark> _liveLands = new();
         private readonly List<Spark> _liveSaveSparks = new();
+        private readonly List<Spark> _livePlayerDies = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
@@ -85,6 +88,8 @@ namespace Refraction.Presentation.Effects
         private Pool<Spark> _landPool;
         private GameObject _saveSparkPrefab;
         private Pool<Spark> _saveSparkPool;
+        private GameObject _playerDiePrefab;
+        private Pool<Spark> _playerDiePool;
         private MoveDustState _moveDust;
         private ChargeDashState _chargeDash;
         private GameObject _chargeInPrefab;
@@ -98,6 +103,7 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoReboundSpark;
         private bool _warnedNoLand;
         private bool _warnedNoSaveSpark;
+        private bool _warnedNoPlayerDie;
         private bool _warnedNoMoveDust;
         private bool _warnedNoChargeDash;
         private bool _warnedNoChargeIn;
@@ -121,6 +127,7 @@ namespace Refraction.Presentation.Effects
             TickSparks(_liveReboundSparks, _reboundSparkPool, deltaTime);
             TickSparks(_liveLands, _landPool, deltaTime);
             TickSparks(_liveSaveSparks, _saveSparkPool, deltaTime);
+            TickSparks(_livePlayerDies, _playerDiePool, deltaTime);
             TickShapes(deltaTime);
             TickChargeIns(deltaTime);
             _moveDust?.Tick();
@@ -241,6 +248,17 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, Vector2.up, color);
             _liveSaveSparks.Add(spark);
+        }
+
+        /// <summary>死亡粒子：死亡当帧在尸体中点播一次，预制体自带朝向，不给颜色就用粒子默认</summary>
+        public void PlayPlayerDie(Vector2 position, Color? color = null)
+        {
+            if (!EnsurePlayerDiePool()) return;
+
+            if (!_playerDiePool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, Vector2.up, color);
+            _livePlayerDies.Add(spark);
         }
 
         /// <summary>移动扬尘：地面上跑动期间挂单实例常驻，on = false 当帧停发射并隐藏，位置每帧贴到 follow</summary>
@@ -581,6 +599,45 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsurePlayerDiePool()
+        {
+            if (_playerDiePool != null) return true;
+
+            _playerDiePrefab = Resources.Load<GameObject>(ResPath.PlayerDie);
+
+            if (_playerDiePrefab == null)
+            {
+                if (!_warnedNoPlayerDie)
+                {
+                    _warnedNoPlayerDie = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.PlayerDie}，死亡粒子不播放。");
+                }
+
+                return false;
+            }
+
+            _playerDiePool = new Pool<Spark>(
+                CreatePlayerDie,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: PlayerDiePoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _playerDiePool.Prewarm(PlayerDiePrewarm);
+
+            return true;
+        }
+
+        private Spark CreatePlayerDie()
+        {
+            GameObject go = Object.Instantiate(_playerDiePrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
         private bool EnsureMoveDust()
         {
             if (_moveDust != null) return true;
@@ -747,6 +804,9 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _liveSaveSparks.Count; i++) _saveSparkPool?.Release(_liveSaveSparks[i]);
             _liveSaveSparks.Clear();
 
+            for (int i = 0; i < _livePlayerDies.Count; i++) _playerDiePool?.Release(_livePlayerDies[i]);
+            _livePlayerDies.Clear();
+
             _moveDust = null;
             _chargeDash = null;
 
@@ -764,6 +824,9 @@ namespace Refraction.Presentation.Effects
 
             _saveSparkPool?.Dispose();
             _saveSparkPool = null;
+
+            _playerDiePool?.Dispose();
+            _playerDiePool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;

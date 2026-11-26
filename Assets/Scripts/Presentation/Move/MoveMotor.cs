@@ -190,6 +190,19 @@ namespace Refraction.Presentation
             _ledger.ApplyGates(in _gates);
         }
 
+        /// <summary>关闭后当帧清空刚体速度：逻辑停跑时没人 Commit，残余惯性只能在这里抹掉</summary>
+        public bool MotorEnabled { get; private set; } = true;
+
+        public void SetMotorEnabled(bool enable)
+        {
+            MotorEnabled = enable;
+
+            if (enable) return;
+
+            _ledger.ResetExternal();
+            _rb.velocity = Vector2.zero;
+        }
+
         public void SpawnAt(Vector2 position, Vector2 velocity)
         {
             _rb.position = position;

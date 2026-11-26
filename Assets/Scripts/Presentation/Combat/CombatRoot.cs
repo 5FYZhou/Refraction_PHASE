@@ -21,6 +21,10 @@ namespace Refraction.Presentation.Combat
         [SerializeField]
         private GameObject afterimagePrefab;
 
+        [Tooltip("玩家死亡演出的人头预制体：留空则退回 Resources/Prefabs/PlayerHead。")]
+        [SerializeField]
+        private GameObject playerHeadPrefab;
+
         private readonly List<BulletOwner> _owners = new();
         private readonly Dictionary<GameObject, BulletPool> _pools = new();
 
@@ -32,6 +36,10 @@ namespace Refraction.Presentation.Combat
         private GameRoot _root;
         private bool _refreshPending;
         private bool _subscribed;
+        private float _deathAt = -1f;
+        private bool _headSpawned;
+        private bool _warnedNoHead;
+        private GameObject _head;
 
         private void Start()
         {
@@ -123,6 +131,8 @@ namespace Refraction.Presentation.Combat
             _enemies?.FixedTick(deltaTime);
 
             SpawnBullets();
+
+            TickPlayerDeath();
         }
 
         public void RenderTick(float deltaTime) => _enemies?.RenderTick(deltaTime);
@@ -150,6 +160,85 @@ namespace Refraction.Presentation.Combat
         private void OnCheckpointActivated(CheckpointActivated evt) => _refreshPending = true;
 
         private void OnPlayerRespawned(PlayerRespawned evt) => _refreshPending = true;
+
+        private void TickPlayerDeath()
+        {
+            if (playerController == null || _root == null) return;
+
+            if (_deathAt < 0f)
+            {
+                if (!playerController.IsDead) return;
+
+                _deathAt = Time.fixedTime;
+                return;
+            }
+
+            PlayerConfig config = playerController.Config;
+            float elapsed = Time.fixedTime - _deathAt;
+
+            if (!_headSpawned && elapsed >= config.deathFadeTime)
+            {
+                _headSpawned = true;
+                SpawnHead();
+            }
+
+            if (elapsed < config.deathFadeTime + config.deathHeadTime) return;
+
+            EndDeath();
+        }
+
+        private void SpawnHead()
+        {
+            GameObject prefab = playerHeadPrefab != null
+                ? playerHeadPrefab
+                : Resources.Load<GameObject>(ResPath.PlayerHeadPrefab);
+
+            if (prefab == null)
+            {
+                if (_warnedNoHead) return;
+
+                _warnedNoHead = true;
+                Debug.LogWarning("[CombatRoot] 找不到人头预制体 PlayerHead，死亡演出只淡出、人头位置空着。");
+                return;
+            }
+
+            _head = Instantiate(prefab, playerController.transform.position, Quaternion.identity, transform);
+        }
+
+        private void EndDeath()
+        {
+            _deathAt = -1f;
+            _headSpawned = false;
+
+            if (_head != null)
+            {
+                Destroy(_head);
+                _head = null;
+            }
+
+            playerController.ReviveFromDeath();
+
+            EventBus<RequestWorldReverse>.Publish(new(true));
+
+            if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
+            {
+                _root.UIMgr.Transition?.Blink();
+                playerController.RespawnAt(checkpoint);
+                EventBus<PlayerRespawned>.Publish(default);
+                return;
+            }
+
+            if (_root.TryStartRespawnInCheckpointLevel()) return;
+
+            _root.UIMgr.Transition?.Blink();
+
+            if (!playerController.RespawnToLastGrounded())
+            {
+                Debug.LogWarning("[CombatRoot] 玩家死亡，但既没有同关存档点也没有落脚点记录，无处可回。");
+            }
+
+            EventBus<PlayerRespawned>.Publish(default);
+        }
 
         private void AttachBullets()
         {

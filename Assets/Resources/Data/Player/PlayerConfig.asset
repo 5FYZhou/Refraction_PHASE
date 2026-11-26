@@ -110,3 +110,5 @@ MonoBehaviour:
   reboundCooldown: 0.4
   saveFlashTime: 0.1
   saveInputLockTime: 0.1
+  deathFadeTime: 0.6
+  deathHeadTime: 1

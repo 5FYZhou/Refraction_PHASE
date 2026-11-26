@@ -73,9 +73,14 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Color savePointSparkColor = Color.white;
 
+        [Tooltip("死亡粒子的颜色：直接覆盖粒子自带颜色。")]
+        [SerializeField]
+        private Color playerDieColor = Color.white;
+
         private Color _moveDustColor = Color.white;
         private Color _landColor = Color.white;
         private Color _savePointSparkColor = Color.white;
+        private Color _playerDieColor = Color.white;
 
         private LogicContext _context;
 
@@ -93,6 +98,10 @@ namespace Refraction.Presentation.Actor
         private int _hurtExclude;
         private bool _phasing;
         private bool _grounded = true;
+        private bool _dead;
+        private float _deathElapsed;
+        private Collider2D[] _bodyColliders;
+        private bool[] _bodyColliderStates;
 
         private bool _shownBlack;
         private float _saveLockUntil;
@@ -192,6 +201,8 @@ namespace Refraction.Presentation.Actor
 
             _blackAttack.BindRebound(_logic, _hurt);
 
+            CacheColliders();
+
             _checkpoint = spawnT != null ? spawnT.GetComponent<Spawn>() : null;
             if (spawnT != null && _checkpoint == null)
             {
@@ -266,9 +277,14 @@ namespace Refraction.Presentation.Actor
 
         public IHitLanded HitSink => _logic;
 
+        public bool IsDead => _dead;
+
         public void FixedTick(float deltaTime)
         {
             if (!_attached) return;
+
+            // 死亡演出期间不推进逻辑、不读输入
+            if (_dead) return;
 
             InputSnapshot snapshot = _inputProvider.ConsumeSnapshot();
             if (Time.fixedTime < _saveLockUntil) snapshot = default;
@@ -309,10 +325,10 @@ namespace Refraction.Presentation.Actor
                 _logic.Polarity,
                 _logic.MaxPolarity));
 
-            // 掉血到 0：回存档点，连存档记录都没有才退回原地满血
+            // 掉血到 0：进入死亡演出，等 CombatRoot 走完再复活
             if (!_logic.IsAlive)
             {
-                HandleDeath();
+                BeginDeath();
                 return;
             }
 
@@ -327,7 +343,7 @@ namespace Refraction.Presentation.Actor
                 {
                     _logic.TakeFallDamage();
 
-                    if (!_logic.IsAlive) HandleDeath();
+                    if (!_logic.IsAlive) BeginDeath();
                     else _logic.FallBackToLastGrounded();
                 }
             }
@@ -418,34 +434,87 @@ namespace Refraction.Presentation.Actor
         private static Color Tint(Color color, bool invert) =>
             invert ? new Color(1f - color.r, 1f - color.g, 1f - color.b, color.a) : color;
 
-        private void HandleDeath()
+        private void BeginDeath()
         {
-            _root.Audio?.EnqueueSfx(AudioId.Death);
+            _dead = true;
+            _deathElapsed = 0f;
 
-            // 先复活再决定回哪：跨关回档的新玩家要从上下文读血，这里不落满血就会带着 0 血重开
-            _logic.Revive();
+            _root.Audio?.EnqueueSfx(AudioId.Death);
+            _root.Audio?.SetLoopSfx(AudioId.Move, false);
+
+            // 死亡期间逻辑不推进，先把这一帧的速度清零，否则尸体会按最后的惯性滑出去
+            moveMotor.SnapVelocity(Vector2.zero);
+            moveMotor.CommitGates(new Logic.Move.MoveGates());
+            moveMotor.Commit();
+
+            _logic.CancelCharge();
+            _chargeBar?.Tick(ChargePhase.None, 0f, 0f);
+
+            _blackAttack?.End();
+            _blackAttack?.HideRebound();
 
             _root.Effects?.SetMoveDust(bottom, false, _moveDustColor);
             _root.Effects?.SetChargeDash(ViewCenter(), Vector2.zero, false, 0f);
+            _root.Effects?.PlayPlayerDie(ViewCenter());
 
-            EventBus<RequestWorldReverse>.Publish(new(true));
+            SetCollidersEnabled(false);
+        }
 
-            if (_root.TryGetLocalCheckpoint(out Vector2 checkpoint))
+        private void TickDeathVisual(float deltaTime)
+        {
+            if (_deathElapsed < config.deathFadeTime) _deathElapsed += deltaTime;
+
+            float t = config.deathFadeTime > 0f ? Mathf.Clamp01(_deathElapsed / config.deathFadeTime) : 1f;
+            SetViewAlpha(_viewBaseColor.a * (1f - t));
+        }
+
+        public void ReviveFromDeath()
+        {
+            if (!_dead) return;
+
+            _logic.Revive();
+
+            _dead = false;
+            _deathElapsed = 0f;
+            _blinkElapsed = 0f;
+
+            SetCollidersEnabled(true);
+            SetViewAlpha(_viewBaseColor.a);
+        }
+
+        public void RespawnAt(Vector2 pivot) => _logic.SpawnTo(pivot);
+
+        public bool RespawnToLastGrounded() => _logic.RespawnToLastGrounded();
+
+        private void SetViewAlpha(float alpha)
+        {
+            if (_viewRenderer == null) return;
+
+            Color color = _viewRenderer.color;
+            if (Mathf.Approximately(color.a, alpha)) return;
+
+            color.a = alpha;
+            _viewRenderer.color = color;
+        }
+
+        private void SetCollidersEnabled(bool on)
+        {
+            if (_bodyColliders == null) return;
+
+            for (int i = 0; i < _bodyColliders.Length; i++)
             {
-                _root.UIMgr.Transition?.Blink();
-                _logic.SpawnTo(checkpoint);
-                EventBus<PlayerRespawned>.Publish(default);
-                return;
+                if (_bodyColliders[i] == null) continue;
+
+                _bodyColliders[i].enabled = on && _bodyColliderStates[i];
             }
+        }
 
-            // 跨关回档走转场，遮罩由它自己拉；同关复活在这里闪一下
-            if (_root.TryStartRespawnInCheckpointLevel()) return;
+        private void CacheColliders()
+        {
+            _bodyColliders = GetComponentsInChildren<Collider2D>(true);
+            _bodyColliderStates = new bool[_bodyColliders.Length];
 
-            _root.UIMgr.Transition?.Blink();
-
-            if (!_logic.RespawnToLastGrounded()) WarnNoGroundedPoint();
-
-            EventBus<PlayerRespawned>.Publish(default);
+            for (int i = 0; i < _bodyColliders.Length; i++) _bodyColliderStates[i] = _bodyColliders[i].enabled;
         }
 
         private void TrySaveCheckpoint()
@@ -480,6 +549,12 @@ namespace Refraction.Presentation.Actor
         public void RenderTick(float deltaTime)
         {
             if (!_attached) return;
+
+            if (_dead)
+            {
+                TickDeathVisual(deltaTime);
+                return;
+            }
 
             _logic.Tick(new());
 
@@ -524,11 +599,7 @@ namespace Refraction.Presentation.Actor
 
             if (_viewRenderer == null) return;
 
-            Color color = _viewRenderer.color;
-            if (Mathf.Approximately(color.a, alpha)) return;
-
-            color.a = alpha;
-            _viewRenderer.color = color;
+            SetViewAlpha(alpha);
         }
 
         private void ApplyPhase()

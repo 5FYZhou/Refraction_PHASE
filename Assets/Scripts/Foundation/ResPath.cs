@@ -12,6 +12,7 @@ namespace Refraction.Foundation
 
         public const string BulletPrefab = "Prefabs/Bullet/Bullet";
         public const string AfterimagePrefab = "Prefabs/AfterImage";
+        public const string PlayerHeadPrefab = "Prefabs/PlayerHead";
 
         public const string HitSpark = "Effects/HitSpark";
         public const string AttackSpark = "Effects/AttackSpark";
@@ -21,6 +22,7 @@ namespace Refraction.Foundation
         public const string SavePointSpark = "Effects/SavePointSpark";
         public const string ChargeIn = "Effects/ChargeIn";
         public const string ChargeDash = "Effects/ChargeDash";
+        public const string PlayerDie = "Effects/PlayerDie";
 
         public const string UICamera = "ui/UICamera";
         public const string UICanvas = "ui/Canvas";

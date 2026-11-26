@@ -343,5 +343,14 @@ namespace Refraction.Data
         [Tooltip("存档成功后玩家不响应输入的时长（秒）：从存档成功那一刻起算，期间移动、跳跃、攻击、反转、存档全部停住，刚体与重力照常。\n0 表示不锁输入（会有连按存两次的风险）。")]
         [Min(0f)]
         public float saveInputLockTime = 0.5f;
+
+        [Header("死亡")]
+        [Tooltip("死亡演出时长（秒）：这段时间玩家视图淡到全透明，死亡粒子在尸体中点播一次，逻辑与输入全停。\n到点生成人头；0 表示当帧就淡完并生成人头。")]
+        [Min(0f)]
+        public float deathFadeTime = 0.6f;
+
+        [Tooltip("人头停留时长（秒）：人头生成后再过这么久才复活玩家。\n0 表示人头一出现就复活（基本看不到）。")]
+        [Min(0f)]
+        public float deathHeadTime = 1f;
     }
 }

@@ -249,7 +249,7 @@ namespace Refraction.Logic.Actor
             _afterimages?.Arm();
         }
 
-        private void CancelCharge()
+        public void CancelCharge()
         {
             _chargePhase = ChargePhase.None;
             _chargeEnterTime = 0f;
