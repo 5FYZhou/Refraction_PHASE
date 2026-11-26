@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: AudioConfig
   m_EditorClassIdentifier: 
   bgmVolume: 0.1
-  sfxVolume: 1
+  sfxVolume: 0.848
   bgmFadeDuration: 0.3
   randomVariation: 1
   randomVolumeRange: 0.15
@@ -22,43 +22,51 @@ MonoBehaviour:
   - id: 1
     fileNames:
     - "\u51B2\u523A"
-    volume: 1
+    volume: 0.6
     randomize: 1
+    single: 0
   - id: 2
     fileNames:
     - "\u547D\u4E2D\u8EAB\u4F53"
     volume: 1
     randomize: 1
+    single: 0
   - id: 3
     fileNames:
     - "\u547D\u4E2D\u786C\u58F3"
     volume: 1
     randomize: 0
+    single: 0
   - id: 4
     fileNames:
     - "\u6325\u5251"
     volume: 1
     randomize: 1
+    single: 0
   - id: 5
     fileNames:
     - "\u5251\u6C14(\u5149\u6CE2)"
     volume: 1
     randomize: 0
+    single: 0
   - id: 6
     fileNames:
     - "\u79FB\u52A8"
     volume: 1
     randomize: 0
+    single: 0
   - id: 7
     fileNames:
     - "\u843D\u5730"
     volume: 1
     randomize: 1
+    single: 0
   - id: 8
     fileNames:
     - "\u8DF3\u8DC3"
     volume: 1
     randomize: 1
+    single: 0
   - id: 9
     fileNames:
     - "\u53D7\u4F241"
@@ -66,89 +74,106 @@ MonoBehaviour:
     - "\u53D7\u4F243"
     volume: 1
     randomize: 0
+    single: 0
   - id: 10
     fileNames:
     - "\u6B7B\u4EA11"
     volume: 1
     randomize: 0
+    single: 0
   - id: 11
     fileNames:
     - "\u77ED\u94C3\u94DB"
     volume: 1
     randomize: 0
+    single: 0
   - id: 12
     fileNames:
     - "\u6B66\u5668\u78B0\u649E"
-    volume: 1
+    volume: 0.8
     randomize: 1
+    single: 0
   - id: 13
     fileNames:
     - "\u6B66\u5668\u78B0\u649E2"
-    volume: 1
+    volume: 0.9
     randomize: 1
+    single: 0
   - id: 14
     fileNames:
     - "\u5145\u80FD"
-    volume: 1
+    volume: 0.6
     randomize: 0
     single: 1
   - id: 15
     fileNames:
     - "\u53CD\u8F6C"
-    volume: 1
+    volume: 0.6
     randomize: 0
+    single: 0
   - id: 16
     fileNames:
     - "\u6298\u8DC3\u8FDE\u7EBF\u89E6\u53D1"
-    volume: 1
+    volume: 0.7
     randomize: 1
+    single: 0
   - id: 17
     fileNames:
     - "\u654C\u4EBA\u6B7B\u4EA1"
-    volume: 1
+    volume: 0.15
     randomize: 0
+    single: 0
   - id: 18
     fileNames:
     - "\u6B8B\u5F71\u51B2\u523A"
-    volume: 1
+    volume: 0.95
     randomize: 1
+    single: 0
   - id: 19
     fileNames:
     - "\u767D\u653B\u51FB.\u547D\u4E2D"
     volume: 1
     randomize: 1
+    single: 0
   - id: 101
     fileNames:
     - scene 1
     volume: 1
     randomize: 0
+    single: 0
   - id: 102
     fileNames:
     - scene 2
     volume: 1
     randomize: 0
+    single: 0
   - id: 103
     fileNames:
     - scene 3
     volume: 1
     randomize: 0
+    single: 0
   - id: 104
     fileNames:
     - boss fight 1
     volume: 1
     randomize: 0
+    single: 0
   - id: 105
     fileNames:
     - boss fight 2
     volume: 1
     randomize: 0
+    single: 0
   - id: 106
     fileNames:
     - boss fight 3
     volume: 1
     randomize: 0
+    single: 0
   - id: 107
     fileNames:
     - "\u4E3B\u754C\u9762"
     volume: 1
     randomize: 0
+    single: 0
