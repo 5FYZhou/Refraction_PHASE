@@ -120,7 +120,7 @@ namespace Refraction.MapEditor
                 if (command != null)
                 {
                     _history.Push(command);
-                    _autoSave.MarkDirty(_current);
+                    _autoSave.MarkDirty(_current, GetDirtyFlags(command));
                 }
                 if (changed)
                 {
@@ -181,21 +181,38 @@ namespace Refraction.MapEditor
             }
         }
 
+        private MapDirtyFlags GetDirtyFlags(IMapCommand command)
+        {
+            if (_current == null) return MapDirtyFlags.None;
+            if (!(command is PixelCommand pixel)) return MapDirtyFlags.All;
+            MapDirtyFlags flags = MapDirtyFlags.None;
+            foreach (Texture2D texture in pixel.EditedTextures)
+            {
+                if (texture == _current.groundTexture) flags |= MapDirtyFlags.Ground;
+                else if (texture == _current.groundEraseMask) flags |= MapDirtyFlags.GroundEraseMask;
+                else if (texture == _current.paintTexture) flags |= MapDirtyFlags.Paint;
+                else if (texture == _current.paintEraseMask) flags |= MapDirtyFlags.PaintEraseMask;
+            }
+            return flags == MapDirtyFlags.None ? MapDirtyFlags.All : flags;
+        }
+
         private void Undo()
         {
             if (_current == null) return;
-            _history.Undo();
+            IMapCommand command = _history.Undo();
+            if (command == null) return;
             _canvas.Refresh(_current);
-            _autoSave.MarkDirty(_current);
+            _autoSave.MarkDirty(_current, GetDirtyFlags(command));
             Repaint();
         }
 
         private void Redo()
         {
             if (_current == null) return;
-            _history.Redo();
+            IMapCommand command = _history.Redo();
+            if (command == null) return;
             _canvas.Refresh(_current);
-            _autoSave.MarkDirty(_current);
+            _autoSave.MarkDirty(_current, GetDirtyFlags(command));
             Repaint();
         }
 

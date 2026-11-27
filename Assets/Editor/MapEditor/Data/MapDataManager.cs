@@ -37,6 +37,7 @@ namespace Refraction.MapEditor
             LevelMapData data = ScriptableObject.CreateInstance<LevelMapData>();
             data.sceneGuid = info.guid;
             data.sceneName = info.sceneName;
+            data.dirtyFlags = MapDirtyFlags.All;
             return data;
         }
 
@@ -66,7 +67,11 @@ namespace Refraction.MapEditor
         public static void SaveAll()
         {
             var snapshot = new List<LevelMapData>(Cache.Values);
-            foreach (LevelMapData data in snapshot) Save(data);
+            foreach (LevelMapData data in snapshot)
+            {
+                if (data == null || !data.isDirty) continue;
+                Save(data);
+            }
         }
 
         public static void Delete(string sceneGuid)
@@ -84,8 +89,14 @@ namespace Refraction.MapEditor
 
         public static void MarkDirty(LevelMapData data)
         {
-            if (data == null) return;
+            MarkDirty(data, MapDirtyFlags.All);
+        }
+
+        public static void MarkDirty(LevelMapData data, MapDirtyFlags flags)
+        {
+            if (data == null || flags == MapDirtyFlags.None) return;
             data.isDirty = true;
+            data.dirtyFlags |= flags;
             EditorUtility.SetDirty(data);
         }
 
@@ -118,6 +129,7 @@ namespace Refraction.MapEditor
                 data.paintEraseMask = newPaintMask;
             }
             data.isDirty = true;
+            data.dirtyFlags = MapDirtyFlags.All;
             return remapped;
         }
 
@@ -135,6 +147,7 @@ namespace Refraction.MapEditor
             data.paintTexture = MapGenerator.CreateBlank("Paint", size.x, size.y);
             data.paintEraseMask = MapGenerator.CreateBlank("PaintEraseMask", size.x, size.y);
             data.isDirty = true;
+            data.dirtyFlags = MapDirtyFlags.All;
         }
 
         public static Texture2D Compose(LevelMapData data)
@@ -144,10 +157,17 @@ namespace Refraction.MapEditor
 
         private static void SaveTextures(LevelMapData data, string folder)
         {
-            data.groundTexture = TextureStorage.Save(data.groundTexture, Path.Combine(folder, "Ground.png"));
-            data.groundEraseMask = TextureStorage.Save(data.groundEraseMask, Path.Combine(folder, "GroundEraseMask.png"));
-            data.paintTexture = TextureStorage.Save(data.paintTexture, Path.Combine(folder, "Paint.png"));
-            data.paintEraseMask = TextureStorage.Save(data.paintEraseMask, Path.Combine(folder, "PaintEraseMask.png"));
+            MapDirtyFlags flags = data.dirtyFlags;
+            if (flags == MapDirtyFlags.None) flags = MapDirtyFlags.All;
+            if ((flags & MapDirtyFlags.Ground) != 0)
+                data.groundTexture = TextureStorage.Save(data.groundTexture, Path.Combine(folder, "Ground.png"));
+            if ((flags & MapDirtyFlags.GroundEraseMask) != 0)
+                data.groundEraseMask = TextureStorage.Save(data.groundEraseMask, Path.Combine(folder, "GroundEraseMask.png"));
+            if ((flags & MapDirtyFlags.Paint) != 0)
+                data.paintTexture = TextureStorage.Save(data.paintTexture, Path.Combine(folder, "Paint.png"));
+            if ((flags & MapDirtyFlags.PaintEraseMask) != 0)
+                data.paintEraseMask = TextureStorage.Save(data.paintEraseMask, Path.Combine(folder, "PaintEraseMask.png"));
+            data.dirtyFlags = MapDirtyFlags.None;
             data.isDirty = false;
         }
 

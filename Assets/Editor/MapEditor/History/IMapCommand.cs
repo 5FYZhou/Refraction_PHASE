@@ -19,6 +19,8 @@ namespace Refraction.MapEditor
 
         private readonly Dictionary<Texture2D, Dictionary<int, PixelEdit>> _edits = new();
 
+        public IEnumerable<Texture2D> EditedTextures => _edits.Keys;
+
         public bool HasChanges
         {
             get

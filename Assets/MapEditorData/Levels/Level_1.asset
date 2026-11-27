@@ -198,4 +198,5 @@ MonoBehaviour:
   groundColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundColor: {r: 0.16, g: 0.16, b: 0.16, a: 1}
   isDirty: 0
+  dirtyFlags: 0
   dataVersion: 2

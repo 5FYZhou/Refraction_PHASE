@@ -22,18 +22,22 @@ namespace Refraction.MapEditor
             _cursor = _stack.Count;
         }
 
-        public void Undo()
+        public IMapCommand Undo()
         {
-            if (!CanUndo) return;
-            _stack[_cursor - 1].Undo();
+            if (!CanUndo) return null;
+            IMapCommand command = _stack[_cursor - 1];
+            command.Undo();
             _cursor--;
+            return command;
         }
 
-        public void Redo()
+        public IMapCommand Redo()
         {
-            if (!CanRedo) return;
-            _stack[_cursor].Execute();
+            if (!CanRedo) return null;
+            IMapCommand command = _stack[_cursor];
+            command.Execute();
             _cursor++;
+            return command;
         }
 
         public void Clear()

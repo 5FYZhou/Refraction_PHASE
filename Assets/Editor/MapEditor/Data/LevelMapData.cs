@@ -4,6 +4,17 @@ using UnityEngine.Serialization;
 
 namespace Refraction.MapEditor
 {
+    [System.Flags]
+    public enum MapDirtyFlags
+    {
+        None = 0,
+        Ground = 1 << 0,
+        GroundEraseMask = 1 << 1,
+        Paint = 1 << 2,
+        PaintEraseMask = 1 << 3,
+        All = Ground | GroundEraseMask | Paint | PaintEraseMask
+    }
+
     [CreateAssetMenu(menuName = "Map Editor/Level Map")]
     public sealed class LevelMapData : ScriptableObject
     {
@@ -31,6 +42,7 @@ namespace Refraction.MapEditor
         public Color backgroundColor = new Color(0.16f, 0.16f, 0.16f, 1f);
 
         public bool isDirty;
+        public MapDirtyFlags dirtyFlags;
         public int dataVersion = 2;
     }
 }

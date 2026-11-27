@@ -13,8 +13,14 @@ namespace Refraction.MapEditor
 
         public void MarkDirty(LevelMapData data)
         {
-            if (data == null) return;
+            MarkDirty(data, MapDirtyFlags.All);
+        }
+
+        public void MarkDirty(LevelMapData data, MapDirtyFlags flags)
+        {
+            if (data == null || flags == MapDirtyFlags.None) return;
             data.isDirty = true;
+            data.dirtyFlags |= flags;
             EditorUtility.SetDirty(data);
             _pending[data.sceneGuid] = data;
             _dirtyAt[data.sceneGuid] = EditorApplication.timeSinceStartup;
