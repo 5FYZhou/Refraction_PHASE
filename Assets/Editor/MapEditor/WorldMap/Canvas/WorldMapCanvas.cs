@@ -15,6 +15,8 @@ namespace Refraction.MapEditor
         private bool _spaceHeld;
         private bool _panning;
         private bool _interacting;
+        private string _moveGuid;
+        private Vector2 _moveStart;
         private Vector2 _lastMouse;
 
         public float Zoom => _transform.Zoom;
@@ -37,6 +39,15 @@ namespace Refraction.MapEditor
             _transform.Pan(rect.size * 0.5f - current);
         }
 
+        public void ValidateSelection(WorldMapData data)
+        {
+            _moveGuid = null;
+            if (data == null) return;
+            if (!string.IsNullOrEmpty(SelectedGuid) && WorldMapRenderer.FindPlacement(data, SelectedGuid) == null)
+                SelectedGuid = null;
+            if (SelectedConnection >= data.connections.Count) SelectedConnection = -1;
+        }
+
         public void Dispose()
         {
             foreach (Texture2D texture in _composites.Values) MapCompositor.Release(texture);
@@ -45,10 +56,11 @@ namespace Refraction.MapEditor
         }
 
         public void HandleInput(Event current, Rect rect, WorldMapData data, WorldTool tool, bool snap,
-            out bool changed, out string message)
+            out bool changed, out string message, out IWorldMapCommand command)
         {
             changed = false;
             message = null;
+            command = null;
             if (data == null) return;
 
             if (current.type == EventType.KeyDown && current.keyCode == KeyCode.Space)
@@ -72,7 +84,8 @@ namespace Refraction.MapEditor
             if (current.type == EventType.KeyDown
                 && (current.keyCode == KeyCode.Delete || current.keyCode == KeyCode.Backspace))
             {
-                changed = DeleteSelection(data);
+                command = DeleteSelection(data);
+                changed = command != null;
                 current.Use();
                 return;
             }
@@ -82,6 +95,7 @@ namespace Refraction.MapEditor
                 {
                     PrepareContext(current, rect, data, tool, snap);
                     ActiveTool(tool).OnUp(_context);
+                    command = CommitMove(data);
                     _interacting = false;
                     if (rect.Contains(current.mousePosition)) current.Use();
                 }
@@ -120,6 +134,7 @@ namespace Refraction.MapEditor
             {
                 _interacting = true;
                 ActiveTool(tool).OnDown(_context);
+                BeginMove(data, tool);
                 current.Use();
             }
             else if (current.type == EventType.MouseDrag && current.button == 0)
@@ -130,6 +145,26 @@ namespace Refraction.MapEditor
             CommitContext();
             changed = _context.Changed;
             message = _context.Message;
+        }
+
+        private void BeginMove(WorldMapData data, WorldTool tool)
+        {
+            _moveGuid = null;
+            if (tool != WorldTool.Select || string.IsNullOrEmpty(_context.SelectedGuid)) return;
+            LevelMapPlacement placement = WorldMapRenderer.FindPlacement(data, _context.SelectedGuid);
+            if (placement == null || placement.locked) return;
+            _moveGuid = placement.sceneGuid;
+            _moveStart = placement.position;
+        }
+
+        private IWorldMapCommand CommitMove(WorldMapData data)
+        {
+            string guid = _moveGuid;
+            _moveGuid = null;
+            if (string.IsNullOrEmpty(guid)) return null;
+            LevelMapPlacement placement = WorldMapRenderer.FindPlacement(data, guid);
+            if (placement == null || placement.position == _moveStart) return null;
+            return new MovePlacementCommand(placement, _moveStart, placement.position);
         }
 
         private IWorldMapTool ActiveTool(WorldTool tool)
@@ -159,20 +194,29 @@ namespace Refraction.MapEditor
             SelectedConnection = _context.SelectedConnection;
         }
 
-        private bool DeleteSelection(WorldMapData data)
+        private IWorldMapCommand DeleteSelection(WorldMapData data)
         {
             if (SelectedConnection >= 0 && SelectedConnection < data.connections.Count)
             {
                 data.connections.RemoveAt(SelectedConnection);
                 SelectedConnection = -1;
-                return true;
+                return null;
             }
-            if (string.IsNullOrEmpty(SelectedGuid)) return false;
-            data.levels.RemoveAll(placement => placement != null && placement.sceneGuid == SelectedGuid);
-            data.connections.RemoveAll(connection => connection != null
-                && (connection.fromSceneGuid == SelectedGuid || connection.toSceneGuid == SelectedGuid));
+            if (string.IsNullOrEmpty(SelectedGuid)) return null;
+            int index = data.levels.FindIndex(p => p != null && p.sceneGuid == SelectedGuid);
+            if (index < 0) return null;
+            LevelMapPlacement placement = data.levels[index];
+            var command = new RemovePlacementCommand(placement, index);
+            for (int i = data.connections.Count - 1; i >= 0; i--)
+            {
+                MapConnection connection = data.connections[i];
+                if (connection == null || (connection.fromSceneGuid != SelectedGuid
+                        && connection.toSceneGuid != SelectedGuid)) continue;
+                command.RecordConnection(connection, i);
+            }
+            command.Execute(data);
             SelectedGuid = null;
-            return true;
+            return command;
         }
 
         private void SyncComposites(WorldMapData data)

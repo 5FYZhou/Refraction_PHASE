@@ -11,6 +11,6 @@ namespace Refraction.MapEditor
         public float pixelsPerUnit = 32f;
         public float scale = 1f;
         public bool showGrid = false;
-        public bool showConnections = true;
+        public bool showConnections;
     }
 }

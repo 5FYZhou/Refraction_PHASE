@@ -12,6 +12,7 @@ namespace Refraction.MapEditor
 
         private readonly WorldMapCanvas _canvas = new();
         private readonly WorldMapExportSettings _exportSettings = new();
+        private readonly WorldMapHistory _history = new();
         private List<SceneAssetInfo> _levels = new();
         private WorldMapData _world;
         private WorldTool _tool = WorldTool.Select;
@@ -100,8 +101,10 @@ namespace Refraction.MapEditor
             Rect rect = GUILayoutUtility.GetRect(320f, 320f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             if (_world != null)
             {
-                _canvas.HandleInput(Event.current, rect, _world, _tool, _snap, out bool changed, out string message);
-                if (changed)
+                _canvas.HandleInput(Event.current, rect, _world, _tool, _snap,
+                    out bool changed, out string message, out IWorldMapCommand command);
+                if (command != null) _history.Push(command);
+                if (changed || command != null)
                 {
                     EditorUtility.SetDirty(_world);
                     Repaint();
@@ -154,6 +157,9 @@ namespace Refraction.MapEditor
             Vector2 position = EditorGUILayout.Vector2Field("位置", placement.position);
             if (position != placement.position)
             {
+                MovePlacementCommand move = _history.Peek() as MovePlacementCommand;
+                if (move != null && move.CanMerge(placement, placement.position)) move.Retarget(position);
+                else _history.Push(new MovePlacementCommand(placement, placement.position, position));
                 placement.position = position;
                 EditorUtility.SetDirty(_world);
                 Repaint();
@@ -179,12 +185,44 @@ namespace Refraction.MapEditor
             {
                 SaveWorld();
                 current.Use();
+                return;
             }
+            if ((current.control || current.command) && current.keyCode == KeyCode.Z)
+            {
+                if (current.shift) RedoWorld(); else UndoWorld();
+                current.Use();
+                return;
+            }
+            if ((current.control || current.command) && current.keyCode == KeyCode.Y)
+            {
+                RedoWorld();
+                current.Use();
+            }
+        }
+
+        private void UndoWorld()
+        {
+            if (_world == null || !_history.CanUndo) return;
+            _history.Undo(_world);
+            _canvas.ValidateSelection(_world);
+            EditorUtility.SetDirty(_world);
+            Repaint();
+        }
+
+        private void RedoWorld()
+        {
+            if (_world == null || !_history.CanRedo) return;
+            _history.Redo(_world);
+            _canvas.ValidateSelection(_world);
+            EditorUtility.SetDirty(_world);
+            Repaint();
         }
 
         private void LoadWorld(string path)
         {
-            _world = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<WorldMapData>(path);
+            WorldMapData next = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<WorldMapData>(path);
+            if (next != _world) _history.Clear();
+            _world = next;
             if (_world != null) EditorPrefs.SetString(PrefKey, path);
             else EditorPrefs.DeleteKey(PrefKey);
             _message = null;
@@ -230,6 +268,7 @@ namespace Refraction.MapEditor
                 sceneGuid = info.guid,
                 position = new Vector2(_world.levels.Count * 8f, 0f)
             };
+            _history.Push(new AddPlacementCommand(placement, _world.levels.Count));
             _world.levels.Add(placement);
             EditorUtility.SetDirty(_world);
             _message = info.sceneName + " 已添加，拖动调整位置。";
@@ -238,10 +277,19 @@ namespace Refraction.MapEditor
 
         private void RemovePlacement(LevelMapPlacement placement)
         {
+            int index = _world.levels.IndexOf(placement);
+            if (index < 0) return;
+            var command = new RemovePlacementCommand(placement, index);
             string guid = placement.sceneGuid;
-            _world.levels.Remove(placement);
-            _world.connections.RemoveAll(connection => connection != null
-                && (connection.fromSceneGuid == guid || connection.toSceneGuid == guid));
+            for (int i = _world.connections.Count - 1; i >= 0; i--)
+            {
+                MapConnection connection = _world.connections[i];
+                if (connection == null || (connection.fromSceneGuid != guid
+                        && connection.toSceneGuid != guid)) continue;
+                command.RecordConnection(connection, i);
+            }
+            _history.Push(command);
+            command.Execute(_world);
             EditorUtility.SetDirty(_world);
             Repaint();
         }
