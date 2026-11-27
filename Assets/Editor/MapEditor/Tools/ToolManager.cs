@@ -10,16 +10,16 @@ namespace Refraction.MapEditor
         public void OnMouseDown(MapToolContext context)
         {
             context.Command = new PaintCommand();
-            BrushTool.Draw(context.Data.paintTexture, context.Data.paintEraseMask,
-                context.Pixel, context.Radius, context.Color, (PixelCommand)context.Command);
+            context.MarkDirty(BrushTool.Draw(context.Data.paintTexture, context.Data.paintEraseMask,
+                context.Pixel, context.Radius, context.Color, (PixelCommand)context.Command));
             context.PreviousPixel = context.Pixel;
         }
 
         public void OnMouseDrag(MapToolContext context)
         {
-            BrushTool.DrawLine(context.Data.paintTexture, context.Data.paintEraseMask,
+            context.MarkDirty(BrushTool.DrawLine(context.Data.paintTexture, context.Data.paintEraseMask,
                 context.PreviousPixel, context.Pixel, context.Radius, context.Color,
-                (PixelCommand)context.Command);
+                (PixelCommand)context.Command));
             context.PreviousPixel = context.Pixel;
         }
 
@@ -42,16 +42,16 @@ namespace Refraction.MapEditor
         public void OnMouseDown(MapToolContext context)
         {
             context.Command = new EraseCommand();
-            EraserTool.Erase(context.Data.paintTexture, context.Data.groundEraseMask,
-                context.Data.paintEraseMask, context.Pixel, context.Radius, (PixelCommand)context.Command);
+            context.MarkDirty(EraserTool.Erase(context.Data.paintTexture, context.Data.groundEraseMask,
+                context.Data.paintEraseMask, context.Pixel, context.Radius, (PixelCommand)context.Command));
             context.PreviousPixel = context.Pixel;
         }
 
         public void OnMouseDrag(MapToolContext context)
         {
-            EraserTool.EraseLine(context.Data.paintTexture, context.Data.groundEraseMask,
+            context.MarkDirty(EraserTool.EraseLine(context.Data.paintTexture, context.Data.groundEraseMask,
                 context.Data.paintEraseMask, context.PreviousPixel, context.Pixel, context.Radius,
-                (PixelCommand)context.Command);
+                (PixelCommand)context.Command));
             context.PreviousPixel = context.Pixel;
         }
 

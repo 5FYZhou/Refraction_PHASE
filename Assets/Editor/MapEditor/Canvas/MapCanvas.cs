@@ -8,6 +8,7 @@ namespace Refraction.MapEditor
         private readonly CanvasTransform _transform = new();
         private readonly MapToolContext _context = new();
         private Texture2D _composite;
+        private RectInt _pendingDirty;
         private IMapCommand _activeCommand;
         private IMapCommand _completedCommand;
         private bool _spaceHeld;
@@ -18,13 +19,33 @@ namespace Refraction.MapEditor
 
         public void SetData(LevelMapData data, Rect rect)
         {
-            _composite = MapCompositor.Compose(data);
+            MapCompositor.Release(_composite);
+            _composite = MapCompositor.CreateComposite(data);
+            _pendingDirty = default;
             Fit(rect, data);
         }
 
         public void Refresh(LevelMapData data)
         {
-            _composite = MapCompositor.Compose(data);
+            if (data == null || data.groundTexture == null) return;
+            if (_composite == null || _composite.width != data.groundTexture.width
+                || _composite.height != data.groundTexture.height)
+            {
+                MapCompositor.Release(_composite);
+                _composite = MapCompositor.CreateComposite(data);
+            }
+            else
+            {
+                MapCompositor.ComposeInto(data, _composite, _pendingDirty);
+            }
+            _pendingDirty = default;
+        }
+
+        public void Dispose()
+        {
+            MapCompositor.Release(_composite);
+            _composite = null;
+            _pendingDirty = default;
         }
 
         public void Fit(Rect rect, LevelMapData data)
@@ -68,10 +89,10 @@ namespace Refraction.MapEditor
             if (current.type == EventType.MouseUp && current.button == 0 && _strokeActive)
             {
                 tools.Active.OnMouseUp(_context);
+                if (_activeCommand is PixelCommand pixelCommand) pixelCommand.ApplyTextures();
                 _completedCommand = _activeCommand;
                 _activeCommand = null;
                 _strokeActive = false;
-                changed = true;
                 current.Use();
                 return;
             }
@@ -109,6 +130,7 @@ namespace Refraction.MapEditor
             {
                 _context.PreviousPixel = pixel;
                 tools.Active.OnMouseDown(_context);
+                AccumulateDirty();
                 _activeCommand = _context.Command;
                 _strokeActive = true;
                 changed = true;
@@ -120,6 +142,7 @@ namespace Refraction.MapEditor
             {
                 _context.Command = _activeCommand;
                 tools.Active.OnMouseDrag(_context);
+                AccumulateDirty();
                 changed = true;
                 current.Use();
             }
@@ -148,6 +171,14 @@ namespace Refraction.MapEditor
             _context.Radius = radius;
             _context.Color = color;
             _context.Command = _activeCommand;
+            _context.Dirty = default;
+        }
+
+        private void AccumulateDirty()
+        {
+            if (_context.Dirty.width <= 0 || _context.Dirty.height <= 0) return;
+            _pendingDirty = MapToolContext.Union(_pendingDirty, _context.Dirty);
+            _context.Dirty = default;
         }
 
         private bool TryScreenToPixel(Vector2 localMouse, LevelMapData data, out Vector2 pixel)

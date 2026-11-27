@@ -11,27 +11,59 @@ namespace Refraction.MapEditor
 
     public abstract class PixelCommand : IMapCommand
     {
-        private struct PixelEdit
+        private sealed class PixelEdit
         {
-            public int index;
             public Color before;
             public Color after;
         }
 
-        private readonly Dictionary<Texture2D, List<PixelEdit>> _edits = new();
+        private readonly Dictionary<Texture2D, Dictionary<int, PixelEdit>> _edits = new();
 
-        public bool HasChanges => _edits.Count > 0;
+        public bool HasChanges
+        {
+            get
+            {
+                bool any = false;
+                var emptyTextures = new List<Texture2D>();
+                foreach (KeyValuePair<Texture2D, Dictionary<int, PixelEdit>> pair in _edits)
+                {
+                    var reverted = new List<int>();
+                    foreach (KeyValuePair<int, PixelEdit> edit in pair.Value)
+                    {
+                        if (edit.Value.before == edit.Value.after) reverted.Add(edit.Key);
+                    }
+                    foreach (int index in reverted) pair.Value.Remove(index);
+                    if (pair.Value.Count == 0) emptyTextures.Add(pair.Key);
+                    else any = true;
+                }
+                foreach (Texture2D texture in emptyTextures) _edits.Remove(texture);
+                return any;
+            }
+        }
 
         public void Record(Texture2D texture, int index, Color before, Color after)
         {
             if (texture == null || index < 0 || index >= texture.width * texture.height) return;
             if (before == after) return;
-            if (!_edits.TryGetValue(texture, out List<PixelEdit> list))
+            if (!_edits.TryGetValue(texture, out Dictionary<int, PixelEdit> edits))
             {
-                list = new List<PixelEdit>();
-                _edits[texture] = list;
+                edits = new Dictionary<int, PixelEdit>();
+                _edits[texture] = edits;
             }
-            list.Add(new PixelEdit { index = index, before = before, after = after });
+            if (edits.TryGetValue(index, out PixelEdit existing))
+            {
+                existing.after = after;
+                return;
+            }
+            edits[index] = new PixelEdit { before = before, after = after };
+        }
+
+        public void ApplyTextures()
+        {
+            foreach (Texture2D texture in _edits.Keys)
+            {
+                if (texture != null) texture.Apply(false, false);
+            }
         }
 
         public void Execute()
@@ -46,12 +78,34 @@ namespace Refraction.MapEditor
 
         private void Apply(bool forward)
         {
-            foreach (KeyValuePair<Texture2D, List<PixelEdit>> pair in _edits)
+            foreach (KeyValuePair<Texture2D, Dictionary<int, PixelEdit>> pair in _edits)
             {
                 Texture2D texture = pair.Key;
-                Color[] pixels = texture.GetPixels();
-                foreach (PixelEdit edit in pair.Value) pixels[edit.index] = forward ? edit.after : edit.before;
-                texture.SetPixels(pixels);
+                if (texture == null || pair.Value.Count == 0) continue;
+                int width = texture.width;
+                int minX = width;
+                int minY = texture.height;
+                int maxX = -1;
+                int maxY = -1;
+                foreach (int index in pair.Value.Keys)
+                {
+                    int x = index % width;
+                    int y = index / width;
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                }
+                int blockWidth = maxX - minX + 1;
+                int blockHeight = maxY - minY + 1;
+                Color[] pixels = texture.GetPixels(minX, minY, blockWidth, blockHeight);
+                foreach (KeyValuePair<int, PixelEdit> edit in pair.Value)
+                {
+                    int x = edit.Key % width - minX;
+                    int y = edit.Key / width - minY;
+                    pixels[y * blockWidth + x] = forward ? edit.Value.after : edit.Value.before;
+                }
+                texture.SetPixels(minX, minY, blockWidth, blockHeight, pixels);
                 texture.Apply(false, false);
             }
         }

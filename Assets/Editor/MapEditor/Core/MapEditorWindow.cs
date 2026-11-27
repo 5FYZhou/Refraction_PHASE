@@ -50,6 +50,7 @@ namespace Refraction.MapEditor
             EditorApplication.quitting -= OnQuitting;
             _autoSave.Flush();
             MapDataManager.SaveAll();
+            _canvas.Dispose();
         }
 
         private void OnUpdate()
