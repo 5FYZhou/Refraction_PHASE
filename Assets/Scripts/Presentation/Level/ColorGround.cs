@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Refraction.Presentation.Level
 {
     /// <summary>彩面地面：只在指定极性的世界存在，另一极性下整块消失（不参与反色），碰撞体一并关掉</summary>
-    public sealed class ColorGround : MonoBehaviour, IReverse
+    public sealed class ColorGround : MonoBehaviour, IReverse, IReverseFade
     {
         /// <summary>地面层级，与 TagManager 第 7 项 Ground 对应，索引 6</summary>
         private const int GroundLayer = 6;
@@ -16,6 +16,8 @@ namespace Refraction.Presentation.Level
         private SpriteRenderer _sprite;
         private Collider2D _collider;
         private Color _designColor = Color.white;
+        private WorldPolarity _world = WorldPolarity.White;
+        private float _fade = 1f;
 
         private void Awake()
         {
@@ -30,22 +32,36 @@ namespace Refraction.Presentation.Level
         private void OnDestroy()
         {
             LevelRoot.Current?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverseFade(this);
         }
 
         public void Attach()
         {
             LevelRoot.Current?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverseFade(this);
         }
 
         public void Apply(WorldPolarity world)
         {
-            bool visible = world == showIn;
+            _world = world;
+            Refresh();
+        }
+
+        public void ApplyFade(float scale)
+        {
+            _fade = scale;
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            bool visible = _world == showIn;
 
             if (_sprite != null)
             {
                 // 先取色再决定显隐：隐藏那一拍也要把颜色刷对，不然切回来会闪一帧旧色
-                Color color = world == WorldPolarity.Black ? Color.black : Color.white;
-                color.a = _designColor.a;
+                Color color = _world == WorldPolarity.Black ? Color.black : Color.white;
+                color.a = _designColor.a * _fade;
 
                 _sprite.color = color;
                 _sprite.enabled = visible;

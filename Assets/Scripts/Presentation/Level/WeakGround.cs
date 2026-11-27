@@ -5,7 +5,7 @@ namespace Refraction.Presentation.Level
 {
     /// <summary>碎裂地面：玩家踩上后支撑时间走完就碎，恢复时间走完再长回来；计时期间透明度闪烁提示</summary>
     /// <remarks>只借用场景根拿物理帧驱动；换色走 IReverse，闪烁与计时都在 FixedTick 里按固定步长推进</remarks>
-    public sealed class WeakGround : MonoBehaviour, ISceneRoot, IPhysicsTicked, IReverse
+    public sealed class WeakGround : MonoBehaviour, ISceneRoot, IPhysicsTicked, IReverse, IReverseFade
     {
         /// <summary>地面层级，与 TagManager 第 7 项 Ground 对应，索引 6</summary>
         private const int GroundLayer = 6;
@@ -47,6 +47,7 @@ namespace Refraction.Presentation.Level
         private int _playerMask;
         private float _time;
         private float _alpha = 1f;
+        private float _fade = 1f;
         private bool _started;
         private bool _broken;
 
@@ -66,6 +67,7 @@ namespace Refraction.Presentation.Level
         private void OnDestroy()
         {
             LevelRoot.Current?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverseFade(this);
 
             if (_root == null) return;
 
@@ -76,11 +78,18 @@ namespace Refraction.Presentation.Level
         {
             _root ??= GameRoot.Instance;
             LevelRoot.Current?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverseFade(this);
         }
 
         public void Apply(WorldPolarity world)
         {
             _world = world;
+            SetAlpha(_alpha);
+        }
+
+        public void ApplyFade(float scale)
+        {
+            _fade = scale;
             SetAlpha(_alpha);
         }
 
@@ -149,9 +158,9 @@ namespace Refraction.Presentation.Level
 
             if (_sprite == null) return;
 
-            // 底色跟着世界走，只有透明度归这里管，反色与闪烁互不覆盖
+            // 底色跟着世界走，只有透明度归这里管，反色与闪烁互不覆盖；淡入进度再乘一层
             Color color = _world == WorldPolarity.Black ? Color.black : Color.white;
-            color.a = _designColor.a * _alpha;
+            color.a = _designColor.a * _alpha * _fade;
             _sprite.color = color;
         }
 

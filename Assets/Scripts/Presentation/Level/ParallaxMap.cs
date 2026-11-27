@@ -1,12 +1,14 @@
-﻿using Refraction.Logic.Level;
+﻿using System;
+using Refraction.Logic.Level;
 using UnityEngine;
 
 namespace Refraction.Presentation.Level
 {
     /// <summary>视差背景：按镜头位移把各层往后拖（x 主拖、y 微量），第一层最近（跟世界 1:1），越往后越跟不上镜头；世界转黑时整图与树下所有粒子一并取反</summary>
-    /// <remarks>层就是本物体的直接子物体，锚点取各自的 localPosition.x，所以这个物体本身不能跟着动。镜头位置读在 Update，比 Cinemachine 的 LateUpdate 慢一帧：背景整体慢一帧但不会抖</remarks>
-    public sealed class ParallaxMap : MonoBehaviour, ISceneRoot, IRenderTicked, IReverse
+    /// <remarks>层就是本物体的直接子物体，锚点取各自的 localPosition.x，所以这个物体本身不能跟着动。镜头位置读在 Update，比 Cinemachine 的 LateUpdate 慢一帧：背景整体慢一帧但不会抖。叫 BG 的那层只换色不淡入，其余层与粒子跟着世界反转淡入</remarks>
+    public sealed class ParallaxMap : MonoBehaviour, ISceneRoot, IRenderTicked, IReverse, IReverseFade
     {
+        private const string BgName = "BG";
         [Tooltip("视差基准镜头。留空则用 Camera.main；读的是它的世界 x。")]
         [SerializeField]
         private Transform playerCamera;
@@ -32,12 +34,16 @@ namespace Refraction.Presentation.Level
         private float[] _followY;
         private SpriteRenderer[] _sprites;
         private Color[] _spriteColors;
+        private bool[] _spriteFades;
         private ParticleSystem[] _particles;
         private ParticleSystem.MinMaxGradient[] _particleColors;
-        private ParticleSystem.Particle[] _particleBuffer;
+        private ParticleSystem.MinMaxGradient[] _particleColorsBlack;
+        private bool[] _particleFades;
 
         private WorldPolarity _world;
         private bool _hasWorld;
+        private int _bgIndex = -1;
+        private float _fade = 1f;
 
         private float _cameraStartX;
         private float _cameraStartY;
@@ -61,6 +67,7 @@ namespace Refraction.Presentation.Level
         {
             _root?.UnregisterSceneRoot(this);
             LevelRoot.Current?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverseFade(this);
         }
 
         public void Attach()
@@ -73,6 +80,7 @@ namespace Refraction.Presentation.Level
 
             _root ??= GameRoot.Instance;
             LevelRoot.Current?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverseFade(this);
         }
 
         public void RenderTick(float deltaTime)
@@ -104,6 +112,7 @@ namespace Refraction.Presentation.Level
             _anchorY = new float[count];
             _follow = new float[count];
             _followY = new float[count];
+            _bgIndex = -1;
 
             for (int i = 0; i < count; i++)
             {
@@ -112,6 +121,8 @@ namespace Refraction.Presentation.Level
                 _layers[i] = layer;
                 _anchorX[i] = layer.localPosition.x;
                 _anchorY[i] = layer.localPosition.y;
+
+                if (_bgIndex < 0 && string.Equals(layer.name, BgName, StringComparison.OrdinalIgnoreCase)) _bgIndex = i;
 
                 // 第一层（最近）跟世界 1:1 不动，最远那层按 farthestFollow 拖，中间线性过渡
                 float ratio = count <= 1 ? 0f : (float)i / (count - 1);
@@ -124,28 +135,39 @@ namespace Refraction.Presentation.Level
         {
             _sprites = GetComponentsInChildren<SpriteRenderer>(true);
             if (_spriteColors == null || _spriteColors.Length != _sprites.Length) _spriteColors = new Color[_sprites.Length];
+            if (_spriteFades == null || _spriteFades.Length != _sprites.Length) _spriteFades = new bool[_sprites.Length];
 
-            for (int i = 0; i < _sprites.Length; i++) _spriteColors[i] = _sprites[i].color;
+            Transform bg = _bgIndex >= 0 ? _layers[_bgIndex] : null;
+
+            for (int i = 0; i < _sprites.Length; i++)
+            {
+                _spriteColors[i] = _sprites[i].color;
+                _spriteFades[i] = bg == null || !_sprites[i].transform.IsChildOf(bg);
+            }
         }
 
         private void CacheParticles()
         {
             _particles = GetComponentsInChildren<ParticleSystem>(true);
-            if (_particleColors == null || _particleColors.Length != _particles.Length)
+
+            int count = _particles.Length;
+
+            if (_particleColors == null || _particleColors.Length != count)
             {
-                _particleColors = new ParticleSystem.MinMaxGradient[_particles.Length];
+                _particleColors = new ParticleSystem.MinMaxGradient[count];
+                _particleColorsBlack = new ParticleSystem.MinMaxGradient[count];
+                _particleFades = new bool[count];
             }
 
-            int capacity = 0;
+            Transform bg = _bgIndex >= 0 ? _layers[_bgIndex] : null;
 
-            for (int i = 0; i < _particles.Length; i++)
+            for (int i = 0; i < count; i++)
             {
                 // 设计态起始色必须在这里抓：Apply 每换一次极性都要按它重算，不能拿翻转后的再翻
                 _particleColors[i] = _particles[i].main.startColor;
-                capacity = Mathf.Max(capacity, _particles[i].main.maxParticles);
+                _particleColorsBlack[i] = Invert(_particleColors[i]);
+                _particleFades[i] = bg == null || !_particles[i].transform.IsChildOf(bg);
             }
-
-            if (capacity > 0) _particleBuffer = new ParticleSystem.Particle[capacity];
         }
 
         /// <summary>镜头可能比本组件晚就位，拿不到就每帧再试一次；换场景后旧引用会变伪 null，这里会重新抓并重设基准</summary>
@@ -176,14 +198,45 @@ namespace Refraction.Presentation.Level
 
             for (int i = 0; i < _sprites.Length; i++)
             {
-                Color c = _spriteColors[i];
+                Color c = black ? Invert(_spriteColors[i]) : _spriteColors[i];
+                c.a = _spriteColors[i].a * (_spriteFades[i] ? _fade : 1f);
 
-                _sprites[i].color = black
-                    ? new Color(1f - c.r, 1f - c.g, 1f - c.b, c.a)
-                    : c;
+                _sprites[i].color = c;
             }
 
             for (int i = 0; i < _particles.Length; i++) InvertParticles(i, black);
+        }
+
+        public void ApplyFade(float scale)
+        {
+            _fade = scale;
+            RefreshFade();
+        }
+
+        /// <summary>每帧只重写参与淡入的东西：BG 层常驻不碰，颜色已由 Apply 定好</summary>
+        private void RefreshFade()
+        {
+            for (int i = 0; i < _sprites.Length; i++)
+            {
+                if (!_spriteFades[i]) continue;
+
+                Color c = _sprites[i].color;
+                c.a = _spriteColors[i].a * _fade;
+                _sprites[i].color = c;
+            }
+
+            bool black = _hasWorld && _world == WorldPolarity.Black;
+
+            for (int i = 0; i < _particles.Length; i++)
+            {
+                if (!_particleFades[i]) continue;
+
+                ParticleSystem ps = _particles[i];
+                if (ps == null) continue;
+
+                ParticleSystem.MainModule main = ps.main;
+                main.startColor = ScaleAlpha(black ? _particleColorsBlack[i] : _particleColors[i], _fade);
+            }
         }
 
         private void InvertParticles(int index, bool black)
@@ -191,23 +244,35 @@ namespace Refraction.Presentation.Level
             ParticleSystem ps = _particles[index];
             if (ps == null) return;
 
+            // 换世界就把在场粒子抹掉：淡入是从空场重新长，留着旧粒子只会在半透明里透出上一版的颜色
+            ps.Clear();
+
+            float scale = _particleFades[index] ? _fade : 1f;
+
             ParticleSystem.MainModule main = ps.main;
-            main.startColor = black ? Invert(_particleColors[index]) : _particleColors[index];
+            main.startColor = ScaleAlpha(black ? _particleColorsBlack[index] : _particleColors[index], scale);
+        }
 
-            if (_particleBuffer == null) return;
-
-            int count = Mathf.Min(ps.particleCount, _particleBuffer.Length);
-            if (count <= 0) return;
-
-            count = ps.GetParticles(_particleBuffer, count);
-
-            for (int i = 0; i < count; i++)
+        /// <summary>只缩透明度；渐变模式（Gradient / TwoGradients）的彩键不参与，恒按设计值播</summary>
+        private static ParticleSystem.MinMaxGradient ScaleAlpha(ParticleSystem.MinMaxGradient g, float scale)
+        {
+            switch (g.mode)
             {
-                Color32 c = _particleBuffer[i].startColor;
-                _particleBuffer[i].startColor = new Color32((byte)(255 - c.r), (byte)(255 - c.g), (byte)(255 - c.b), c.a);
-            }
+                case ParticleSystemGradientMode.Color:
+                    Color single = g.color;
+                    single.a *= scale;
+                    return new ParticleSystem.MinMaxGradient(single);
 
-            ps.SetParticles(_particleBuffer, count);
+                case ParticleSystemGradientMode.TwoColors:
+                    Color min = g.colorMin;
+                    Color max = g.colorMax;
+                    min.a *= scale;
+                    max.a *= scale;
+                    return new ParticleSystem.MinMaxGradient(min, max);
+
+                default:
+                    return g;
+            }
         }
 
         private static Color Invert(Color c) => new(1f - c.r, 1f - c.g, 1f - c.b, c.a);

@@ -77,10 +77,15 @@ namespace Refraction.Presentation.Actor
         [SerializeField]
         private Color playerDieColor = Color.white;
 
+        [Tooltip("世界反转粒子的颜色：世界黑白翻转时在玩家中点播一次，颜色跟着取反。")]
+        [SerializeField]
+        private Color worldReverseColor = Color.white;
+
         private Color _moveDustColor = Color.white;
         private Color _landColor = Color.white;
         private Color _savePointSparkColor = Color.white;
         private Color _playerDieColor = Color.white;
+        private Color _worldReverseColor = Color.white;
 
         private LogicContext _context;
 
@@ -305,7 +310,11 @@ namespace Refraction.Presentation.Actor
             ApplyPhase();
 
             // 轮询而不是听事件：显示必须跟逻辑同一帧的形态，事件到达顺序由订阅先后决定
-            if (_logic.IsBlack != _shownBlack) ApplyInvert(_logic.IsBlack);
+            if (_logic.IsBlack != _shownBlack)
+            {
+                ApplyInvert(_logic.IsBlack);
+                _root?.Effects?.PlayWorldReverse(ViewCenter(), _worldReverseColor);
+            }
 
             bool grounded = _context.WorldInfo.Grounded;
 
@@ -432,6 +441,7 @@ namespace Refraction.Presentation.Actor
             _landColor = Tint(landColor, invert);
             _savePointSparkColor = Tint(savePointSparkColor, invert);
             _playerDieColor = Tint(playerDieColor, invert);
+            _worldReverseColor = Tint(worldReverseColor, invert);
         }
 
         private static Color Tint(Color color, bool invert) =>

@@ -36,6 +36,7 @@ namespace Refraction.Presentation.Effects
         private const int LandPoolSize = 4;
         private const int SavePointSparkPoolSize = 4;
         private const int PlayerDiePoolSize = 4;
+        private const int WorldReversePoolSize = 4;
         private const int ChargeInPoolSize = 4;
         private const int HitSparkPrewarm = 4;
         private const int AttackSparkPrewarm = 2;
@@ -43,6 +44,7 @@ namespace Refraction.Presentation.Effects
         private const int LandPrewarm = 1;
         private const int SavePointSparkPrewarm = 1;
         private const int PlayerDiePrewarm = 1;
+        private const int WorldReversePrewarm = 1;
         private const int ChargeInPrewarm = 1;
         private const float SparkMaxLife = 5f;
         private const float ChargeInMinDuration = 0.05f;
@@ -76,6 +78,7 @@ namespace Refraction.Presentation.Effects
         private readonly List<Spark> _liveLands = new();
         private readonly List<Spark> _liveSaveSparks = new();
         private readonly List<Spark> _livePlayerDies = new();
+        private readonly List<Spark> _liveWorldReverses = new();
 
         private Transform _effectRoot;
         private GameObject _sparkPrefab;
@@ -90,6 +93,8 @@ namespace Refraction.Presentation.Effects
         private Pool<Spark> _saveSparkPool;
         private GameObject _playerDiePrefab;
         private Pool<Spark> _playerDiePool;
+        private GameObject _worldReversePrefab;
+        private Pool<Spark> _worldReversePool;
         private MoveDustState _moveDust;
         private ChargeDashState _chargeDash;
         private GameObject _chargeInPrefab;
@@ -104,6 +109,7 @@ namespace Refraction.Presentation.Effects
         private bool _warnedNoLand;
         private bool _warnedNoSaveSpark;
         private bool _warnedNoPlayerDie;
+        private bool _warnedNoWorldReverse;
         private bool _warnedNoMoveDust;
         private bool _warnedNoChargeDash;
         private bool _warnedNoChargeIn;
@@ -128,6 +134,7 @@ namespace Refraction.Presentation.Effects
             TickSparks(_liveLands, _landPool, deltaTime);
             TickSparks(_liveSaveSparks, _saveSparkPool, deltaTime);
             TickSparks(_livePlayerDies, _playerDiePool, deltaTime);
+            TickSparks(_liveWorldReverses, _worldReversePool, deltaTime);
             TickShapes(deltaTime);
             TickChargeIns(deltaTime);
             _moveDust?.Tick();
@@ -259,6 +266,17 @@ namespace Refraction.Presentation.Effects
 
             spark.Play(position, Vector2.up, color);
             _livePlayerDies.Add(spark);
+        }
+
+        /// <summary>世界反转粒子：翻转当帧在玩家中点播一次，预制体自带朝向，不给颜色就用粒子默认</summary>
+        public void PlayWorldReverse(Vector2 position, Color? color = null)
+        {
+            if (!EnsureWorldReversePool()) return;
+
+            if (!_worldReversePool.TryGet(out Spark spark)) return;
+
+            spark.Play(position, Vector2.up, color);
+            _liveWorldReverses.Add(spark);
         }
 
         /// <summary>移动扬尘：地面上跑动期间挂单实例常驻，on = false 当帧停发射并隐藏，位置每帧贴到 follow</summary>
@@ -638,6 +656,45 @@ namespace Refraction.Presentation.Effects
             return new Spark(go);
         }
 
+        private bool EnsureWorldReversePool()
+        {
+            if (_worldReversePool != null) return true;
+
+            _worldReversePrefab = Resources.Load<GameObject>(ResPath.WorldReverse);
+
+            if (_worldReversePrefab == null)
+            {
+                if (!_warnedNoWorldReverse)
+                {
+                    _warnedNoWorldReverse = true;
+                    Debug.LogWarning($"[EffectModule] 找不到粒子预制体 Resources/{ResPath.WorldReverse}，世界反转粒子不播放。");
+                }
+
+                return false;
+            }
+
+            _worldReversePool = new Pool<Spark>(
+                CreateWorldReverse,
+                onGet: TakeSpark,
+                onRelease: PutSpark,
+                onDestroy: DestroySpark,
+                name: nameof(Spark),
+                maxSize: WorldReversePoolSize,
+                overflowPolicy: PoolOverflowPolicy.CreateOrDrop);
+
+            _worldReversePool.Prewarm(WorldReversePrewarm);
+
+            return true;
+        }
+
+        private Spark CreateWorldReverse()
+        {
+            GameObject go = Object.Instantiate(_worldReversePrefab, _effectRoot);
+            go.SetActive(false);
+
+            return new Spark(go);
+        }
+
         private bool EnsureMoveDust()
         {
             if (_moveDust != null) return true;
@@ -807,6 +864,9 @@ namespace Refraction.Presentation.Effects
             for (int i = 0; i < _livePlayerDies.Count; i++) _playerDiePool?.Release(_livePlayerDies[i]);
             _livePlayerDies.Clear();
 
+            for (int i = 0; i < _liveWorldReverses.Count; i++) _worldReversePool?.Release(_liveWorldReverses[i]);
+            _liveWorldReverses.Clear();
+
             _moveDust = null;
             _chargeDash = null;
 
@@ -827,6 +887,9 @@ namespace Refraction.Presentation.Effects
 
             _playerDiePool?.Dispose();
             _playerDiePool = null;
+
+            _worldReversePool?.Dispose();
+            _worldReversePool = null;
 
             if (_effectRoot != null) Object.Destroy(_effectRoot.gameObject);
             _effectRoot = null;

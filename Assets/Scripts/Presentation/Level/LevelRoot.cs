@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Refraction.Data;
+using Refraction.Logic.Events;
 using Refraction.Logic.Level;
 using UnityEngine;
 
@@ -7,7 +9,7 @@ namespace Refraction.Presentation.Level
     /// <summary>关卡根：只在关卡场景存在，持有本关门索引、关卡推进与换色登记；没有它就不是关卡（开始场景）</summary>
     /// <remarks>Order 取 Entry + 1：必须晚于 SceneFlowConfig 写极性，否则 LevelManager 拿到的初值是上一关的；门索引靠 Door 自己注册，运行期增删门不支持</remarks>
     [DisallowMultipleComponent]
-    public sealed class LevelRoot : MonoBehaviour, ISceneRoot, IDoorReader
+    public sealed class LevelRoot : MonoBehaviour, ISceneRoot, IDoorReader, IRenderTicked
     {
         /// <summary>落点放下后吞掉门的进入触发这么久（秒），否则两扇门会来回弹</summary>
         private const float SuppressSeconds = 0.2f;
@@ -19,15 +21,25 @@ namespace Refraction.Presentation.Level
 
         private readonly Dictionary<int, Door> _doors = new();
         private readonly List<IReverse> _pendingReverse = new();
+        private readonly List<IReverseFade> _fades = new();
 
         private GameRoot _root;
         private LevelManager _levelMgr;
         private int _levelId;
 
+        private float _fadeScale = 1f;
+        private float _fadeElapsed;
+        private float _fadeDuration;
+        private bool _fading;
+
         public int Order => SceneOrder.Entry + 1;
 
         /// <summary>本场景解析出的关卡 id；命名不合 Level_正整数 时为 0，本关不索引任何门</summary>
         public int LevelId => _levelId;
+
+        private void OnEnable() => EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
+
+        private void OnDisable() => EventBus<WorldPolarityChanged>.Unsubscribe(OnWorldPolarityChanged);
 
         private void Awake()
         {
@@ -68,6 +80,7 @@ namespace Refraction.Presentation.Level
 
             _doors.Clear();
             _pendingReverse.Clear();
+            _fades.Clear();
 
             if (_root == null) return;
 
@@ -153,6 +166,72 @@ namespace Refraction.Presentation.Level
 
             _pendingReverse.Remove(reverse);
             _levelMgr?.RemoveReverse(reverse);
+        }
+
+        /// <summary>登记反转演出的淡入目标；登记立刻按当前进度套一次，中途加入也不会卡在旧透明度</summary>
+        public void RegisterReverseFade(IReverseFade target)
+        {
+            if (target == null || _fades.Contains(target)) return;
+
+            _fades.Add(target);
+            target.ApplyFade(_fadeScale);
+        }
+
+        public void UnregisterReverseFade(IReverseFade target)
+        {
+            if (target != null) _fades.Remove(target);
+        }
+
+        public void RenderTick(float deltaTime)
+        {
+            if (!_fading) return;
+
+            _fadeElapsed += deltaTime;
+
+            float t = Mathf.Clamp01(_fadeElapsed / _fadeDuration);
+            _fadeScale = t * t * (3f - 2f * t);
+
+            for (int i = 0; i < _fades.Count; i++)
+            {
+                // 关卡里运行时销毁的对象不会自己注销（OnDestroy 时本根可能已经先没了）
+                if (_fades[i] is Object obj && obj == null) continue;
+
+                _fades[i].ApplyFade(_fadeScale);
+            }
+
+            if (t >= 1f) _fading = false;
+        }
+
+        private void OnWorldPolarityChanged(WorldPolarityChanged evt) => BeginReverseFade();
+
+        private void BeginReverseFade()
+        {
+            _fadeDuration = WorldReverseVisualConfig.Default.fadeInDuration;
+            _fadeElapsed = 0f;
+
+            if (_fadeDuration <= 0f)
+            {
+                _fading = false;
+                _fadeScale = 1f;
+
+                ApplyFadeAll(1f);
+                return;
+            }
+
+            _fading = true;
+            _fadeScale = 0f;
+
+            ApplyFadeAll(0f);
+        }
+
+        private void ApplyFadeAll(float scale)
+        {
+            for (int i = 0; i < _fades.Count; i++)
+            {
+                if (_fades[i] is Object obj && obj == null) continue;
+
+                _fades[i].ApplyFade(scale);
+            }
         }
 
         private void AddDoor(Door door)

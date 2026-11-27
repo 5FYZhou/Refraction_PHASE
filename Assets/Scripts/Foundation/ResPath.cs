@@ -9,6 +9,7 @@ namespace Refraction.Foundation
         public const string BlackAttackVisualConfig = "Data/Player/BlackAttackVisualConfig";
         public const string AfterimageVisualConfig = "Data/Player/AfterimageVisualConfig";
         public const string EnemyColliderConfig = "Data/Enemy/EnemyColliderConfig";
+        public const string WorldReverseVisualConfig = "Data/Level/WorldReverseVisualConfig";
 
         public const string BulletPrefab = "Prefabs/Bullet/Bullet";
         public const string AfterimagePrefab = "Prefabs/AfterImage";
@@ -23,6 +24,7 @@ namespace Refraction.Foundation
         public const string ChargeIn = "Effects/ChargeIn";
         public const string ChargeDash = "Effects/ChargeDash";
         public const string PlayerDie = "Effects/PlayerDie";
+        public const string WorldReverse = "Effects/WorldReverse";
 
         public const string UICamera = "ui/UICamera";
         public const string UICanvas = "ui/Canvas";

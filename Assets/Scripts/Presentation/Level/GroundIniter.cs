@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Refraction.Presentation
 {
     /// <summary>把子物体统一补成可探测地面：场景只管摆位置和缩放，Layer 与碰撞框由这里补</summary>
-    public class GroundIniter : MonoBehaviour, IReverse
+    public class GroundIniter : MonoBehaviour, IReverse, IReverseFade
     {
         /// <summary>地面层级，与 TagManager 第 7 项 Ground 对应，索引 6</summary>
         private const int GroundLayer = 6;
@@ -16,6 +16,11 @@ namespace Refraction.Presentation
         private static readonly Color BlackColor = Color.black;
 
         private readonly List<SpriteRenderer> _sprites = new();
+
+        private readonly List<float> _alphas = new();
+
+        private WorldPolarity _world = WorldPolarity.White;
+        private float _fade = 1f;
 
         private void Awake()
         {
@@ -30,11 +35,13 @@ namespace Refraction.Presentation
         private void OnDestroy()
         {
             LevelRoot.Current?.UnregisterReverse(this);
+            LevelRoot.Current?.UnregisterReverseFade(this);
         }
 
         public void Attach()
         {
             LevelRoot.Current?.RegisterReverse(this);
+            LevelRoot.Current?.RegisterReverseFade(this);
         }
 
         public void Init()
@@ -43,6 +50,7 @@ namespace Refraction.Presentation
             Transform[] children = GetComponentsInChildren<Transform>(true);
 
             _sprites.Clear();
+            _alphas.Clear();
 
             for (int i = 0; i < children.Length; i++)
             {
@@ -56,21 +64,34 @@ namespace Refraction.Presentation
                 {
                     sprite.sortingOrder = -5;
                     _sprites.Add(sprite);
+                    _alphas.Add(sprite.color.a);
                 }
             }
         }
 
         public void Apply(WorldPolarity world)
         {
-            Color color = world == WorldPolarity.Black ? BlackColor : WhiteColor;
+            _world = world;
+            Refresh();
+        }
+
+        public void ApplyFade(float scale)
+        {
+            _fade = scale;
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            Color color = _world == WorldPolarity.Black ? BlackColor : WhiteColor;
 
             for (int i = 0; i < _sprites.Count; i++)
             {
                 SpriteRenderer sprite = _sprites[i];
                 if (sprite == null) continue;
 
-                // 只换色调，各自的透明度要留着
-                color.a = sprite.color.a;
+                // 只换色调，各自的透明度要留着（设计态 alpha × 反向演出的淡入进度）
+                color.a = _alphas[i] * _fade;
                 sprite.color = color;
             }
         }
