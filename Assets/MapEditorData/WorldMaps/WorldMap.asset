@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ab3aa63a680fda42b4d3602c14f3bd7, type: 3}
+  m_Name: WorldMap
+  m_EditorClassIdentifier: 
+  mapName: WorldMap
+  levels:
+  - sceneGuid: 744539bf782dfed4f9da782a8f86e27e
+    position: {x: 0, y: 0}
+    locked: 0
+  - sceneGuid: 8c2fd598384f910469153f82772267d5
+    position: {x: 41.272694, y: 3.1038952}
+    locked: 0
+  connections:
+  - fromSceneGuid: 8c2fd598384f910469153f82772267d5
+    toSceneGuid: 744539bf782dfed4f9da782a8f86e27e
+    fromPosition: {x: 32, y: 11.75}
+    toPosition: {x: 21.703125, y: 12.15625}
