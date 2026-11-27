@@ -38,6 +38,7 @@ namespace Refraction.MapEditor
 
         private void OnEnable()
         {
+            _autoSave.LoadEnabled();
             EditorApplication.update += OnUpdate;
             EditorApplication.quitting += OnQuitting;
             _levels = SceneScanner.ScanLevels();
@@ -49,7 +50,7 @@ namespace Refraction.MapEditor
             EditorApplication.update -= OnUpdate;
             EditorApplication.quitting -= OnQuitting;
             _autoSave.Flush();
-            MapDataManager.SaveAll();
+            if (_autoSave.Enabled) MapDataManager.SaveAll();
             _canvas.Dispose();
         }
 
@@ -61,7 +62,7 @@ namespace Refraction.MapEditor
         private void OnQuitting()
         {
             _autoSave.Flush();
-            MapDataManager.SaveAll();
+            if (_autoSave.Enabled) MapDataManager.SaveAll();
         }
 
         private void OnGUI()
@@ -84,6 +85,8 @@ namespace Refraction.MapEditor
             if (GUILayout.Button("重建", EditorStyles.toolbarButton)) ScanAllLevels(true);
             if (GUILayout.Button("保存", EditorStyles.toolbarButton)) SaveCurrentLevel();
             if (GUILayout.Button("保存全部", EditorStyles.toolbarButton)) SaveAllLevels();
+            bool autoSave = EditorGUILayout.ToggleLeft("自动保存", _autoSave.Enabled, GUILayout.Width(82f));
+            if (autoSave != _autoSave.Enabled) _autoSave.SetEnabled(autoSave);
             EditorGUI.BeginDisabledGroup(!_history.CanUndo);
             if (GUILayout.Button("撤销", EditorStyles.toolbarButton)) Undo();
             EditorGUI.EndDisabledGroup();
@@ -218,7 +221,7 @@ namespace Refraction.MapEditor
 
         private void SelectLevel(SceneAssetInfo info)
         {
-            if (_current != null && _current.isDirty) _autoSave.RequestSave(_current);
+            if (_autoSave.Enabled && _current != null && _current.isDirty) _autoSave.RequestSave(_current);
             _current = MapDataManager.Load(info.guid);
             _history.Clear();
             if (_current == null)

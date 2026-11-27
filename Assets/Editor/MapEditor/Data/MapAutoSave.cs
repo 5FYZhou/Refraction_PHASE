@@ -7,9 +7,23 @@ namespace Refraction.MapEditor
     public sealed class MapAutoSave
     {
         private const double IdleSeconds = 1.0;
+        private const string PrefKey = "Refraction.MapEditor.AutoSave";
 
         private readonly Dictionary<string, LevelMapData> _pending = new();
         private readonly Dictionary<string, double> _dirtyAt = new();
+
+        public bool Enabled { get; private set; }
+
+        public void LoadEnabled()
+        {
+            Enabled = EditorPrefs.GetBool(PrefKey, false);
+        }
+
+        public void SetEnabled(bool value)
+        {
+            Enabled = value;
+            EditorPrefs.SetBool(PrefKey, value);
+        }
 
         public void MarkDirty(LevelMapData data)
         {
@@ -36,6 +50,7 @@ namespace Refraction.MapEditor
 
         public void SavePending()
         {
+            if (!Enabled) return;
             double now = EditorApplication.timeSinceStartup;
             var ready = new List<LevelMapData>();
             foreach (KeyValuePair<string, double> pair in _dirtyAt)
@@ -48,6 +63,7 @@ namespace Refraction.MapEditor
 
         public void Flush()
         {
+            if (!Enabled) return;
             var pending = new List<LevelMapData>(_pending.Values);
             foreach (LevelMapData data in pending) RequestSave(data);
         }
