@@ -31,6 +31,15 @@ namespace Refraction.MapEditor
 
         public static bool Exists(string sceneGuid) => Load(sceneGuid) != null;
 
+        public static bool HasDirty()
+        {
+            foreach (LevelMapData data in Cache.Values)
+            {
+                if (data != null && data.isDirty) return true;
+            }
+            return false;
+        }
+
         public static LevelMapData Create(SceneAssetInfo info)
         {
             if (info == null) return null;
@@ -96,6 +105,7 @@ namespace Refraction.MapEditor
         {
             if (data == null || flags == MapDirtyFlags.None) return;
             data.isDirty = true;
+            data.compositeVersion++;
             data.dirtyFlags |= flags;
             EditorUtility.SetDirty(data);
         }
@@ -122,6 +132,7 @@ namespace Refraction.MapEditor
             data.pixelsPerUnit = ppu;
             data.groundHash = groundHash;
             data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, ppu);
+            data.compositeVersion++;
             if (remapped)
             {
                 data.paintTexture = newPaint;
@@ -146,6 +157,7 @@ namespace Refraction.MapEditor
             data.groundEraseMask = MapGenerator.CreateBlank("GroundEraseMask", size.x, size.y);
             data.paintTexture = MapGenerator.CreateBlank("Paint", size.x, size.y);
             data.paintEraseMask = MapGenerator.CreateBlank("PaintEraseMask", size.x, size.y);
+            data.compositeVersion++;
             data.isDirty = true;
             data.dirtyFlags = MapDirtyFlags.All;
         }

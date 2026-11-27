@@ -22,6 +22,7 @@ namespace Refraction.MapEditor
         private readonly MapHistory _history = new();
         private readonly ToolManager _tools = new();
         private readonly MapAutoSave _autoSave = new();
+        private EditorCloseGuard _closeGuard;
         private List<SceneAssetInfo> _levels = new();
         private LevelMapData _current;
         private string _currentGuid;
@@ -40,8 +41,9 @@ namespace Refraction.MapEditor
         private void OnEnable()
         {
             _autoSave.LoadEnabled();
+            _closeGuard = new EditorCloseGuard("Map Editor", HasUnsavedChanges, SaveAllOnClose);
             EditorApplication.update += OnUpdate;
-            EditorApplication.quitting += OnQuitting;
+            EditorApplication.wantsToQuit += OnWantsToQuit;
             _levels = SceneScanner.ScanLevels();
             if (!string.IsNullOrEmpty(_currentGuid))
             {
@@ -58,10 +60,18 @@ namespace Refraction.MapEditor
         private void OnDisable()
         {
             EditorApplication.update -= OnUpdate;
-            EditorApplication.quitting -= OnQuitting;
-            _autoSave.Flush();
-            if (_autoSave.Enabled) MapDataManager.SaveAll();
+            EditorApplication.wantsToQuit -= OnWantsToQuit;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                _autoSave.Flush();
+                if (_autoSave.Enabled) MapDataManager.SaveAll();
+            }
             _canvas.Dispose();
+        }
+
+        private void OnDestroy()
+        {
+            _closeGuard?.ConfirmOnDestroy();
         }
 
         private void OnUpdate()
@@ -69,10 +79,21 @@ namespace Refraction.MapEditor
             _autoSave.SavePending();
         }
 
-        private void OnQuitting()
+        private bool OnWantsToQuit()
+        {
+            return _closeGuard == null || _closeGuard.ConfirmOnQuit();
+        }
+
+        private bool HasUnsavedChanges()
+        {
+            return MapDataManager.HasDirty();
+        }
+
+        private void SaveAllOnClose()
         {
             _autoSave.Flush();
-            if (_autoSave.Enabled) MapDataManager.SaveAll();
+            MapDataManager.SaveAll();
+            _message = "全部关卡已保存。";
         }
 
         private void OnGUI()
@@ -158,8 +179,18 @@ namespace Refraction.MapEditor
             EditorGUILayout.LabelField("地图", EditorStyles.boldLabel);
             if (_current != null)
             {
-                _current.groundColor = EditorGUILayout.ColorField("地形颜色", _current.groundColor);
-                _current.backgroundColor = EditorGUILayout.ColorField("背景颜色", _current.backgroundColor);
+                Color groundColor = EditorGUILayout.ColorField("地形颜色", _current.groundColor);
+                if (groundColor != _current.groundColor)
+                {
+                    _current.groundColor = groundColor;
+                    MapDataManager.MarkDirty(_current);
+                }
+                Color backgroundColor = EditorGUILayout.ColorField("背景颜色", _current.backgroundColor);
+                if (backgroundColor != _current.backgroundColor)
+                {
+                    _current.backgroundColor = backgroundColor;
+                    MapDataManager.MarkDirty(_current);
+                }
                 EditorGUILayout.LabelField("关卡", _current.sceneName);
                 EditorGUILayout.LabelField("原点", _current.sourceBounds.min.ToString());
                 EditorGUILayout.LabelField("尺寸", _current.sourceBounds.size.ToString());

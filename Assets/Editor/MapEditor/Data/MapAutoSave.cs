@@ -34,6 +34,7 @@ namespace Refraction.MapEditor
         {
             if (data == null || flags == MapDirtyFlags.None) return;
             data.isDirty = true;
+            data.compositeVersion++;
             data.dirtyFlags |= flags;
             EditorUtility.SetDirty(data);
             _pending[data.sceneGuid] = data;

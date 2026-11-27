@@ -18,6 +18,6 @@ MonoBehaviour:
     position: {x: -1, y: 2}
     locked: 0
   - sceneGuid: 8c2fd598384f910469153f82772267d5
-    position: {x: 40.31069, y: 5.207654}
+    position: {x: 40.056847, y: 5.328001}
     locked: 0
   connections: []

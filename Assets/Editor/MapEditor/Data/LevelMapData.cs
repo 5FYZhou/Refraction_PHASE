@@ -44,5 +44,6 @@ namespace Refraction.MapEditor
         public bool isDirty;
         public MapDirtyFlags dirtyFlags;
         public int dataVersion = 2;
+        [System.NonSerialized] public int compositeVersion;
     }
 }

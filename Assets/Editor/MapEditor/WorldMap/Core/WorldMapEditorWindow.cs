@@ -13,8 +13,10 @@ namespace Refraction.MapEditor
         private readonly WorldMapCanvas _canvas = new();
         private readonly WorldMapExportSettings _exportSettings = new();
         private readonly WorldMapHistory _history = new();
+        private EditorCloseGuard _closeGuard;
         private List<SceneAssetInfo> _levels = new();
         private WorldMapData _world;
+        private bool _worldDirty;
         private WorldTool _tool = WorldTool.Select;
         private bool _snap;
         private bool _showGrid = true;
@@ -29,6 +31,8 @@ namespace Refraction.MapEditor
 
         private void OnEnable()
         {
+            _closeGuard = new EditorCloseGuard("World Map Editor", HasUnsavedChanges, () => SaveWorld(true));
+            EditorApplication.wantsToQuit += OnWantsToQuit;
             string path = EditorPrefs.GetString(PrefKey, string.Empty);
             if (!string.IsNullOrEmpty(path)) LoadWorld(path);
             if (_world == null)
@@ -41,7 +45,23 @@ namespace Refraction.MapEditor
 
         private void OnDisable()
         {
+            EditorApplication.wantsToQuit -= OnWantsToQuit;
             _canvas.Dispose();
+        }
+
+        private void OnDestroy()
+        {
+            _closeGuard?.ConfirmOnDestroy();
+        }
+
+        private bool OnWantsToQuit()
+        {
+            return _closeGuard == null || _closeGuard.ConfirmOnQuit();
+        }
+
+        private bool HasUnsavedChanges()
+        {
+            return _world != null && _worldDirty;
         }
 
         private void OnGUI()
@@ -102,13 +122,10 @@ namespace Refraction.MapEditor
             if (_world != null)
             {
                 _canvas.HandleInput(Event.current, rect, _world, _tool, _snap,
-                    out bool changed, out string message, out IWorldMapCommand command);
+                    out bool changed, out bool dirty, out string message, out IWorldMapCommand command);
                 if (command != null) _history.Push(command);
-                if (changed || command != null)
-                {
-                    EditorUtility.SetDirty(_world);
-                    Repaint();
-                }
+                if (command != null || dirty) MarkWorldDirty();
+                if (changed || command != null) Repaint();
                 if (!string.IsNullOrEmpty(message)) _message = message;
             }
             _canvas.Draw(rect, _world, _showGrid);
@@ -133,7 +150,12 @@ namespace Refraction.MapEditor
                 EditorGUILayout.EndVertical();
                 return;
             }
-            _world.mapName = EditorGUILayout.TextField("名称", _world.mapName);
+            string mapName = EditorGUILayout.TextField("名称", _world.mapName);
+            if (mapName != _world.mapName)
+            {
+                _world.mapName = mapName;
+                MarkWorldDirty();
+            }
             EditorGUILayout.LabelField("关卡数", _world.levels.Count.ToString());
             EditorGUILayout.LabelField("连接数", _world.connections.Count.ToString());
             DrawSelection();
@@ -161,14 +183,14 @@ namespace Refraction.MapEditor
                 if (move != null && move.CanMerge(placement, placement.position)) move.Retarget(position);
                 else _history.Push(new MovePlacementCommand(placement, placement.position, position));
                 placement.position = position;
-                EditorUtility.SetDirty(_world);
+                MarkWorldDirty();
                 Repaint();
             }
             bool locked = EditorGUILayout.Toggle("锁定位置", placement.locked);
             if (locked != placement.locked)
             {
                 placement.locked = locked;
-                EditorUtility.SetDirty(_world);
+                MarkWorldDirty();
             }
             if (GUILayout.Button("移出世界地图")) RemovePlacement(placement);
         }
@@ -205,7 +227,7 @@ namespace Refraction.MapEditor
             if (_world == null || !_history.CanUndo) return;
             _history.Undo(_world);
             _canvas.ValidateSelection(_world);
-            EditorUtility.SetDirty(_world);
+            MarkWorldDirty();
             Repaint();
         }
 
@@ -214,14 +236,18 @@ namespace Refraction.MapEditor
             if (_world == null || !_history.CanRedo) return;
             _history.Redo(_world);
             _canvas.ValidateSelection(_world);
-            EditorUtility.SetDirty(_world);
+            MarkWorldDirty();
             Repaint();
         }
 
         private void LoadWorld(string path)
         {
             WorldMapData next = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<WorldMapData>(path);
-            if (next != _world) _history.Clear();
+            if (next != _world)
+            {
+                _history.Clear();
+                _worldDirty = false;
+            }
             _world = next;
             if (_world != null) EditorPrefs.SetString(PrefKey, path);
             else EditorPrefs.DeleteKey(PrefKey);
@@ -242,13 +268,21 @@ namespace Refraction.MapEditor
             _message = "已创建世界地图：" + path;
         }
 
-        private void SaveWorld()
+        private void SaveWorld(bool silent = false)
         {
             if (_world == null) return;
             EditorUtility.SetDirty(_world);
             AssetDatabase.SaveAssets();
+            _worldDirty = false;
+            if (silent) return;
             _message = _world.mapName + " 已保存。";
             Repaint();
+        }
+
+        private void MarkWorldDirty()
+        {
+            EditorUtility.SetDirty(_world);
+            _worldDirty = true;
         }
 
         private void AddLevel(SceneAssetInfo info)
@@ -270,7 +304,7 @@ namespace Refraction.MapEditor
             };
             _history.Push(new AddPlacementCommand(placement, _world.levels.Count));
             _world.levels.Add(placement);
-            EditorUtility.SetDirty(_world);
+            MarkWorldDirty();
             _message = info.sceneName + " 已添加，拖动调整位置。";
             Repaint();
         }
@@ -290,7 +324,7 @@ namespace Refraction.MapEditor
             }
             _history.Push(command);
             command.Execute(_world);
-            EditorUtility.SetDirty(_world);
+            MarkWorldDirty();
             Repaint();
         }
 
@@ -298,7 +332,7 @@ namespace Refraction.MapEditor
         {
             if (index < 0 || index >= _world.connections.Count) return;
             _world.connections.RemoveAt(index);
-            EditorUtility.SetDirty(_world);
+            MarkWorldDirty();
             Repaint();
         }
 

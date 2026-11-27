@@ -9,6 +9,7 @@ namespace Refraction.MapEditor
         private readonly CanvasTransform _transform = new();
         private readonly Dictionary<string, Texture2D> _composites = new();
         private readonly Dictionary<string, Texture2D> _sources = new();
+        private readonly Dictionary<string, int> _sourceVersions = new();
         private readonly SelectTool _select = new();
         private readonly ConnectionTool _connect = new();
         private readonly WorldToolContext _context = new();
@@ -53,12 +54,14 @@ namespace Refraction.MapEditor
             foreach (Texture2D texture in _composites.Values) MapCompositor.Release(texture);
             _composites.Clear();
             _sources.Clear();
+            _sourceVersions.Clear();
         }
 
         public void HandleInput(Event current, Rect rect, WorldMapData data, WorldTool tool, bool snap,
-            out bool changed, out string message, out IWorldMapCommand command)
+            out bool changed, out bool dirty, out string message, out IWorldMapCommand command)
         {
             changed = false;
+            dirty = false;
             message = null;
             command = null;
             if (data == null) return;
@@ -85,7 +88,8 @@ namespace Refraction.MapEditor
                 && (current.keyCode == KeyCode.Delete || current.keyCode == KeyCode.Backspace))
             {
                 command = DeleteSelection(data);
-                changed = command != null;
+                changed = true;
+                dirty = true;
                 current.Use();
                 return;
             }
@@ -144,6 +148,7 @@ namespace Refraction.MapEditor
             }
             CommitContext();
             changed = _context.Changed;
+            dirty = _context.Changed && current.type != EventType.MouseDrag;
             message = _context.Message;
         }
 
@@ -230,10 +235,13 @@ namespace Refraction.MapEditor
                 if (level == null || level.groundTexture == null) continue;
                 valid.Add(placement.sceneGuid);
                 _sources.TryGetValue(placement.sceneGuid, out Texture2D previous);
-                if (previous == level.groundTexture && _composites.ContainsKey(placement.sceneGuid) && !level.isDirty) continue;
+                _sourceVersions.TryGetValue(placement.sceneGuid, out int version);
+                if (previous == level.groundTexture && version == level.compositeVersion
+                    && _composites.ContainsKey(placement.sceneGuid)) continue;
                 if (_composites.TryGetValue(placement.sceneGuid, out Texture2D old)) MapCompositor.Release(old);
                 _composites[placement.sceneGuid] = MapCompositor.CreateComposite(level);
                 _sources[placement.sceneGuid] = level.groundTexture;
+                _sourceVersions[placement.sceneGuid] = level.compositeVersion;
             }
             var stale = new List<string>();
             foreach (string guid in _composites.Keys)
@@ -246,6 +254,7 @@ namespace Refraction.MapEditor
                 MapCompositor.Release(_composites[guid]);
                 _composites.Remove(guid);
                 _sources.Remove(guid);
+                _sourceVersions.Remove(guid);
             }
         }
     }
