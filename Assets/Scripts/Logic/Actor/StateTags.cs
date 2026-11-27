@@ -19,7 +19,8 @@ namespace Refraction.Logic.Actor
         Jump,
         AirJump,
         Fall,
-        Dash
+        Dash,
+        Map
     }
 
     /// <summary>姿态：与移动正交的一组状态，站着还是蹲着。</summary>

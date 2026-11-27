@@ -234,6 +234,8 @@ namespace Refraction.Presentation.Actor
 
         public bool IsTransiting => _attached && _logic != null && _logic.IsTransiting;
 
+        public bool MapOpen => _attached && _logic != null && _logic.MapOpen;
+
         /// -1 朝左，1 朝右；跨场景后新玩家还没有朝向
         public int CurrentFace => _attached && moveMotor != null ? moveMotor.FaceSign : 1;
 

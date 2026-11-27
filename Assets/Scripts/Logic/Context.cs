@@ -24,7 +24,10 @@ namespace Refraction.Logic
         /// <summary>攻击键按住：弹反范围靠它续期</summary>
         public readonly bool AttackHeld;
 
-        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld, bool attack, bool chargePressed, bool savePressed = false, bool reversePressed = false, bool attackHeld = false)
+        /// <summary>地图键按住：表现层显隐真值</summary>
+        public readonly bool MapHeld;
+
+        public InputSnapshot(Vector2 move, bool jump, bool dash, bool jumpHeld, bool crouchHeld, bool attack, bool chargePressed, bool savePressed = false, bool reversePressed = false, bool attackHeld = false, bool mapHeld = false)
         {
             this.Move = move;
             this.Jump = jump;
@@ -36,6 +39,7 @@ namespace Refraction.Logic
             this.SavePressed = savePressed;
             this.ReversePressed = reversePressed;
             this.AttackHeld = attackHeld;
+            this.MapHeld = mapHeld;
         }
     }
 

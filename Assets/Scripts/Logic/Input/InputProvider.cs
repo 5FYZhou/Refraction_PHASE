@@ -25,6 +25,7 @@ namespace Refraction.Logic.Input
         private bool _reverse;
         private bool _save;
         private bool _upHeld;
+        private bool _mapHeld;
 
         public InputProvider() { }
 
@@ -59,12 +60,13 @@ namespace Refraction.Logic.Input
             _jumpHeld = _input.Player.Jump.IsPressed();
             _crouchHeld = _input.Player.Crouch.IsPressed();
             _attackHeld = _input.Player.Attack.IsPressed();
+            _mapHeld = _input.Player.Map.IsPressed();
         }
 
         /// <summary>取走即清零，否则反复消费</summary>
         public InputSnapshot ConsumeSnapshot()
         {
-            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save, _reverse, _attackHeld);
+            InputSnapshot snapshot = new(_move, _jump, _dash, _jumpHeld, _crouchHeld, _attack, _charge, _save, _reverse, _attackHeld, _mapHeld);
 
             _jump = false;
             _dash = false;
@@ -104,6 +106,7 @@ namespace Refraction.Logic.Input
             _reverse = false;
             _save = false;
             _upHeld = false;
+            _mapHeld = false;
         }
 
         #region 按键

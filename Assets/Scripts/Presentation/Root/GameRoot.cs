@@ -48,6 +48,7 @@ namespace Refraction.Presentation
         private int _pendingFace;
 
         private bool _warnedNoLevel;
+        private bool _mapOpen;
 
         private Coroutine _sceneLoad;
         private bool _levelReady;
@@ -598,6 +599,7 @@ namespace Refraction.Presentation
             PinCameraWhileTransiting();
             _inputProvider?.Tick();
             TickUiInput();
+            TickMapPanel();
             TickServices(Time.deltaTime, Time.unscaledDeltaTime);
             _effects?.Tick(Time.deltaTime);
             TickSceneRootsRender(Time.deltaTime);
@@ -625,6 +627,17 @@ namespace Refraction.Presentation
                     _gameMgr.Resume();
                     return;
             }
+        }
+
+        private void TickMapPanel()
+        {
+            bool open = _player != null && _player.MapOpen;
+            if (open == _mapOpen || _uiMgr == null) return;
+
+            _mapOpen = open;
+
+            if (open) _uiMgr.ShowPanel<MapPanel>();
+            else _uiMgr.HidePanel<MapPanel>();
         }
 
         private void FixedUpdate()

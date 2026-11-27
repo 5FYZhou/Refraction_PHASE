@@ -35,6 +35,7 @@ namespace Refraction.Logic.Actor
         {
             RegisterState(new IdleState(_motor));
             RegisterState(new MoveState(_motor, _config.moveSpeed));
+            RegisterState(new MapState(_motor, _config.mapMoveSpeed));
             RegisterState(new JumpState(_motor, _config));
             RegisterState(new AirJumpState(_motor, _config));
             RegisterState(new FallState(_motor, _config.moveSpeed));
@@ -54,7 +55,6 @@ namespace Refraction.Logic.Actor
 
         protected override MovementStateTag Fallback(in LogicContext ctx)
         {
-            // 离地按竖直速度分上升/下落（> 0 上升，≤ 0 下落）
             if (!ctx.WorldInfo.Grounded)
             {
                 return ctx.WorldInfo.FrameStartVelocity.y > 0f ? MovementStateTag.Jump : MovementStateTag.Fall;
@@ -75,8 +75,7 @@ namespace Refraction.Logic.Actor
             {
                 _lastGroundedTime = ctx.GameTime.now;
 
-                // 只在落地那一帧恢复土狼机会与空中次数
-                if (!_wasGrounded)
+                    if (!_wasGrounded)
                 {
                     _coyoteConsumed = false;
                     _airJumpsUsed = 0;
@@ -91,6 +90,14 @@ namespace Refraction.Logic.Actor
         protected override bool TryDecidePreempt(in LogicContext ctx, out MovementStateTag target)
         {
             target = EmptyTag;
+
+            if (machine.CurrentState?.Tag == MovementStateTag.Map) return false;
+
+            if (ctx.InputSnapshot.MapHeld && ctx.WorldInfo.Grounded)
+            {
+                target = MovementStateTag.Map;
+                return true;
+            }
 
             if (ActionsBlocked) return false;
 
@@ -108,11 +115,12 @@ namespace Refraction.Logic.Actor
         {
             switch (target)
             {
+                case MovementStateTag.Map:
+                    return true;
                 case MovementStateTag.Jump:
                     // 消费掉这次按下，避免同一次按键反复起跳
                     return TryConsumeJump(ctx.GameTime.now);
                 case MovementStateTag.AirJump:
-                    // 同样要消费输入，成功才扣一次机会
                     if (!TryConsumeJump(ctx.GameTime.now)) return false;
                     _airJumpsUsed++;
                     return true;
@@ -190,7 +198,6 @@ namespace Refraction.Logic.Actor
             if (!CanDash(ctx)) return false;
             if (!_buffer.TryConsume(InputType.Dash, ctx.GameTime.now, _config.dashBufferTime)) return false;
 
-            // 只有真的在空中冲出去才扣次数
             if (!ctx.WorldInfo.Grounded) _airDashesUsed++;
 
             return true;

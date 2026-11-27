@@ -156,6 +156,15 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Map"",
+                    ""type"": ""Button"",
+                    ""id"": ""2a7e2d12-2deb-4955-b19a-26caa13592bb"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -442,6 +451,17 @@ namespace Refraction.Generated
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Reverse"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""baf05578-2a38-4497-b86e-756acfd5a88a"",
+                    ""path"": ""<Keyboard>/tab"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Map"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1343,6 +1363,7 @@ namespace Refraction.Generated
             m_Player_Crouch = m_Player.FindAction("Crouch", throwIfNotFound: true);
             m_Player_Charge = m_Player.FindAction("Charge", throwIfNotFound: true);
             m_Player_Reverse = m_Player.FindAction("Reverse", throwIfNotFound: true);
+            m_Player_Map = m_Player.FindAction("Map", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Cancel = m_UI.FindAction("Cancel", throwIfNotFound: true);
@@ -1446,6 +1467,7 @@ namespace Refraction.Generated
         private readonly InputAction m_Player_Crouch;
         private readonly InputAction m_Player_Charge;
         private readonly InputAction m_Player_Reverse;
+        private readonly InputAction m_Player_Map;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1485,6 +1507,10 @@ namespace Refraction.Generated
             /// Provides access to the underlying input action "Player/Reverse".
             /// </summary>
             public InputAction @Reverse => m_Wrapper.m_Player_Reverse;
+            /// <summary>
+            /// Provides access to the underlying input action "Player/Map".
+            /// </summary>
+            public InputAction @Map => m_Wrapper.m_Player_Map;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1532,6 +1558,9 @@ namespace Refraction.Generated
                 @Reverse.started += instance.OnReverse;
                 @Reverse.performed += instance.OnReverse;
                 @Reverse.canceled += instance.OnReverse;
+                @Map.started += instance.OnMap;
+                @Map.performed += instance.OnMap;
+                @Map.canceled += instance.OnMap;
             }
 
             /// <summary>
@@ -1564,6 +1593,9 @@ namespace Refraction.Generated
                 @Reverse.started -= instance.OnReverse;
                 @Reverse.performed -= instance.OnReverse;
                 @Reverse.canceled -= instance.OnReverse;
+                @Map.started -= instance.OnMap;
+                @Map.performed -= instance.OnMap;
+                @Map.canceled -= instance.OnMap;
             }
 
             /// <summary>
@@ -1881,6 +1913,13 @@ namespace Refraction.Generated
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnReverse(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Map" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnMap(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

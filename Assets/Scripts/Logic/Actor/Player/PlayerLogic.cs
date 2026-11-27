@@ -55,18 +55,21 @@ namespace Refraction.Logic.Actor
             EventBus<WorldPolarityChanged>.Subscribe(OnWorldPolarityChanged);
         }
 
-        /// <summary>还没踩过地（出生就在空中）时为 false</summary>
+        /// <summary>出生就在空中时为 false</summary>
         public bool HasGroundedPos => _hasGroundedPos;
 
         public Vector2 LastGroundedPos => _lastGroundedPos;
 
-        /// 广播当前血量：装配给初值，掉血与复活后再发
+        /// 广播血量：装配与掉血后发
         public void Announce()
         {
             EventBus<PlayerHealthChanged>.Publish(new(CurHealth, MaxHealth));
         }
 
         public MovementStateTag CurrentTag => _moveGroup.CurrentTag;
+
+        /// <summary>地图态中：地面按住地图键</summary>
+        public bool MapOpen { get; private set; }
 
         public float MoveX => _moveX;
 
@@ -134,7 +137,7 @@ namespace Refraction.Logic.Actor
 
         public ChargePhase ChargeStage => _chargePhase;
 
-        /// <summary>0 没在充能，1 前摇走满</summary>
+        /// <summary>0 未充能，1 前摇走满</summary>
         public float ChargeProgress
         {
             get
@@ -162,10 +165,10 @@ namespace Refraction.Logic.Actor
 
         protected override void OnFixedTick(in LogicContext ctx)
         {
-            // 记在移动之前：帧末位置可能已被推出平台边缘
+            // 记在移动之前：帧末位置可能已在平台外
             if (ctx.WorldInfo.Grounded) RememberGround(ctx.WorldInfo.Pos);
 
-            // 过门运动必须等帧首（BeginStep 之后）才能动速度
+            // 过门要在帧首之后才能动速度
             if (_hasPendingEntry)
             {
                 _hasPendingEntry = false;
@@ -178,13 +181,16 @@ namespace Refraction.Logic.Actor
             // 入缓冲的必须是最终生效的输入
             _buffer.Push(in tick.InputSnapshot, tick.GameTime.now);
 
-            // 姿态先于移动：反过来会晚一帧，按下蹲键的那帧还能跳
+            // 姿态先于移动：否则按下蹲那帧还能跳
             _postureGroup.Tick(in tick);
 
             MovementStateTag beforeMove = _moveGroup.CurrentTag;
             _moveGroup.Blocked = _attackGroup.BlocksMovement;
             _moveGroup.ActionsBlocked = _attackGroup.BlocksActions;
             _moveGroup.Tick(in tick);
+
+            MapOpen = _moveGroup.CurrentTag == MovementStateTag.Map;
+            _attackGroup.Locked = MapOpen;
 
             bool dashStarted = beforeMove != MovementStateTag.Dash && _moveGroup.CurrentTag == MovementStateTag.Dash;
 
@@ -276,7 +282,7 @@ namespace Refraction.Logic.Actor
 
         protected override void OnTick(in LogicContext ctx) { }
 
-        // 已排队、还没起步那一拍也算过门：相机逐帧钉住要在落位当帧就生效
+        // 已排队未起步也算过门：相机要在落位当帧钉住
         public bool IsTransiting => _transit.IsActive || _hasPendingEntry;
 
         public void SpawnTo(Vector2 pos, bool invulnerable = true)
@@ -325,7 +331,7 @@ namespace Refraction.Logic.Actor
         /// <summary>打断下蹲前摇：立刻回站立并恢复移速乘数与缩放；不在前摇里调用无副作用</summary>
         public bool InterruptCrouch(in LogicContext ctx) => _postureGroup.InterruptToStand(ctx);
 
-        /// <summary>回到最近踩地点；没记下过返回 false（调用方自行处理），且不清空记录，连续掉落仍回同一点</summary>
+        /// <summary>回最近踩地点；没记录过返回 false，且不清记录</summary>
         public bool RespawnToLastGrounded() => ToLastGrounded(true, true);
 
         public bool FallBackToLastGrounded() => ToLastGrounded(false, false);

@@ -84,7 +84,7 @@ namespace Refraction.Presentation.Actor
             bool dash = tag == MovementStateTag.Dash;
             bool jump = !crouched && (tag == MovementStateTag.Jump || tag == MovementStateTag.AirJump);
             bool fall = tag == MovementStateTag.Fall;
-            bool move = !crouched && tag == MovementStateTag.Move && !hurt && Mathf.Abs(inputX) > 0f;
+            bool move = !crouched && (tag == MovementStateTag.Move || tag == MovementStateTag.Map) && !hurt && Mathf.Abs(inputX) > 0f;
             bool rising = velocityY > 0f;
 
             PlayMove(move);

@@ -66,6 +66,11 @@ namespace Refraction.Data
         [Min(0f)]
         public float inputBufferTime;
 
+        [Header("地图")]
+        [Tooltip("打开地图时的水平移动速度（单位/秒）：地图态只走这条速度，跳跃与冲刺都不接。\n0 表示地图打开期间不能移动。")]
+        [Min(0f)]
+        public float mapMoveSpeed = 3f;
+
         [Header("姿态 · 下蹲")]
         [Tooltip("下蹲前摇时长（秒），也就是 CrouchingTransition 的时长：\n这段时间里身体高度与移速乘数一起从站姿值线性过渡到蹲姿值，跳跃/冲刺的限制要等过渡结束才生效。\n0 表示没有前摇，直接进蹲姿。")]
         [Min(0f)]

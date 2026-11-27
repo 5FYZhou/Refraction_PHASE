@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: PlayerConfig
   m_EditorClassIdentifier: 
   moveSpeed: 6.1
+  mapMoveSpeed: 3
   moveAcceleration: 52
   moveDeceleration: 65
   turnAcceleration: 225

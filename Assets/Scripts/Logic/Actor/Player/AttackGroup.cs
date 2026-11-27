@@ -69,6 +69,9 @@ namespace Refraction.Logic.Actor
         /// <summary>正在后摇：别的攻击可以顶掉它</summary>
         public bool Cancelable => Phased != null && Phased.Cancelable;
 
+        /// <summary>地图打开：不接新攻击</summary>
+        public bool Locked { get; set; }
+
         public bool HoldsMoveFall => Phased is BlackDashState && Phased.Tag != AttackStateTag.BlackDashLevel && Phased.BlocksMovement;
 
         public void BindLauncher(IBulletLauncher launcher) => _white.Bind(launcher);
@@ -155,6 +158,8 @@ namespace Refraction.Logic.Actor
         protected override bool TryDecidePreempt(in LogicContext ctx, out AttackStateTag target)
         {
             target = EmptyTag;
+
+            if (Locked) return false;
 
             if (_conditions != null && _conditions.IsHurt) return false;
             if (!ctx.InputSnapshot.Attack) return false;
