@@ -22,10 +22,22 @@ namespace Refraction.MapEditor
             {
                 LevelMapData data = AssetDatabase.LoadAssetAtPath<LevelMapData>(AssetDatabase.GUIDToAssetPath(guid));
                 if (data == null || data.sceneGuid != sceneGuid) continue;
+                if (MapDataMigrator.Migrate(data)) EditorUtility.SetDirty(data);
                 Cache[sceneGuid] = data;
                 return data;
             }
             return null;
+        }
+
+        public static bool Exists(string sceneGuid) => Load(sceneGuid) != null;
+
+        public static LevelMapData Create(SceneAssetInfo info)
+        {
+            if (info == null) return null;
+            LevelMapData data = ScriptableObject.CreateInstance<LevelMapData>();
+            data.sceneGuid = info.guid;
+            data.sceneName = info.sceneName;
+            return data;
         }
 
         public static void Create(LevelMapData data)
@@ -34,11 +46,7 @@ namespace Refraction.MapEditor
             EnsureFolder(LevelsFolder);
             string textureFolder = TextureFolder(data.sceneName);
             EnsureFolder(textureFolder);
-
-            data.groundTexture = SaveTexture(data.groundTexture, Path.Combine(textureFolder, "Ground.png"));
-            data.paintTexture = SaveTexture(data.paintTexture, Path.Combine(textureFolder, "Paint.png"));
-            data.eraseMask = SaveTexture(data.eraseMask, Path.Combine(textureFolder, "EraseMask.png"));
-
+            SaveTextures(data, textureFolder);
             AssetDatabase.CreateAsset(data, LevelAssetPath(data.sceneName));
             AssetDatabase.SaveAssets();
             Cache[data.sceneGuid] = data;
@@ -49,56 +57,98 @@ namespace Refraction.MapEditor
             if (data == null) return;
             string textureFolder = TextureFolder(data.sceneName);
             EnsureFolder(textureFolder);
-            data.groundTexture = SaveTexture(data.groundTexture, Path.Combine(textureFolder, "Ground.png"));
-            data.paintTexture = SaveTexture(data.paintTexture, Path.Combine(textureFolder, "Paint.png"));
-            data.eraseMask = SaveTexture(data.eraseMask, Path.Combine(textureFolder, "EraseMask.png"));
-
+            SaveTextures(data, textureFolder);
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssets();
             Cache[data.sceneGuid] = data;
         }
 
-        public static void MarkDirty(LevelMapData data)
+        public static void SaveAll()
         {
-            if (data != null) EditorUtility.SetDirty(data);
+            var snapshot = new List<LevelMapData>(Cache.Values);
+            foreach (LevelMapData data in snapshot) Save(data);
         }
 
-        // 扫描只换底图：手绘层与遮罩按局部坐标重映射；源数据缺失时原地保留并告警
-        public static bool Scan(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu)
+        public static void Delete(string sceneGuid)
+        {
+            if (string.IsNullOrEmpty(sceneGuid)) return;
+            LevelMapData data = Load(sceneGuid);
+            Cache.Remove(sceneGuid);
+            if (data == null) return;
+            string assetPath = LevelAssetPath(data.sceneName);
+            if (AssetDatabase.LoadAssetAtPath<LevelMapData>(assetPath) != null) AssetDatabase.DeleteAsset(assetPath);
+            string textureFolder = TextureFolder(data.sceneName);
+            if (AssetDatabase.IsValidFolder(textureFolder)) AssetDatabase.DeleteAsset(textureFolder);
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void MarkDirty(LevelMapData data)
+        {
+            if (data == null) return;
+            data.isDirty = true;
+            EditorUtility.SetDirty(data);
+        }
+
+        // 扫描：只换底图；手绘层按局部坐标重映射，源数据缺失时原地保留并告警
+        public static bool Scan(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu, string groundHash)
         {
             if (data == null) return false;
-            bool canRemap = data.groundTexture != null && data.paintTexture != null && data.eraseMask != null
-                            && data.mapBounds.width > 0f && data.mapBounds.height > 0f && data.pixelsPerUnit > 0f;
+            bool canRemap = data.groundTexture != null && data.paintTexture != null
+                            && data.groundEraseMask != null && data.paintEraseMask != null
+                            && data.sourceBounds.width > 0f && data.sourceBounds.height > 0f && data.pixelsPerUnit > 0f;
             Texture2D newPaint = canRemap
-                ? RemapTexture(data.paintTexture, data.mapBounds, data.pixelsPerUnit, bounds, ppu)
+                ? RemapTexture(data.paintTexture, data.sourceBounds, data.pixelsPerUnit, bounds, ppu)
                 : null;
-            Texture2D newMask = canRemap
-                ? RemapTexture(data.eraseMask, data.mapBounds, data.pixelsPerUnit, bounds, ppu)
+            Texture2D newGroundMask = canRemap
+                ? RemapTexture(data.groundEraseMask, data.sourceBounds, data.pixelsPerUnit, bounds, ppu)
                 : null;
-            bool remapped = canRemap && newPaint != null && newMask != null;
-            data.sprites = sprites;
-            data.mapBounds = bounds;
+            Texture2D newPaintMask = canRemap
+                ? RemapTexture(data.paintEraseMask, data.sourceBounds, data.pixelsPerUnit, bounds, ppu)
+                : null;
+            bool remapped = canRemap && newPaint != null && newGroundMask != null && newPaintMask != null;
+            data.sourceSprites = sprites;
+            data.sourceBounds = bounds;
             data.pixelsPerUnit = ppu;
+            data.groundHash = groundHash;
             data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, ppu);
             if (remapped)
             {
                 data.paintTexture = newPaint;
-                data.eraseMask = newMask;
+                data.groundEraseMask = newGroundMask;
+                data.paintEraseMask = newPaintMask;
             }
+            data.isDirty = true;
             return remapped;
         }
 
         // 重建：底图重新扫描，手绘层与遮罩一并清空
-        public static void Rebuild(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu)
+        public static void Rebuild(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu, string groundHash)
         {
             if (data == null) return;
             Vector2Int size = MapGeometry.TextureSize(bounds, ppu);
-            data.sprites = sprites;
-            data.mapBounds = bounds;
+            data.sourceSprites = sprites;
+            data.sourceBounds = bounds;
             data.pixelsPerUnit = ppu;
+            data.groundHash = groundHash;
             data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, ppu);
+            data.groundEraseMask = MapGenerator.CreateBlank("GroundEraseMask", size.x, size.y);
             data.paintTexture = MapGenerator.CreateBlank("Paint", size.x, size.y);
-            data.eraseMask = MapGenerator.CreateBlank("EraseMask", size.x, size.y);
+            data.paintEraseMask = MapGenerator.CreateBlank("PaintEraseMask", size.x, size.y);
+            data.isDirty = true;
+        }
+
+        public static Texture2D Compose(LevelMapData data)
+        {
+            return MapCompositor.Compose(data);
+        }
+
+        private static void SaveTextures(LevelMapData data, string folder)
+        {
+            data.groundTexture = TextureStorage.Save(data.groundTexture, Path.Combine(folder, "Ground.png"));
+            data.groundEraseMask = TextureStorage.Save(data.groundEraseMask, Path.Combine(folder, "GroundEraseMask.png"));
+            data.paintTexture = TextureStorage.Save(data.paintTexture, Path.Combine(folder, "Paint.png"));
+            data.paintEraseMask = TextureStorage.Save(data.paintEraseMask, Path.Combine(folder, "PaintEraseMask.png"));
+            data.isDirty = false;
         }
 
         private static Texture2D RemapTexture(Texture2D source, Rect sourceBounds, float sourcePpu, Rect targetBounds, float targetPpu)
@@ -125,52 +175,6 @@ namespace Refraction.MapEditor
             return target;
         }
 
-        public static Texture2D Compose(LevelMapData data)
-        {
-            if (data == null || data.groundTexture == null) return null;
-            int width = data.groundTexture.width;
-            int height = data.groundTexture.height;
-            Texture2D result = MapGenerator.CreateBlank("Composite", width, height);
-            Color[] ground = data.groundTexture.GetPixels();
-            Color[] paint = data.paintTexture != null && data.paintTexture.width == width && data.paintTexture.height == height
-                ? data.paintTexture.GetPixels() : null;
-            Color[] mask = data.eraseMask != null && data.eraseMask.width == width && data.eraseMask.height == height
-                ? data.eraseMask.GetPixels() : null;
-            var pixels = new Color[width * height];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                float maskAlpha = mask != null ? mask[i].a : 0f;
-                Color baseColor = ground[i];
-                baseColor.a *= 1f - maskAlpha;
-                Color paintColor = paint != null ? paint[i] : new Color(0f, 0f, 0f, 0f);
-                pixels[i] = new Color(
-                    baseColor.r * (1f - paintColor.a) + paintColor.r * paintColor.a,
-                    baseColor.g * (1f - paintColor.a) + paintColor.g * paintColor.a,
-                    baseColor.b * (1f - paintColor.a) + paintColor.b * paintColor.a,
-                    Mathf.Max(baseColor.a, paintColor.a));
-            }
-            result.SetPixels(pixels);
-            result.Apply(false, false);
-            return result;
-        }
-
-        private static Texture2D SaveTexture(Texture2D texture, string assetPath)
-        {
-            if (texture == null) return null;
-            File.WriteAllBytes(assetPath, texture.EncodeToPNG());
-            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
-            var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
-            if (importer != null && (importer.isReadable || importer.filterMode != FilterMode.Point || importer.mipmapEnabled))
-            {
-                importer.isReadable = true;
-                importer.filterMode = FilterMode.Point;
-                importer.mipmapEnabled = false;
-                importer.alphaIsTransparency = true;
-                importer.SaveAndReimport();
-            }
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-        }
-
         private static string LevelAssetPath(string sceneName)
         {
             return LevelsFolder + "/" + sceneName + ".asset";
@@ -183,11 +187,7 @@ namespace Refraction.MapEditor
 
         private static void EnsureFolder(string path)
         {
-            if (AssetDatabase.IsValidFolder(path)) return;
-            string parent = Path.GetDirectoryName(path);
-            string name = Path.GetFileName(path);
-            if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent)) EnsureFolder(parent);
-            AssetDatabase.CreateFolder(parent, name);
+            TextureStorage.EnsureFolder(path);
         }
     }
 }

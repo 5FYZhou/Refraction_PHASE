@@ -1,28 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Refraction.MapEditor
 {
-    [Serializable]
-    public sealed class MapSpriteData
-    {
-        public string hierarchyPath;
-        public Vector2[] corners = new Vector2[4];
-
-        public MapSpriteData()
-        {
-        }
-
-        public MapSpriteData(string path, Vector2[] points)
-        {
-            hierarchyPath = path;
-            corners = points;
-        }
-    }
-
     public static class GroundScanner
     {
         public static Transform FindGroundRoot(Scene scene)
@@ -73,7 +56,18 @@ namespace Refraction.MapEditor
                     Vector3 point = matrix.MultiplyPoint3x4(localCorners[i]);
                     corners[i] = new Vector2(point.x, point.y);
                 }
-                result.Add(new MapSpriteData(RelativePath(renderer.transform, groundRoot), corners));
+
+                var data = new MapSpriteData(RelativePath(renderer.transform, groundRoot), corners);
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(renderer.sprite, out string guid, out long localId);
+                data.spriteGuid = guid ?? string.Empty;
+                data.localFileId = localId;
+                data.localPosition = renderer.transform.localPosition;
+                data.localRotation = renderer.transform.localEulerAngles;
+                data.localScale = renderer.transform.localScale;
+                data.color = renderer.color;
+                data.flipX = renderer.flipX;
+                data.flipY = renderer.flipY;
+                result.Add(data);
             }
             return result;
         }

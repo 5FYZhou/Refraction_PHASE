@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Refraction.MapEditor
 {
@@ -8,12 +9,28 @@ namespace Refraction.MapEditor
     {
         public string sceneGuid;
         public string sceneName;
-        public Rect mapBounds;
+
+        [FormerlySerializedAs("mapBounds")]
+        public Rect sourceBounds;
+
         public float pixelsPerUnit = 32f;
-        public List<MapSpriteData> sprites = new List<MapSpriteData>();
+
+        [FormerlySerializedAs("sprites")]
+        public List<MapSpriteData> sourceSprites = new List<MapSpriteData>();
+
+        public string groundHash;
+
         public Texture2D groundTexture;
+        [FormerlySerializedAs("eraseMask")]
+        public Texture2D groundEraseMask;
+
         public Texture2D paintTexture;
-        public Texture2D eraseMask;
-        public int dataVersion = 1;
+        public Texture2D paintEraseMask;
+
+        public Color groundColor = Color.white;
+        public Color backgroundColor = new Color(0.16f, 0.16f, 0.16f, 1f);
+
+        public bool isDirty;
+        public int dataVersion = 2;
     }
 }

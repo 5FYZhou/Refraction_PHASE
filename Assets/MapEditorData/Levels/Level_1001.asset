@@ -14,87 +14,188 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sceneGuid: b2b9637672be3364bb51badfd6545314
   sceneName: Level_1001
-  mapBounds:
+  sourceBounds:
     serializedVersion: 2
     x: -21.684296
     y: -3.3953
     width: 43.418663
     height: 24.323486
   pixelsPerUnit: 32
-  sprites:
+  sourceSprites:
   - hierarchyPath: Square (1)
     corners:
     - {x: -20.62343, y: -2.3953}
     - {x: -20.62343, y: -1.6847}
     - {x: 20.62343, y: -1.6847}
     - {x: 20.62343, y: -2.3953}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 0, y: -2.04}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 41.24686, y: 0.7106, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (4)
     corners:
     - {x: -13.853067, y: 18.253279}
     - {x: -13.853067, y: 19.925322}
     - {x: 20.734266, y: 19.925322}
     - {x: 20.734266, y: 18.253279}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 3.4406, y: 19.0893}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 34.587334, y: 1.6720418, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square
     corners:
     - {x: -3.19654, y: 0.07410231}
     - {x: -3.19654, y: 1.0458977}
     - {x: 3.29654, y: 1.0458977}
     - {x: 3.29654, y: 0.07410231}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 0.05, y: 0.56}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 6.49308, y: 0.9717954, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (9)
     corners:
     - {x: -19.24562, y: 10.1859665}
     - {x: -19.24562, y: 11.157763}
     - {x: -12.752542, y: 11.157763}
     - {x: -12.752542, y: 10.1859665}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -15.999082, y: 10.6718645}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 6.49308, y: 0.9717954, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (7)
     corners:
     - {x: 0.0079295635, y: 5.3641024}
     - {x: 0.0079295635, y: 6.3358974}
     - {x: 4.19207, y: 6.3358974}
     - {x: 4.19207, y: 5.3641024}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 2.1, y: 5.85}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 4.1841407, y: 0.9717954, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (11)
     corners:
     - {x: -18.727018, y: 14.805596}
     - {x: -18.727018, y: 15.804803}
     - {x: -16.567583, y: 15.804803}
     - {x: -16.567583, y: 14.805596}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -17.6473, y: 15.3052}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 2.159435, y: 0.99920565, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (8)
     corners:
     - {x: 6.2379293, y: 7.9341025}
     - {x: 6.2379293, y: 8.905898}
     - {x: 10.4220705, y: 8.905898}
     - {x: 10.4220705, y: 7.9341025}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 8.33, y: 8.42}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 4.1841407, y: 0.9717954, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (6)
     corners:
     - {x: 5.884113, y: 2.384102}
     - {x: 5.884113, y: 3.3558977}
     - {x: 12.475887, y: 3.3558977}
     - {x: 12.475887, y: 2.384102}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 9.18, y: 2.87}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 6.591775, y: 0.9717954, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (2)
     corners:
     - {x: -20.623377, y: -1.684763}
     - {x: -20.623377, y: 11.157763}
     - {x: -19.245623, y: 11.157763}
     - {x: -19.245623, y: -1.684763}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -19.9345, y: 4.7365}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 1.3777542, y: 12.8425255, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (10)
     corners:
     - {x: -20.684296, y: 14.805613}
     - {x: -20.684296, y: 19.928186}
     - {x: -18.726906, y: 19.928186}
     - {x: -18.726906, y: 14.805613}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -19.7056, y: 17.3669}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 1.9573894, y: 5.122575, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (3)
     corners:
     - {x: 13.773989, y: -1.68451}
     - {x: 13.773989, y: 8.33031}
     - {x: 20.62343, y: 8.33031}
     - {x: 20.62343, y: -1.68451}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 17.19871, y: 3.3229}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 6.8494425, y: 10.01482, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (5)
     corners:
     - {x: 19.313633, y: 11.793922}
     - {x: 19.313633, y: 18.253277}
     - {x: 20.734367, y: 18.253277}
     - {x: 20.734367, y: 11.793922}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 20.024, y: 15.0236}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 1.4207342, y: 6.4593554, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
+  groundHash: e92ef1bc45c42a261f470dc9c0fdb668
   groundTexture: {fileID: 2800000, guid: fc21dfc135b3d7445aa68c5ff6b56296, type: 3}
+  groundEraseMask: {fileID: 2800000, guid: b1a8321689b39f14ea48daf5677d519b, type: 3}
   paintTexture: {fileID: 2800000, guid: 9c1dc768555ef474c80222ca17254193, type: 3}
-  eraseMask: {fileID: 2800000, guid: e6933d2210808d54e886177a027c2363, type: 3}
-  dataVersion: 1
+  paintEraseMask: {fileID: 2800000, guid: 86fa0fee84685404081d537c1a80c362, type: 3}
+  groundColor: {r: 1, g: 1, b: 1, a: 1}
+  backgroundColor: {r: 0.16, g: 0.16, b: 0.16, a: 1}
+  isDirty: 0
+  dataVersion: 2

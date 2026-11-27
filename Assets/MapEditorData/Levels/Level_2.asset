@@ -14,75 +14,160 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sceneGuid: 8c2fd598384f910469153f82772267d5
   sceneName: Level_2
-  mapBounds:
+  sourceBounds:
     serializedVersion: 2
     x: -21.60238
     y: -2.7323759
     width: 71.27941
     height: 26.200403
   pixelsPerUnit: 32
-  sprites:
+  sourceSprites:
   - hierarchyPath: Square (4)
     corners:
     - {x: 33.020443, y: 16.563469}
     - {x: 33.020443, y: 15.696528}
     - {x: 38.844547, y: 15.696528}
     - {x: 38.844547, y: 16.563469}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 35.932495, y: 16.13}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 5.8241014, y: -0.8669408, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square
     corners:
     - {x: -20.60238, y: 10.36463}
     - {x: -20.60238, y: 22.468027}
     - {x: -19.729818, y: 22.468027}
     - {x: -19.729818, y: 10.36463}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -20.1661, y: 16.416328}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 0.872564, y: 12.103398, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (1)
     corners:
     - {x: 47.073673, y: 15.368961}
     - {x: 47.073673, y: 21.57484}
     - {x: 48.519123, y: 21.57484}
     - {x: 48.519123, y: 15.368961}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 47.7964, y: 18.4719}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 1.4454468, y: 6.2058787, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (2)
     corners:
     - {x: -20.525118, y: -1.7323759}
     - {x: -20.525118, y: 6.7901754}
     - {x: -13.67748, y: 6.7901754}
     - {x: -13.67748, y: -1.7323759}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -17.1013, y: 2.5289}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 6.8476386, y: 8.522552, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (3)
     corners:
     - {x: 24.52457, y: -1.1548786}
     - {x: 24.52457, y: 12.5248785}
     - {x: 48.67703, y: 12.5248785}
     - {x: 48.67703, y: -1.1548786}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 36.6008, y: 5.685}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 24.152458, y: 13.679757, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (3)
     corners:
     - {x: -19.729767, y: 22.468027}
     - {x: -19.729767, y: 21.574827}
     - {x: 48.518967, y: 21.574827}
     - {x: 48.518967, y: 22.468027}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 14.3946, y: 22.021427}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 68.24873, y: -0.8932011, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (2)
     corners:
     - {x: 16.22547, y: 11.366601}
     - {x: 16.22547, y: 10.473399}
     - {x: 21.374529, y: 10.473399}
     - {x: 21.374529, y: 11.366601}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 18.8, y: 10.92}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 5.1490593, y: -0.8932011, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (1)
     corners:
     - {x: 2.1354704, y: 8.186601}
     - {x: 2.1354704, y: 7.2933993}
     - {x: 7.2845297, y: 7.2933993}
     - {x: 7.2845297, y: 8.186601}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 4.71, y: 7.74}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 5.1490593, y: -0.8932011, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square
     corners:
     - {x: -10.82453, y: 7.9866004}
     - {x: -10.82453, y: 7.0933995}
     - {x: -5.6754704, y: 7.0933995}
     - {x: -5.6754704, y: 7.9866004}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -8.25, y: 7.54}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 5.1490593, y: -0.8932011, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (5)
     corners:
     - {x: -15.700283, y: 16.179678}
     - {x: -15.700283, y: 15.151121}
     - {x: 10.740084, y: 15.151121}
     - {x: 10.740084, y: 16.179678}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -2.4801, y: 15.6654}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 26.440367, y: -1.0285573, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
+  groundHash: 0c11d98c96fad64ff4596fd75b49ea05
   groundTexture: {fileID: 2800000, guid: 19a64e280f94a304f95bdf6bf2274a74, type: 3}
+  groundEraseMask: {fileID: 2800000, guid: d535c214b2f84784c9596ac84a645f87, type: 3}
   paintTexture: {fileID: 2800000, guid: 72f9b7e1a0387bc4f94d2af0e93a0254, type: 3}
-  eraseMask: {fileID: 2800000, guid: d124abe6fe6efe14eaec625fa617cfb2, type: 3}
-  dataVersion: 1
+  paintEraseMask: {fileID: 2800000, guid: 1f81c3a3712f0764d992faf7a04b4b03, type: 3}
+  groundColor: {r: 1, g: 1, b: 1, a: 1}
+  backgroundColor: {r: 0.16, g: 0.16, b: 0.16, a: 1}
+  isDirty: 0
+  dataVersion: 2

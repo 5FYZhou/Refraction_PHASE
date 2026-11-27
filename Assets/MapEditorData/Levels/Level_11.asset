@@ -14,135 +14,300 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sceneGuid: 7161cb65571fc344aa370e3e404d48eb
   sceneName: Level_11
-  mapBounds:
+  sourceBounds:
     serializedVersion: 2
     x: -121.18828
     y: -65.09086
     width: 144.31787
     height: 123.913025
   pixelsPerUnit: 32
-  sprites:
+  sourceSprites:
   - hierarchyPath: Square (1)
     corners:
     - {x: -5.3140745, y: -59.751698}
     - {x: -5.3140745, y: -62.502537}
     - {x: 18.254673, y: -62.502537}
     - {x: 18.254673, y: -59.751698}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 6.4703, y: -61.127117}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 23.568747, y: -2.7508402, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (8)
     corners:
     - {x: -39.45531, y: 33.686123}
     - {x: -39.45531, y: 36.77808}
     - {x: -3.6974907, y: 36.77808}
     - {x: -3.6974907, y: 33.686123}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -21.5764, y: 35.2321}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 35.75782, y: 3.091959, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (9)
     corners:
     - {x: -55.780987, y: -45.453472}
     - {x: -55.780987, y: -39.85393}
     - {x: -5.285015, y: -39.85393}
     - {x: -5.285015, y: -45.453472}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -30.533, y: -42.6537}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 50.49597, y: 5.599538, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (10)
     corners:
     - {x: -116.678856, y: -45.443333}
     - {x: -116.678856, y: -39.90347}
     - {x: -67.58715, y: -39.90347}
     - {x: -67.58715, y: -45.443333}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -92.133, y: -42.6734}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 49.0917, y: 5.539863, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (16)
     corners:
     - {x: -120.18828, y: -62.9236}
     - {x: -120.18828, y: -22.369398}
     - {x: -116.37053, y: -22.369398}
     - {x: -116.37053, y: -62.9236}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -118.2794, y: -42.6465}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 3.8177423, y: 40.554203, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (15)
     corners:
     - {x: -120.18819, y: -22.369965}
     - {x: -120.18819, y: -18.196236}
     - {x: -5.053417, y: -18.196236}
     - {x: -5.053417, y: -22.369965}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -62.6208, y: -20.2831}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 115.134766, y: 4.1737275, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (11)
     corners:
     - {x: -102.73387, y: -39.903557}
     - {x: -102.73387, y: -36.8116}
     - {x: -64.734726, y: -36.8116}
     - {x: -64.734726, y: -39.903557}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -83.7343, y: -38.35758}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 37.99915, y: 3.091959, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (13)
     corners:
     - {x: -91.16217, y: -36.811596}
     - {x: -91.16217, y: -33.71964}
     - {x: -63.059635, y: -33.71964}
     - {x: -63.059635, y: -36.811596}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -77.1109, y: -35.265617}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 28.102531, y: 3.091959, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (14)
     corners:
     - {x: -60.677563, y: -36.811596}
     - {x: -60.677563, y: -33.71964}
     - {x: -35.035038, y: -33.71964}
     - {x: -35.035038, y: -36.811596}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -47.8563, y: -35.265617}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 25.642523, y: 3.091959, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (12)
     corners:
     - {x: -59.081078, y: -39.903557}
     - {x: -59.081078, y: -36.8116}
     - {x: -22.276728, y: -36.8116}
     - {x: -22.276728, y: -39.903557}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -40.6789, y: -38.35758}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 36.804348, y: 3.091959, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (19)
     corners:
     - {x: -24.265316, y: 54.514034}
     - {x: -24.265316, y: 57.82217}
     - {x: 18.253803, y: 57.82217}
     - {x: 18.253803, y: 54.514034}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -3.005755, y: 56.1681}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 42.51912, y: 3.3081372, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (20)
     corners:
     - {x: -41.98718, y: 54.514034}
     - {x: -41.98718, y: 57.82217}
     - {x: -31.036419, y: 57.82217}
     - {x: -31.036419, y: 54.514034}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -36.5118, y: 56.1681}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 10.950759, y: 3.3081372, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (3)
     corners:
     - {x: 18.253803, y: -62.50254}
     - {x: 18.253803, y: 57.822136}
     - {x: 22.129597, y: 57.822136}
     - {x: 22.129597, y: -62.50254}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 20.1917, y: -2.3402}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 3.8757925, y: 120.32468, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (4)
     corners:
     - {x: 4.6987114, y: -1.2669706}
     - {x: 4.6987114, y: 22.666973}
     - {x: 7.901287, y: 22.666973}
     - {x: 7.901287, y: -1.2669706}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 6.3, y: 10.7}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 3.2025762, y: 23.933943, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (5)
     corners:
     - {x: 11.26361, y: -48.627937}
     - {x: 11.26361, y: -11.772062}
     - {x: 14.136392, y: -11.772062}
     - {x: 14.136392, y: -48.627937}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: 12.7, y: -30.2}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 2.872781, y: 36.855877, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (18)
     corners:
     - {x: -41.98718, y: 42.758205}
     - {x: -41.98718, y: 54.5144}
     - {x: -39.455105, y: 54.5144}
     - {x: -39.455105, y: 42.758205}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -40.72114, y: 48.6363}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 2.532077, y: 11.756195, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (22)
     corners:
     - {x: -41.98718, y: 25.0219}
     - {x: -41.98718, y: 36.778095}
     - {x: -39.455105, y: 36.778095}
     - {x: -39.455105, y: 25.0219}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -40.72114, y: 30.9}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 2.532077, y: 11.756195, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (23)
     corners:
     - {x: -6.229566, y: -33.70392}
     - {x: -6.229566, y: 33.68612}
     - {x: -3.6974893, y: 33.68612}
     - {x: -3.6974893, y: -33.70392}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -4.9635286, y: -0.0089}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 2.532077, y: 67.39004, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (24)
     corners:
     - {x: -7.7818203, y: -64.09086}
     - {x: -7.7818203, y: -39.85134}
     - {x: -3.69758, y: -39.85134}
     - {x: -3.69758, y: -64.09086}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -5.7397, y: -51.9711}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 4.0842404, y: 24.239521, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
   - hierarchyPath: Square (17)
     corners:
     - {x: -19.635288, y: 33.485245}
     - {x: -19.635288, y: 34.974754}
     - {x: -18.304707, y: 34.974754}
     - {x: -18.304707, y: 33.485245}
+    spriteGuid: 311925a002f4447b3a28927169b83ea6
+    localFileId: 7482667652216324306
+    localPosition: {x: -18.97, y: 34.23}
+    localRotation: {x: -0, y: 0, z: 0}
+    localScale: {x: 1.33058, y: 1.4895098, z: 1}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    flipX: 0
+    flipY: 0
+  groundHash: e10f72bdfa01f2dd52c491ce44e67846
   groundTexture: {fileID: 2800000, guid: beae81790bfd72d4488dec9938e15ba6, type: 3}
+  groundEraseMask: {fileID: 2800000, guid: 37a8c6750901f814197514592c25c257, type: 3}
   paintTexture: {fileID: 2800000, guid: 705d2a23a5d03ee42934ad4097e5d5ad, type: 3}
-  eraseMask: {fileID: 2800000, guid: 432e7324e19e0c54dae768e5a9a3b8b5, type: 3}
-  dataVersion: 1
+  paintEraseMask: {fileID: 2800000, guid: aeb9332c5476f73419328b47dcca3df8, type: 3}
+  groundColor: {r: 1, g: 1, b: 1, a: 1}
+  backgroundColor: {r: 0.16, g: 0.16, b: 0.16, a: 1}
+  isDirty: 0
+  dataVersion: 2
