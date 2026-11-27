@@ -63,8 +63,8 @@ namespace Refraction.MapEditor
             if (data != null) EditorUtility.SetDirty(data);
         }
 
-        // 重扫只换底图：手绘层与遮罩按地图局部坐标重映射，源数据缺失时拒绝覆盖
-        public static bool RebuildGround(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu)
+        // 扫描只换底图：手绘层与遮罩按局部坐标重映射；源数据缺失时原地保留并告警
+        public static bool Scan(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu)
         {
             if (data == null) return false;
             bool canRemap = data.groundTexture != null && data.paintTexture != null && data.eraseMask != null
@@ -75,16 +75,54 @@ namespace Refraction.MapEditor
             Texture2D newMask = canRemap
                 ? RemapTexture(data.eraseMask, data.mapBounds, data.pixelsPerUnit, bounds, ppu)
                 : null;
-            if (canRemap && (newPaint == null || newMask == null)) return false;
-
-            Texture2D ground = MapGenerator.GenerateGround(sprites, bounds, ppu);
+            bool remapped = canRemap && newPaint != null && newMask != null;
             data.sprites = sprites;
             data.mapBounds = bounds;
             data.pixelsPerUnit = ppu;
-            data.groundTexture = ground;
-            if (newPaint != null) data.paintTexture = newPaint;
-            if (newMask != null) data.eraseMask = newMask;
-            return true;
+            data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, ppu);
+            if (remapped)
+            {
+                data.paintTexture = newPaint;
+                data.eraseMask = newMask;
+            }
+            return remapped;
+        }
+
+        // 重建：底图重新扫描，手绘层与遮罩一并清空
+        public static void Rebuild(LevelMapData data, List<MapSpriteData> sprites, Rect bounds, float ppu)
+        {
+            if (data == null) return;
+            Vector2Int size = MapGeometry.TextureSize(bounds, ppu);
+            data.sprites = sprites;
+            data.mapBounds = bounds;
+            data.pixelsPerUnit = ppu;
+            data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, ppu);
+            data.paintTexture = MapGenerator.CreateBlank("Paint", size.x, size.y);
+            data.eraseMask = MapGenerator.CreateBlank("EraseMask", size.x, size.y);
+        }
+
+        private static Texture2D RemapTexture(Texture2D source, Rect sourceBounds, float sourcePpu, Rect targetBounds, float targetPpu)
+        {
+            Vector2Int size = MapGeometry.TextureSize(targetBounds, targetPpu);
+            Texture2D target = MapGenerator.CreateBlank(source.name, size.x, size.y);
+            var pixels = new Color[size.x * size.y];
+            int sourceWidth = source.width;
+            int sourceHeight = source.height;
+            for (int y = 0; y < size.y; y++)
+            {
+                for (int x = 0; x < size.x; x++)
+                {
+                    Vector2 local = MapGeometry.PixelToMap(new Vector2(x + 0.5f, y + 0.5f), targetBounds, targetPpu);
+                    Vector2 sourcePixel = MapGeometry.MapToPixel(local, sourceBounds, sourcePpu);
+                    int sx = Mathf.FloorToInt(sourcePixel.x);
+                    int sy = Mathf.FloorToInt(sourcePixel.y);
+                    if (sx < 0 || sy < 0 || sx >= sourceWidth || sy >= sourceHeight) continue;
+                    pixels[y * size.x + x] = source.GetPixel(sx, sy);
+                }
+            }
+            target.SetPixels(pixels);
+            target.Apply(false, false);
+            return target;
         }
 
         public static Texture2D Compose(LevelMapData data)
@@ -114,30 +152,6 @@ namespace Refraction.MapEditor
             result.SetPixels(pixels);
             result.Apply(false, false);
             return result;
-        }
-
-        private static Texture2D RemapTexture(Texture2D source, Rect sourceBounds, float sourcePpu, Rect targetBounds, float targetPpu)
-        {
-            Vector2Int size = MapGeometry.TextureSize(targetBounds, targetPpu);
-            Texture2D target = MapGenerator.CreateBlank(source.name, size.x, size.y);
-            var pixels = new Color[size.x * size.y];
-            int sourceWidth = source.width;
-            int sourceHeight = source.height;
-            for (int y = 0; y < size.y; y++)
-            {
-                for (int x = 0; x < size.x; x++)
-                {
-                    Vector2 local = MapGeometry.PixelToMap(new Vector2(x + 0.5f, y + 0.5f), targetBounds, targetPpu);
-                    Vector2 sourcePixel = MapGeometry.MapToPixel(local, sourceBounds, sourcePpu);
-                    int sx = Mathf.FloorToInt(sourcePixel.x);
-                    int sy = Mathf.FloorToInt(sourcePixel.y);
-                    if (sx < 0 || sy < 0 || sx >= sourceWidth || sy >= sourceHeight) continue;
-                    pixels[y * size.x + x] = source.GetPixel(sx, sy);
-                }
-            }
-            target.SetPixels(pixels);
-            target.Apply(false, false);
-            return target;
         }
 
         private static Texture2D SaveTexture(Texture2D texture, string assetPath)

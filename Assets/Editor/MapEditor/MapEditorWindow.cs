@@ -8,6 +8,13 @@ namespace Refraction.MapEditor
 {
     public sealed class MapEditorWindow : EditorWindow
     {
+        private enum ScanScope
+        {
+            Current,
+            Unimported,
+            All
+        }
+
         private const float Padding = 1f;
         private const float DefaultPpu = 32f;
 
@@ -15,6 +22,7 @@ namespace Refraction.MapEditor
         private readonly MapHistory _history = new();
         private List<SceneAssetInfo> _levels = new();
         private LevelMapData _current;
+        private ScanScope _scanScope = ScanScope.Current;
         private MapTool _tool = MapTool.Brush;
         private float _radius = 10f;
         private Color _brushColor = Color.white;
@@ -48,7 +56,9 @@ namespace Refraction.MapEditor
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            if (GUILayout.Button("扫描 / 重建", EditorStyles.toolbarButton)) ScanAllLevels();
+            _scanScope = (ScanScope)EditorGUILayout.EnumPopup(_scanScope, EditorStyles.toolbarPopup, GUILayout.Width(100f));
+            if (GUILayout.Button("扫描", EditorStyles.toolbarButton)) ScanAllLevels(false);
+            if (GUILayout.Button("重建", EditorStyles.toolbarButton)) ScanAllLevels(true);
             if (GUILayout.Button("保存", EditorStyles.toolbarButton)) SaveCurrentLevel();
             EditorGUI.BeginDisabledGroup(!_history.CanUndo);
             if (GUILayout.Button("撤销", EditorStyles.toolbarButton) && _current != null)
@@ -152,7 +162,7 @@ namespace Refraction.MapEditor
             _history.Clear();
             if (_current == null)
             {
-                _message = info.sceneName + " 尚无地图数据，点「扫描 / 重建」生成。";
+                _message = info.sceneName + " 尚无地图数据，点「扫描」或「重建」生成。";
                 return;
             }
             _message = null;
@@ -167,55 +177,102 @@ namespace Refraction.MapEditor
             Repaint();
         }
 
-        private void ScanAllLevels()
+        private void ScanAllLevels(bool clearEdits)
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             string restorePath = SceneManager.GetActiveScene().path;
             List<SceneAssetInfo> levels = SceneScanner.ScanLevels();
+            List<SceneAssetInfo> targets = FilterTargets(levels);
+            if (targets.Count == 0)
+            {
+                _message = "没有需要处理的关卡。";
+                Repaint();
+                return;
+            }
+
             int created = 0;
-            int rebuilt = 0;
-            foreach (SceneAssetInfo info in levels)
+            int updated = 0;
+            int failed = 0;
+            foreach (SceneAssetInfo info in targets)
             {
                 Scene scene = EditorSceneManager.OpenScene(info.path, OpenSceneMode.Single);
                 Transform ground = GroundScanner.FindGroundRoot(scene);
                 if (ground == null)
                 {
                     Debug.LogWarning("Map Editor: " + info.sceneName + " 没有 Ground 根节点，跳过。");
+                    failed++;
                     continue;
                 }
                 List<MapSpriteData> sprites = GroundScanner.Scan(ground);
                 Rect bounds = MapGeometry.CalculateBounds(sprites, Padding);
                 LevelMapData data = MapDataManager.Load(info.guid);
-                if (data == null)
+                bool isNew = data == null;
+                if (isNew)
                 {
-                    Vector2Int size = MapGeometry.TextureSize(bounds, DefaultPpu);
                     data = CreateInstance<LevelMapData>();
                     data.sceneGuid = info.guid;
                     data.sceneName = info.sceneName;
-                    data.mapBounds = bounds;
-                    data.pixelsPerUnit = DefaultPpu;
-                    data.sprites = sprites;
-                    data.groundTexture = MapGenerator.GenerateGround(sprites, bounds, DefaultPpu);
-                    data.paintTexture = MapGenerator.CreateBlank("Paint", size.x, size.y);
-                    data.eraseMask = MapGenerator.CreateBlank("EraseMask", size.x, size.y);
+                    MapDataManager.Rebuild(data, sprites, bounds, DefaultPpu);
                     MapDataManager.Create(data);
                     created++;
                 }
-                else if (MapDataManager.RebuildGround(data, sprites, bounds, DefaultPpu))
-                {
-                    MapDataManager.Save(data);
-                    rebuilt++;
-                }
                 else
                 {
-                    Debug.LogWarning("Map Editor: " + info.sceneName + " 边界变化且无法可靠映射手绘层，未覆盖。");
+                    if (clearEdits)
+                    {
+                        MapDataManager.Rebuild(data, sprites, bounds, DefaultPpu);
+                    }
+                    else if (!MapDataManager.Scan(data, sprites, bounds, DefaultPpu))
+                    {
+                        Debug.LogWarning("Map Editor: " + info.sceneName + " 边界变化且无法可靠映射手绘层，未更新。");
+                        failed++;
+                        continue;
+                    }
+                    MapDataManager.Save(data);
+                    updated++;
+                    if (_current != null && _current.sceneGuid == info.guid)
+                    {
+                        _history.Clear();
+                        _canvas.SetData(_current, new Rect(0f, 0f, position.width, position.height));
+                    }
                 }
             }
             if (!string.IsNullOrEmpty(restorePath)) EditorSceneManager.OpenScene(restorePath, OpenSceneMode.Single);
             _levels = levels;
-            _message = "重建完成：新增 " + created + " 关，更新 " + rebuilt + " 关。";
-            if (_levels.Count > 0) SelectLevel(_levels[0]);
+            string action = clearEdits ? "重建" : "扫描";
+            string extra = clearEdits ? "（画笔与橡皮已清空）" : "（绘制内容保留）";
+            _message = action + "完成：新增 " + created + " 关，更新 " + updated + " 关" + extra
+                       + (failed > 0 ? "，跳过 " + failed + " 关。" : "。");
+            if (_current == null && _levels.Count > 0) SelectLevel(_levels[0]);
             Repaint();
+        }
+
+        private List<SceneAssetInfo> FilterTargets(List<SceneAssetInfo> levels)
+        {
+            var result = new List<SceneAssetInfo>();
+            if (_scanScope == ScanScope.All)
+            {
+                result.AddRange(levels);
+                return result;
+            }
+            if (_scanScope == ScanScope.Unimported)
+            {
+                foreach (SceneAssetInfo info in levels)
+                {
+                    if (MapDataManager.Load(info.guid) == null) result.Add(info);
+                }
+                return result;
+            }
+
+            string activeScene = SceneManager.GetActiveScene().name;
+            foreach (SceneAssetInfo info in levels)
+            {
+                bool selected = _current != null
+                    ? _current.sceneGuid == info.guid
+                    : info.sceneName == activeScene;
+                if (selected) result.Add(info);
+            }
+            return result;
         }
     }
 }
