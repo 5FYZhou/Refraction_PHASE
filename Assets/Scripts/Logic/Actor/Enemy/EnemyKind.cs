@@ -18,5 +18,7 @@ namespace Refraction.Logic.Actor
         Mmfly = 6,
 
         Mantis = 7,
+
+        Fortress = 8,
     }
 }
