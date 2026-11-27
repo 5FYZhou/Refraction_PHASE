@@ -1,0 +1,112 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: faf6ee91c3e7bd945aeb2b6928a8c46f, type: 3}
+  m_Name: Level_10
+  m_EditorClassIdentifier: 
+  sceneGuid: 2a85b838bf170994ca4d7ec3082c52d4
+  sceneName: Level_10
+  mapBounds:
+    serializedVersion: 2
+    x: -31.652641
+    y: -10.577642
+    width: 85.567505
+    height: 49.931168
+  pixelsPerUnit: 32
+  sprites:
+  - hierarchyPath: Square
+    corners:
+    - {x: -30.652641, y: 28.703505}
+    - {x: -30.652641, y: 35.555096}
+    - {x: -27.877018, y: 35.555096}
+    - {x: -27.877018, y: 28.703505}
+  - hierarchyPath: Square (2)
+    corners:
+    - {x: -30.652641, y: -5.9802303}
+    - {x: -30.652641, y: 23.53183}
+    - {x: -27.877018, y: 23.53183}
+    - {x: -27.877018, y: -5.9802303}
+  - hierarchyPath: Square (6)
+    corners:
+    - {x: 47.89099, y: -7.1435204}
+    - {x: 47.89099, y: 37.49052}
+    - {x: 50.66662, y: 37.49052}
+    - {x: 50.66662, y: -7.1435204}
+  - hierarchyPath: Square (3)
+    corners:
+    - {x: 19.729961, y: -9.577642}
+    - {x: 19.729961, y: -1.9349577}
+    - {x: 22.505585, y: -1.9349577}
+    - {x: 22.505585, y: -9.577642}
+  - hierarchyPath: Square (15)
+    corners:
+    - {x: -20.57104, y: 0.8226845}
+    - {x: -20.57104, y: 6.7025156}
+    - {x: -19.54056, y: 6.7025156}
+    - {x: -19.54056, y: 0.8226845}
+  - hierarchyPath: Square (44)
+    corners:
+    - {x: -24.224812, y: 6.7025156}
+    - {x: -24.224812, y: 5.65464}
+    - {x: -20.571041, y: 5.65464}
+    - {x: -20.571041, y: 6.7025156}
+  - hierarchyPath: Square (45)
+    corners:
+    - {x: -24.25616, y: 11.412504}
+    - {x: -24.25616, y: 10.36463}
+    - {x: -20.60239, y: 10.36463}
+    - {x: -20.60239, y: 11.412504}
+  - hierarchyPath: Square (43)
+    corners:
+    - {x: -19.540508, y: 3.8300233}
+    - {x: -19.540508, y: 1.8705769}
+    - {x: -18.449493, y: 1.8705769}
+    - {x: -18.449493, y: 3.8300233}
+  - hierarchyPath: Square (33)
+    corners:
+    - {x: -19.540468, y: 1.8705599}
+    - {x: -19.540468, y: 0.8226845}
+    - {x: -16.886732, y: 0.8226845}
+    - {x: -16.886732, y: 1.8705599}
+  - hierarchyPath: Square (1)
+    corners:
+    - {x: 22.506083, y: -7.142935}
+    - {x: 22.506083, y: -9.577642}
+    - {x: 29.757318, y: -9.577642}
+    - {x: 29.757318, y: -7.142935}
+  - hierarchyPath: Square (5)
+    corners:
+    - {x: 35.212284, y: -7.142935}
+    - {x: 35.212284, y: -9.577642}
+    - {x: 50.666515, y: -9.577642}
+    - {x: 50.666515, y: -7.142935}
+  - hierarchyPath: Square (4)
+    corners:
+    - {x: -27.877018, y: -1.9345455}
+    - {x: -27.877018, y: -5.9802547}
+    - {x: 19.729961, y: -5.9802547}
+    - {x: 19.729961, y: -1.9345455}
+  - hierarchyPath: Square (14)
+    corners:
+    - {x: -30.652058, y: 38.353527}
+    - {x: -30.652058, y: 35.55547}
+    - {x: 52.91486, y: 35.55547}
+    - {x: 52.91486, y: 38.353527}
+  - hierarchyPath: Square
+    corners:
+    - {x: -11.622743, y: 15.916596}
+    - {x: -11.622743, y: 15.264203}
+    - {x: -4.447858, y: 15.264203}
+    - {x: -4.447858, y: 15.916596}
+  groundTexture: {fileID: 2800000, guid: 1eaa3ea281c6c8c48a861b423ba7849f, type: 3}
+  paintTexture: {fileID: 2800000, guid: 97c95e64e06b18d4c8f630ca395b5668, type: 3}
+  eraseMask: {fileID: 2800000, guid: 38074a813ecac2f47bc5467c32e98df9, type: 3}
+  dataVersion: 1
