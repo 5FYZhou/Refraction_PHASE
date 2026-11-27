@@ -58,13 +58,13 @@ MonoBehaviour:
   - id: 7
     fileNames:
     - "\u843D\u5730"
-    volume: 1
+    volume: 0.6
     randomize: 1
     single: 0
   - id: 8
     fileNames:
     - "\u8DF3\u8DC3"
-    volume: 1
+    volume: 0.5
     randomize: 1
     single: 0
   - id: 9
@@ -102,7 +102,7 @@ MonoBehaviour:
   - id: 14
     fileNames:
     - "\u5145\u80FD"
-    volume: 0.6
+    volume: 0.3
     randomize: 0
     single: 1
   - id: 15
