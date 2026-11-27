@@ -19,8 +19,8 @@ namespace Refraction.MapEditor
             for (int i = 0; i < pixels.Length; i++) pixels[i] = fill;
 
             if (settings.showGrid) DrawGrid(pixels, width, height, bounds, density);
-            if (settings.showConnections) DrawConnections(pixels, width, height, data, bounds, density);
             DrawLevels(pixels, width, height, data, bounds, density, scale);
+            if (settings.showConnections) DrawConnections(pixels, width, height, data, bounds, density);
 
             var result = new Texture2D(width, height, TextureFormat.RGBA32, false)
             {

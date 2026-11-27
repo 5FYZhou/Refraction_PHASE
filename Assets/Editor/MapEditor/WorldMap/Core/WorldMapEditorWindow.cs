@@ -15,7 +15,7 @@ namespace Refraction.MapEditor
         private List<SceneAssetInfo> _levels = new();
         private WorldMapData _world;
         private WorldTool _tool = WorldTool.Select;
-        private bool _snap = true;
+        private bool _snap;
         private bool _showGrid = true;
         private Vector2 _listScroll;
         private string _message;
@@ -63,6 +63,12 @@ namespace Refraction.MapEditor
             if (selected != _world) LoadWorld(selected == null ? null : AssetDatabase.GetAssetPath(selected));
             if (GUILayout.Button("新建", EditorStyles.toolbarButton)) CreateWorld();
             if (GUILayout.Button("保存", EditorStyles.toolbarButton)) SaveWorld();
+            EditorGUI.BeginDisabledGroup(!_history.CanUndo);
+            if (GUILayout.Button("撤销", EditorStyles.toolbarButton)) UndoWorld();
+            EditorGUI.EndDisabledGroup();
+            EditorGUI.BeginDisabledGroup(!_history.CanRedo);
+            if (GUILayout.Button("重做", EditorStyles.toolbarButton)) RedoWorld();
+            EditorGUI.EndDisabledGroup();
             _tool = (WorldTool)EditorGUILayout.EnumPopup(_tool, EditorStyles.toolbarPopup, GUILayout.Width(90f));
             _snap = GUILayout.Toggle(_snap, "吸附", EditorStyles.toolbarButton, GUILayout.Width(44f));
             _showGrid = GUILayout.Toggle(_showGrid, "网格", EditorStyles.toolbarButton, GUILayout.Width(44f));

@@ -14,6 +14,7 @@ namespace Refraction.MapEditor
         private readonly WorldToolContext _context = new();
         private bool _spaceHeld;
         private bool _panning;
+        private bool _interacting;
         private Vector2 _lastMouse;
 
         public float Zoom => _transform.Zoom;
@@ -75,12 +76,16 @@ namespace Refraction.MapEditor
                 current.Use();
                 return;
             }
-            if (current.type == EventType.MouseUp && current.button == 0)
+            if (current.type == EventType.MouseUp)
             {
-                PrepareContext(current, rect, data, tool, snap);
-                ActiveTool(tool).OnUp(_context);
+                if (current.button == 0 && _interacting)
+                {
+                    PrepareContext(current, rect, data, tool, snap);
+                    ActiveTool(tool).OnUp(_context);
+                    _interacting = false;
+                    if (rect.Contains(current.mousePosition)) current.Use();
+                }
                 _panning = false;
-                current.Use();
                 return;
             }
             if (!rect.Contains(current.mousePosition)) return;
@@ -96,6 +101,7 @@ namespace Refraction.MapEditor
             if (current.type == EventType.MouseDown && panGesture)
             {
                 _panning = true;
+                _interacting = true;
                 _lastMouse = localMouse;
                 current.Use();
                 return;
@@ -112,6 +118,7 @@ namespace Refraction.MapEditor
             PrepareContext(current, rect, data, tool, snap);
             if (current.type == EventType.MouseDown && current.button == 0)
             {
+                _interacting = true;
                 ActiveTool(tool).OnDown(_context);
                 current.Use();
             }

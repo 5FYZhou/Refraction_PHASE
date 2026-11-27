@@ -15,13 +15,9 @@ MonoBehaviour:
   mapName: WorldMap
   levels:
   - sceneGuid: 744539bf782dfed4f9da782a8f86e27e
-    position: {x: 0, y: 0}
+    position: {x: -1, y: 2}
     locked: 0
   - sceneGuid: 8c2fd598384f910469153f82772267d5
-    position: {x: 41.272694, y: 3.1038952}
+    position: {x: 40.31069, y: 5.207654}
     locked: 0
-  connections:
-  - fromSceneGuid: 8c2fd598384f910469153f82772267d5
-    toSceneGuid: 744539bf782dfed4f9da782a8f86e27e
-    fromPosition: {x: 32, y: 11.75}
-    toPosition: {x: 21.703125, y: 12.15625}
+  connections: []
