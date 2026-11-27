@@ -16,5 +16,7 @@ namespace Refraction.Logic.Actor
         Warrior = 5,
 
         Mmfly = 6,
+
+        Mantis = 7,
     }
 }
