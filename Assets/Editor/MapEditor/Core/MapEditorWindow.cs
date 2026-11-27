@@ -24,6 +24,7 @@ namespace Refraction.MapEditor
         private readonly MapAutoSave _autoSave = new();
         private List<SceneAssetInfo> _levels = new();
         private LevelMapData _current;
+        private string _currentGuid;
         private ScanScope _scanScope = ScanScope.Current;
         private float _radius = 10f;
         private Color _brushColor = Color.white;
@@ -42,6 +43,15 @@ namespace Refraction.MapEditor
             EditorApplication.update += OnUpdate;
             EditorApplication.quitting += OnQuitting;
             _levels = SceneScanner.ScanLevels();
+            if (!string.IsNullOrEmpty(_currentGuid))
+            {
+                SceneAssetInfo current = _levels.Find(info => info.guid == _currentGuid);
+                if (current != null)
+                {
+                    SelectLevel(current);
+                    return;
+                }
+            }
             if (_levels.Count > 0) SelectLevel(_levels[0]);
         }
 
@@ -223,6 +233,7 @@ namespace Refraction.MapEditor
         {
             if (_autoSave.Enabled && _current != null && _current.isDirty) _autoSave.RequestSave(_current);
             _current = MapDataManager.Load(info.guid);
+            _currentGuid = info.guid;
             _history.Clear();
             if (_current == null)
             {
@@ -253,6 +264,7 @@ namespace Refraction.MapEditor
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             string restorePath = SceneManager.GetActiveScene().path;
+            string activeSceneName = SceneManager.GetActiveScene().name;
             List<SceneAssetInfo> levels = SceneScanner.ScanLevels();
             List<SceneAssetInfo> targets = FilterTargets(levels);
             if (targets.Count == 0)
@@ -320,11 +332,6 @@ namespace Refraction.MapEditor
                     }
                     MapDataManager.Save(data);
                     updated++;
-                    if (_current != null && _current.sceneGuid == info.guid)
-                    {
-                        _history.Clear();
-                        _canvas.SetData(_current, CurrentCanvasRect());
-                    }
                 }
             }
             if (!string.IsNullOrEmpty(restorePath)) EditorSceneManager.OpenScene(restorePath, OpenSceneMode.Single);
@@ -333,7 +340,19 @@ namespace Refraction.MapEditor
             string extra = clearEdits ? "（画笔与橡皮已清空）" : "（绘制内容保留）";
             _message = actionName + "完成：新增 " + created + " 关，更新 " + updated + " 关" + extra
                        + (skipped > 0 ? "，跳过 " + skipped + " 关。" : "。");
-            if (_current == null && _levels.Count > 0) SelectLevel(_levels[0]);
+            SceneAssetInfo currentTarget = targets.Find(info => !string.IsNullOrEmpty(_currentGuid)
+                ? info.guid == _currentGuid
+                : info.sceneName == activeSceneName);
+            if (currentTarget != null)
+            {
+                if (_current == null || _current.sceneGuid != currentTarget.guid) SelectLevel(currentTarget);
+                else
+                {
+                    _history.Clear();
+                    _canvas.SetData(_current, CurrentCanvasRect());
+                }
+            }
+            else if (_current == null && _levels.Count > 0) SelectLevel(_levels[0]);
             Repaint();
         }
 
