@@ -14,5 +14,7 @@ namespace Refraction.Logic.Actor
         Spliter = 4,
 
         Warrior = 5,
+
+        Mmfly = 6,
     }
 }

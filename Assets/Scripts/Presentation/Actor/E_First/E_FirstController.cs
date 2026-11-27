@@ -71,6 +71,9 @@ namespace Refraction.Presentation.Actor
 
         protected override bool BodyAlive => _logic != null && _logic.IsAlive;
 
+        /// <summary>被 Boss 召唤时用：Start 之前定形态</summary>
+        public override void PrepareSpawn(bool black) => blackForm = black;
+
         public EnemyStateTag CurrentTag => _logic != null ? _logic.CurrentTag : EnemyStateTag.None;
 
         protected override void Assemble()

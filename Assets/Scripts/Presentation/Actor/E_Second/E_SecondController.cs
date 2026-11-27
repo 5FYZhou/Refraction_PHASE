@@ -94,6 +94,9 @@ namespace Refraction.Presentation.Actor
 
         protected override bool BodyAlive => _logic != null && _logic.IsAlive;
 
+        /// <summary>被 Boss 召唤时用：Start 之前定形态</summary>
+        public override void PrepareSpawn(bool black) => blackForm = black;
+
         /// <summary>只读给调试面板看状态与两个框，面板不反向写任何东西</summary>
         public E_SecondLogic Logic => _logic;
 

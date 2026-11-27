@@ -19,6 +19,9 @@ namespace Refraction.Presentation.Actor
 
         protected GameRoot Root { get; private set; }
 
+        /// <summary>出生前预置形态：Instantiate 之后、Start 之前调，Start 抓快照时才读得到</summary>
+        public virtual void PrepareSpawn(bool black) { }
+
         /// <summary>存活判定归派生：壳不知道这只敌人的血量藏在哪</summary>
         protected abstract bool BodyAlive { get; }
 

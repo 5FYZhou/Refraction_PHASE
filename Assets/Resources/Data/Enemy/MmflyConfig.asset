@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60a6bdcfccaca5345839e555c6c99ee0, type: 3}
+  m_Name: MmflyConfig
+  m_EditorClassIdentifier: 
+  moveSpeed: 10
+  moveAcceleration: 50
+  moveDeceleration: 60
+  turnAcceleration: 80
+  externalDeceleration: 40
+  maxHealth: 100
+  invulnerableTime: 0
+  flashTime: 0.12
+  KnockbackDecay: 30
+  enableGravity: 0
+  maxFallSpeed: 20
+  maxRiseSpeed: 20
+  fallGravity: 70
+  decideInterval: 0.6
+  phase2HealthRatio: 0.5
+  phase2DecideScale: 0.6
+  phase2ApproachScale: 1.4
+  observeTimeMin: 1
+  observeTimeMax: 1.5
+  observeDriftSpeed: 0.6
+  approachSpeed: 2.5
+  approachSway: 0.8
+  diveWindupTime: 0.5
+  diveSpeed: 18
+  diveRecoverTime: 0.8
+  diveCooldown: 3
+  reboundCooldown: 2
+  barrageCooldown: 4
+  barrageWindupTime: 0.6
+  waveCount: 3
+  bulletsPerWave: 5
+  spreadAngle: 12
+  waveInterval: 0.15
+  bulletSpeed: 12
+  bulletDamage: 1
+  bulletKnockback: 6
+  summonCooldown: 8
+  summonWindupTime: 1
+  summonCount: 2
+  summonLimit: 4
+  floatSpeed: 4
+  floatDistanceMin: 1
+  floatDistanceMax: 3
+  contactDamage: 1
+  contactInterval: 1
+  contactKnockback: 8
