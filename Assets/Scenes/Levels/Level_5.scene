@@ -273,6 +273,10 @@ PrefabInstance:
       propertyPath: nextLevelId
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4848757783301965510, guid: e2cfea20bcdf47e4ca99678ce322139f, type: 3}
+      propertyPath: m_Color.a
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 0}
     m_RemovedGameObjects: []
@@ -1746,7 +1750,7 @@ Transform:
   m_GameObject: {fileID: 1466504234}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000008033914, y: -0.000000051134474, z: -4.1080996e-15, w: 1}
-  m_LocalPosition: {x: 9.997957, y: 6.1244483, z: -10}
+  m_LocalPosition: {x: 6.615157, y: 6.1245384, z: -10.000001}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1915,6 +1919,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerController: {fileID: 1515487013}
   afterimagePrefab: {fileID: 4492115629568869392, guid: d5918cd7a3fd13740a89e823af491b90, type: 3}
+  playerHeadPrefab: {fileID: 0}
 --- !u!4 &1512647168
 Transform:
   m_ObjectHideFlags: 0
