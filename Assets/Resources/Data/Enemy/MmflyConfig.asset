@@ -38,7 +38,7 @@ MonoBehaviour:
   diveSpeed: 15
   diveRecoverTime: 1.2
   diveCooldown: 3
-  reboundCooldown: 2
+  reboundCooldown: 0.8
   barrageCooldown: 2.5
   barrageWindupTime: 0.8
   waveCount: 3

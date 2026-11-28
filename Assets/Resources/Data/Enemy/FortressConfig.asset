@@ -30,14 +30,14 @@ MonoBehaviour:
   barrageCooldown: 4
   barrageWindupTime: 0.5
   barrageRecoverTime: 0.4
-  waveCount: 3
+  waveCount: 1
   bulletsPerWave: 5
-  spreadAngle: 12
+  spreadAngle: 8
   waveInterval: 0.15
-  bulletSpeed: 5
+  bulletSpeed: 4.5
   bulletDamage: 1
-  bulletKnockback: 0
-  reboundCooldown: 2
+  bulletKnockback: 2
+  reboundCooldown: 0.4
   contactDamage: 1
   contactInterval: 1
   contactKnockback: 24
