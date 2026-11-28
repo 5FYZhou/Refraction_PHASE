@@ -12,32 +12,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0539b88d0b9e5bc4dbd9ae70bd1c75f9, type: 3}
   m_Name: MantisConfig
   m_EditorClassIdentifier: 
-  moveSpeed: 10
+  moveSpeed: 6
   moveAcceleration: 50
   moveDeceleration: 60
   turnAcceleration: 80
   externalDeceleration: 40
-  maxHealth: 3
-  invulnerableTime: 0.4
+  maxHealth: 350
+  invulnerableTime: 0
   flashTime: 0.12
-  KnockbackDecay: 30
-  enableGravity: 0
+  KnockbackDecay: 20
+  enableGravity: 1
   maxFallSpeed: 20
   maxRiseSpeed: 20
   fallGravity: 70
-  patrolSpeed: 2.5
+  patrolSpeed: 3
   loseTargetTime: 1.5
   blackWindupTime: 0.4
   blackRecoverTime: 0.5
-  dashSpeed: 14
-  dashTime: 0.12
-  reboundCooldown: 2
+  dashSpeed: 12
+  dashTime: 0.16
+  reboundCooldown: 0.8
   whiteWindupTime: 0.5
-  whiteRecoverTime: 0.12
-  dashBackMultiplier: 2
-  bulletSpeed: 14
-  bulletDamage: 1
-  bulletKnockback: 6
+  whiteRecoverTime: 0.16
+  dashBackMultiplier: 3
+  bulletSpeed: 10
+  bulletDamage: 75
+  bulletKnockback: 12
   contactDamage: 1
   contactInterval: 1
   contactKnockback: 8
