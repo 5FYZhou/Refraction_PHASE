@@ -17,6 +17,6 @@ MonoBehaviour:
   blinkWindow: 1
   blinkHz: 6
   blinkMinAlphaScale: 0.25
-  linkColor: {r: 0.956, g: 0.95, b: 0.731, a: 0.51}
+  linkColor: {r: 0.91194963, g: 0.8936369, b: 0.4846524, a: 0.51}
   linkHotColor: {r: 0.956, g: 0.95, b: 0.731, a: 1}
   linkThickness: 0.2
